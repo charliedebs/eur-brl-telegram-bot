@@ -1211,8 +1211,3 @@ const en = {
       giveFeedback: '💬 Dar uma sugestão',
     },
   };
-  
-  // English
-  const en = {
-  
-  export const messages = { fr, pt, en };
