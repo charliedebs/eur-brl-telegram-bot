@@ -3,45 +3,227 @@ import { DEFAULTS, LINKS } from '../config/constants.js';
 
 export function buildKeyboards(msg, type, options = {}) {
   const { route = 'eurbrl', amount = DEFAULTS.EUR, alerts = [] } = options;
+  const locale = options.locale || 'fr-FR';
   
   switch (type) {
+    // Écran 0 : Sélection langue
+    case 'lang_select':
+      return Markup.inlineKeyboard([
+        [
+          Markup.button.callback(msg.btn.langFR, 'lang:fr'),
+          Markup.button.callback(msg.btn.langPT, 'lang:pt'),
+          Markup.button.callback(msg.btn.langEN, 'lang:en'),
+        ],
+      ]);
+    
+    // Écran 1 : Choix route/montant
     case 'main':
       return Markup.inlineKeyboard([
-        [Markup.button.callback(msg.btn.eurbrl(DEFAULTS.EUR), `route:eurbrl:${DEFAULTS.EUR}`)],
-        [Markup.button.callback(msg.btn.brleur(DEFAULTS.BRL), `route:brleur:${DEFAULTS.BRL}`)],
-        [Markup.button.callback(msg.btn.help, 'help:open')],
+        [Markup.button.callback(msg.btn.eurbrl(DEFAULTS.EUR, locale), `route:eurbrl:${DEFAULTS.EUR}`)],
+        [Markup.button.callback(msg.btn.brleur(DEFAULTS.BRL, locale), `route:brleur:${DEFAULTS.BRL}`)],
+        [Markup.button.callback(msg.btn.about, 'action:about')],
       ]);
     
-    case 'comparison':
+    // Écran "À propos"
+    case 'about':
       return Markup.inlineKeyboard([
-        [Markup.button.callback(msg.btn.contOn, `mode:onchain:${route}:${amount}`)],
-        [Markup.button.callback(msg.btn.change, `action:change_amount:${route}`)],
-        [Markup.button.callback(msg.btn.setAlert, 'alerts:start'), Markup.button.callback(msg.btn.premium, 'premium:open')],
-      ]);
-    
-    case 'onchain':
-      return Markup.inlineKeyboard([
-        [Markup.button.url('🇪🇺 Kraken', LINKS.KRAKEN), Markup.button.url('🇧🇷 Binance BR', LINKS.BINANCE_BR)],
         [Markup.button.callback(msg.btn.back, 'action:back_main')],
       ]);
     
-    case 'alerts_list':
-      const buttons = alerts.map(a => [
-        Markup.button.callback(`⛔ ${a.pair}`, `alerts:disable:${a.id}`),
-      ]);
-      buttons.push([Markup.button.callback('➕ Nouvelle', 'alerts:start'), Markup.button.callback(msg.btn.back, 'action:back_main')]);
-      return Markup.inlineKeyboard(buttons);
-    
-    case 'premium':
-      return Markup.inlineKeyboard([
-        [Markup.button.callback('✨ Intéressé', 'premium:interest')],
-        [Markup.button.callback(msg.btn.back, 'action:back_main')],
-      ]);
-    
+    // Écran 1bis : Clarification route
     case 'route_choice':
       return Markup.inlineKeyboard([
         [Markup.button.callback('🇪🇺 EUR → 🇧🇷 BRL', `route:eurbrl:${amount}`)],
         [Markup.button.callback('🇧🇷 BRL → 🇪🇺 EUR', `route:brleur:${amount}`)],
+      ]);
+    
+    // Écran 2 : Carte comparaison
+    case 'comparison':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback(msg.btn.contOn, `action:continue_onchain:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.stayOff, `action:stay_offchain:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.change, `action:change_amount:${route}`)],
+        [Markup.button.callback(msg.btn.sources, 'action:sources')],
+      ]);
+    
+    // Écran 2bis : Sources
+    case 'sources':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback(msg.btn.back, `action:back_comparison:${route}:${amount}`)],
+      ]);
+    
+    // Écran 3 : Off-chain
+    case 'offchain':
+      return Markup.inlineKeyboard([
+        [Markup.button.url(msg.btn.openWise, LINKS.WISE)],
+        [Markup.button.url(msg.btn.openRemitly, LINKS.REMITLY)],
+        [Markup.button.url(msg.btn.openInstarem, LINKS.INSTAREM)],
+        [Markup.button.callback(msg.btn.seeOnchain, `action:continue_onchain:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.back, `action:back_comparison:${route}:${amount}`)],
+      ]);
+    
+    // Écran 4 : Route on-chain
+    case 'onchain_intro':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback(msg.btn.createEU, 'action:exchanges_eu')],
+        [Markup.button.callback(msg.btn.createBR, 'action:exchanges_br')],
+        [Markup.button.callback(msg.btn.startGuide, `action:start_guide:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.whatIsUSDC, 'action:what_usdc')],
+        [Markup.button.callback(msg.btn.whatIsExchange, 'action:what_exchange')],
+        [Markup.button.callback(msg.btn.proofSources, 'action:proof_sources')],
+        [Markup.button.callback(msg.btn.back, `action:back_comparison:${route}:${amount}`)],
+      ]);
+    
+    // Écran 4bis : Preuves & sources
+    case 'proof_sources':
+      return Markup.inlineKeyboard([
+        [Markup.button.url('🔗 CoinLaw', 'https://coinlaw.io/cryptocurrency-based-remittance-statistics/')],
+        [Markup.button.url('🔗 World Bank', 'https://remittanceprices.worldbank.org/')],
+        [Markup.button.url('🔗 CFA Institute', 'https://blogs.cfainstitute.org/investor/2025/08/27/blockchain-in-fx-and-remittances-from-pilot-to-portfolio-impact/')],
+        [Markup.button.url('🔗 McKinsey', 'https://www.mckinsey.com/industries/financial-services/our-insights/the-stable-door-opens-how-tokenized-cash-enables-next-gen-payments')],
+        [Markup.button.callback(msg.btn.back, 'action:onchain_intro:' + route + ':' + amount)],
+      ]);
+    
+    // Écran 5 : Exchanges Europe
+    case 'exchanges_eu':
+      return Markup.inlineKeyboard([
+        [Markup.button.url(msg.btn.openKraken, LINKS.KRAKEN)],
+        [Markup.button.url(msg.btn.openBinanceEU, LINKS.BINANCE_EU)],
+        [Markup.button.url(msg.btn.openBitvavo, LINKS.BITVAVO)],
+        [Markup.button.url(msg.btn.openBitstamp, LINKS.BITSTAMP)],
+        [Markup.button.url(msg.btn.openCoinbase, LINKS.COINBASE)],
+        [Markup.button.callback(msg.btn.createBR, 'action:exchanges_br')],
+        [Markup.button.callback(msg.btn.startGuide, `action:start_guide:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.back, `action:onchain_intro:${route}:${amount}`)],
+      ]);
+    
+    // Écran 6 : Exchanges Brésil
+    case 'exchanges_br':
+      return Markup.inlineKeyboard([
+        [Markup.button.url(msg.btn.openBinanceBR, LINKS.BINANCE_BR)],
+        [Markup.button.url(msg.btn.openBitso, LINKS.BITSO)],
+        [Markup.button.url(msg.btn.openMercadoBitcoin, LINKS.MERCADO_BITCOIN)],
+        [Markup.button.url(msg.btn.openFoxbit, LINKS.FOXBIT)],
+        [Markup.button.callback(msg.btn.createEU, 'action:exchanges_eu')],
+        [Markup.button.callback(msg.btn.startGuide, `action:start_guide:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.back, `action:onchain_intro:${route}:${amount}`)],
+      ]);
+    
+    // Écrans pédagogiques
+    case 'what_usdc':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback(msg.btn.whatIsExchange, 'action:what_exchange')],
+        [Markup.button.callback(msg.btn.back, `action:onchain_intro:${route}:${amount}`)],
+      ]);
+    
+    case 'what_exchange':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback(msg.btn.whatIsUSDC, 'action:what_usdc')],
+        [Markup.button.callback(msg.btn.back, `action:onchain_intro:${route}:${amount}`)],
+      ]);
+    
+    // Écran 7 : Transition
+    case 'guide_transition':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback(msg.btn.startStep1, `guide:step:1.1:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.back, `action:onchain_intro:${route}:${amount}`)],
+      ]);
+    
+    // Étapes du guide
+    case 'step_1_1':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback(msg.btn.step1Done, `guide:step:1.2:${route}:${amount}`)],
+        [Markup.button.url('🔗 Ouvrir Kraken', LINKS.KRAKEN)],
+        [Markup.button.callback('⏭️ Passer à l\'étape 2', `guide:step:2.1:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.back, `action:start_guide:${route}:${amount}`)],
+      ]);
+    
+    case 'step_1_2':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback(msg.btn.step1_2Done, `guide:step:1.3:${route}:${amount}`)],
+        [Markup.button.callback('⏭️ Passer à l\'étape 2', `guide:step:2.1:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.back, `guide:step:1.1:${route}:${amount}`)],
+      ]);
+    
+    case 'step_1_3':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback(msg.btn.step1_3Done, `guide:step:1.4:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.marketVsLimit, 'action:market_vs_limit')],
+        [Markup.button.callback('⏭️ Passer à l\'étape 2', `guide:step:2.1:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.back, `guide:step:1.2:${route}:${amount}`)],
+      ]);
+    
+    case 'step_1_4':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback(msg.btn.nextStep2, `guide:step:2.1:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.back, `guide:step:1.3:${route}:${amount}`)],
+      ]);
+    
+    case 'step_2_1':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback(msg.btn.step2Done, `guide:step:2.2:${route}:${amount}`)],
+        [Markup.button.url('🔗 Ouvrir Binance BR', LINKS.BINANCE_BR)],
+        [Markup.button.callback('⏭️ Passer à l\'étape 3', `guide:step:3.1:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.back, `guide:step:1.4:${route}:${amount}`)],
+      ]);
+    
+    case 'step_2_2':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback(msg.btn.step2_2Done, `guide:step:2.3:${route}:${amount}`)],
+        [Markup.button.callback('⏭️ Passer à l\'étape 3', `guide:step:3.1:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.back, `guide:step:2.1:${route}:${amount}`)],
+      ]);
+    
+    case 'step_2_3':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback(msg.btn.step2_3Done, `guide:step:2.4:${route}:${amount}`)],
+        [Markup.button.callback('⏭️ Passer à l\'étape 3', `guide:step:3.1:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.back, `guide:step:2.2:${route}:${amount}`)],
+      ]);
+    
+    case 'step_2_4':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback(msg.btn.step3Start, `guide:step:3.1:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.back, `guide:step:2.3:${route}:${amount}`)],
+      ]);
+    
+    case 'step_3_1':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback(msg.btn.step3_1Done, `guide:step:3.2:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.back, `guide:step:2.4:${route}:${amount}`)],
+      ]);
+    
+    case 'step_3_2':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback(msg.btn.step3_2Done, `guide:step:3.3:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.marketVsLimit, 'action:market_vs_limit')],
+        [Markup.button.callback(msg.btn.back, `guide:step:3.1:${route}:${amount}`)],
+      ]);
+    
+    case 'step_3_3':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback(msg.btn.step3_3Done, `guide:step:3.4:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.whyNotExact, 'action:why_not_exact')],
+        [Markup.button.callback(msg.btn.back, `guide:step:3.2:${route}:${amount}`)],
+      ]);
+    
+    case 'step_3_4':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback(msg.btn.setAlert, 'alerts:start')],
+        [Markup.button.callback(msg.btn.premium, 'premium:open')],
+        [Markup.button.callback(msg.btn.giveFeedback, 'action:feedback')],
+        [Markup.button.callback(msg.btn.back, `guide:step:3.3:${route}:${amount}`)],
+      ]);
+    
+    // Écrans info supplémentaires
+    case 'why_not_exact':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback(msg.btn.back, `guide:step:3.3:${route}:${amount}`)],
+      ]);
+    
+    case 'market_vs_limit':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback(msg.btn.back, 'action:back_context')],
       ]);
     
     default:
