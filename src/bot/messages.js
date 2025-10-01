@@ -1,7 +1,7 @@
 import { formatAmount, formatRate } from '../services/rates.js';
 
 // ============================================
-// FRANÇAIS (FR) - VALIDÉ ✅
+// FRANÇAIS (FR) - COMPLET ✅
 // ============================================
 
 const fr = {
@@ -29,7 +29,6 @@ Service gratuit, financé par des liens de parrainage.`,
       ? `🌍 On-chain\n€${formatAmount(amount, 0, locale)} → R$${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`
       : `🌍 On-chain\nR$${formatAmount(amount, 0, locale)} → €${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`;
     
-    // ✅ Gestion du cas où bestBank est null
     let bankLine;
     if (!bestBank) {
       bankLine = `🏦 Meilleur off-chain\n⚠️ Taux indisponible`;
@@ -39,7 +38,6 @@ Service gratuit, financé par des liens de parrainage.`,
         : `🏦 ${bestBank.provider}\nR$${formatAmount(amount, 0, locale)} → €${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`;
     }
     
-    // ✅ Autres providers (tous ceux disponibles, pas juste 2-3)
     let othersText = '';
     if (others.length > 0) {
       const othersList = others.map(p => 
@@ -50,7 +48,6 @@ Service gratuit, financé par des liens de parrainage.`,
       othersText = `\n\nAutres : ${othersList}`;
     }
     
-    // ✅ Delta seulement si on a bestBank
     let deltaText = '';
     if (delta !== null && bestBank) {
       const sign = delta >= 0 ? '+' : '−';
@@ -58,6 +55,70 @@ Service gratuit, financé par des liens de parrainage.`,
     }
     
     return `${title}\n\n${ref}\n\n${onchainLine}\n\n${bankLine}${othersText}${deltaText}`;
+  },
+
+  buildCalcDetails: ({ route, amount, rates, onchain, locale }) => {
+    const title = '🔍 Détails du calcul on-chain';
+    
+    if (route === 'eurbrl') {
+      const { usdcAfterBuy, usdcAfterNetwork, brlAfterTrade, brlNet } = onchain.breakdown;
+      
+      return `${title}
+
+📊 EUR → BRL via USDC
+
+1️⃣ <b>Achat USDC en Europe</b>
+   💰 Montant : €${formatAmount(amount, 2, locale)}
+   📉 Frais trading (~0,1-0,2%) : −€${formatAmount(amount * 0.001, 2, locale)}
+   🪙 USDC obtenus : ${formatAmount(usdcAfterBuy, 2, locale)} USDC
+
+2️⃣ <b>Transfert blockchain</b>
+   🌍 Réseau : Polygon (MATIC)
+   📉 Frais réseau : −${formatAmount(1, 2, locale)} USDC
+   🪙 USDC reçus au Brésil : ${formatAmount(usdcAfterNetwork, 2, locale)} USDC
+
+3️⃣ <b>Vente USDC au Brésil</b>
+   🪙 USDC à vendre : ${formatAmount(usdcAfterNetwork, 2, locale)} USDC
+   💱 Taux USDC/BRL : ${formatRate(rates.usdcBRL, locale)}
+   📉 Frais trading (~0,1-0,2%) : −R$${formatAmount(usdcAfterNetwork * rates.usdcBRL * 0.001, 2, locale)}
+   💰 BRL obtenus : R$${formatAmount(brlAfterTrade, 2, locale)}
+
+4️⃣ <b>Retrait Pix</b>
+   📉 Frais Pix (~R$3,50) : −R$${formatAmount(3.5, 2, locale)}
+   
+✅ <b>Total reçu : R$${formatAmount(brlNet, 2, locale)}</b>
+📊 <b>Taux effectif : ${formatRate(onchain.rate, locale)}</b>
+
+💡 Les frais réels peuvent varier légèrement selon ta plateforme et ton volume de trading.`;
+    } else {
+      // BRL → EUR
+      const { usdcFromBRL, usdcAfterNetwork, eurOut, eurNet } = onchain.breakdown;
+      
+      return `${title}
+
+📊 BRL → EUR via USDC
+
+1️⃣ <b>Achat USDC au Brésil</b>
+   💰 Montant : R$${formatAmount(amount, 2, locale)}
+   💱 Taux BRL/USDC : ${formatRate(1/rates.usdcBRL, locale)}
+   📉 Frais trading (~0,1-0,2%) : −R$${formatAmount(amount * 0.001, 2, locale)}
+   🪙 USDC obtenus : ${formatAmount(usdcFromBRL, 2, locale)} USDC
+
+2️⃣ <b>Transfert blockchain</b>
+   🌍 Réseau : Polygon (MATIC)
+   📉 Frais réseau : −${formatAmount(1, 2, locale)} USDC
+   🪙 USDC reçus en Europe : ${formatAmount(usdcAfterNetwork, 2, locale)} USDC
+
+3️⃣ <b>Vente USDC en Europe</b>
+   🪙 USDC à vendre : ${formatAmount(usdcAfterNetwork, 2, locale)} USDC
+   💱 Taux USDC/EUR : ${formatRate(rates.usdcEUR, locale)}
+   📉 Frais trading (~0,1-0,2%) : −€${formatAmount(usdcAfterNetwork * rates.usdcEUR * 0.001, 2, locale)}
+   
+✅ <b>Total reçu : €${formatAmount(eurNet, 2, locale)}</b>
+📊 <b>Taux effectif : ${formatRate(onchain.rate, locale)}</b>
+
+💡 Les frais réels peuvent varier légèrement selon ta plateforme et ton volume de trading.`;
+    }
   },
 
   SOURCES_TEXT: `📊 Sources des données
@@ -75,39 +136,33 @@ Taux off-chain : API Wise Comparisons (taux live des providers)
 
 Liens de parrainage : gratuits pour toi, financent le service.`,
 
-buildOffChain: ({ route, amount, bestBank, others, locale }) => {
+  buildOffChain: ({ route, amount, bestBank, others, locale }) => {
     const title = '🏦 Off-chain';
     
     if (!bestBank) {
       return `${title}\n\n⚠️ Taux indisponibles pour le moment.`;
     }
     
-    // Format pour afficher les frais
     const formatFee = (fee) => {
       if (fee === null || fee === undefined || fee === 0) return 'Sans frais';
       return route === 'eurbrl' ? `${formatAmount(fee, 2, locale)} EUR` : `${formatAmount(fee, 2, locale)} BRL`;
     };
     
-    // Construire la liste complète : prioritaires + top autres
     const priorityNames = ['Wise', 'PayPal', 'Western Union'];
     const allProviders = [bestBank, ...others];
     
-    // Séparer prioritaires et non-prioritaires
     const priorityProviders = allProviders.filter(p => priorityNames.includes(p.provider));
     const otherProviders = allProviders.filter(p => !priorityNames.includes(p.provider));
     
-    // Prendre top 2-3 des autres (pour avoir max ~6 au total)
     const maxOthers = 6 - priorityProviders.length;
     const topOthers = otherProviders.slice(0, Math.max(2, maxOthers));
     
-    // Combiner et trier par montant reçu
     const displayProviders = [...priorityProviders, ...topOthers]
       .sort((a, b) => b.out - a.out);
     
-    // Formater chaque provider
     const providersList = displayProviders.map((p, i) => {
       if (route === 'eurbrl') {
-        return `<b>${i + 1}. ${p.provider}</b>\n💰 Tu reçois : R${formatAmount(p.out, 2, locale)}\n📊 Taux : ${formatRate(p.rate, locale)}\n💳 Frais : ${formatFee(p.fee)}`;
+        return `<b>${i + 1}. ${p.provider}</b>\n💰 Tu reçois : R$${formatAmount(p.out, 2, locale)}\n📊 Taux : ${formatRate(p.rate, locale)}\n💳 Frais : ${formatFee(p.fee)}`;
       } else {
         return `<b>${i + 1}. ${p.provider}</b>\n💰 Tu reçois : €${formatAmount(p.out, 2, locale)}\n📊 Taux : ${formatRate(p.rate, locale)}\n💳 Frais : ${formatFee(p.fee)}`;
       }
@@ -458,20 +513,101 @@ Serviço gratuito, financiado por links de indicação.`,
   buildComparison: ({ route, amount, rates, onchain, bestBank, others, delta, locale }) => {
     const title = route === 'eurbrl' ? '💱 EUR → BRL' : '💱 BRL → EUR';
     const ref = `📊 Ref. ${formatRate(rates.cross, locale)} • ${new Date().toLocaleTimeString(locale, {hour: '2-digit', minute: '2-digit'})}`;
+    
     const onchainLine = route === 'eurbrl'
-      ? `🌍 On-chain\n€${formatAmount(amount, 0, locale)} → R$${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`
-      : `🌍 On-chain\nR$${formatAmount(amount, 0, locale)} → €${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`;
-    const bankLine = route === 'eurbrl'
-      ? `🏦 ${bestBank.provider}\n€${formatAmount(amount, 0, locale)} → R$${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`
-      : `🏦 ${bestBank.provider}\nR$${formatAmount(amount, 0, locale)} → €${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`;
+      ? `🌍 On-chain\n€${formatAmount(amount, 0, locale)} → R${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`
+      : `🌍 On-chain\nR${formatAmount(amount, 0, locale)} → €${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`;
+    
+    let bankLine;
+    if (!bestBank) {
+      bankLine = `🏦 Melhor off-chain\n⚠️ Taxa indisponível`;
+    } else {
+      bankLine = route === 'eurbrl'
+        ? `🏦 ${bestBank.provider}\n€${formatAmount(amount, 0, locale)} → R${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`
+        : `🏦 ${bestBank.provider}\nR${formatAmount(amount, 0, locale)} → €${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`;
+    }
+    
     let othersText = '';
     if (others.length > 0) {
-      const othersList = others.map(p => route === 'eurbrl' ? `${p.provider} R$${formatAmount(p.out, 0, locale)}` : `${p.provider} €${formatAmount(p.out, 2, locale)}`).join(' • ');
+      const othersList = others.map(p => 
+        route === 'eurbrl' 
+          ? `${p.provider} R${formatAmount(p.out, 0, locale)}` 
+          : `${p.provider} €${formatAmount(p.out, 2, locale)}`
+      ).join(' • ');
       othersText = `\n\nOutros: ${othersList}`;
     }
-    const sign = delta >= 0 ? '+' : '−';
-    const deltaText = `\n\n✅ ${sign}${formatAmount(Math.abs(delta), 1, locale)}% on-chain`;
+    
+    let deltaText = '';
+    if (delta !== null && bestBank) {
+      const sign = delta >= 0 ? '+' : '−';
+      deltaText = `\n\n✅ ${sign}${formatAmount(Math.abs(delta), 1, locale)}% on-chain`;
+    }
+    
     return `${title}\n\n${ref}\n\n${onchainLine}\n\n${bankLine}${othersText}${deltaText}`;
+  },
+
+  buildCalcDetails: ({ route, amount, rates, onchain, locale }) => {
+    const title = '🔍 Detalhes do cálculo on-chain';
+    
+    if (route === 'eurbrl') {
+      const { usdcAfterBuy, usdcAfterNetwork, brlAfterTrade, brlNet } = onchain.breakdown;
+      
+      return `${title}
+
+📊 EUR → BRL via USDC
+
+1️⃣ <b>Compra de USDC na Europa</b>
+   💰 Valor : €${formatAmount(amount, 2, locale)}
+   📉 Taxa de trading (~0,1-0,2%) : −€${formatAmount(amount * 0.001, 2, locale)}
+   🪙 USDC obtidos : ${formatAmount(usdcAfterBuy, 2, locale)} USDC
+
+2️⃣ <b>Transferência blockchain</b>
+   🌍 Rede : Polygon (MATIC)
+   📉 Taxa de rede : −${formatAmount(1, 2, locale)} USDC
+   🪙 USDC recebidos no Brasil : ${formatAmount(usdcAfterNetwork, 2, locale)} USDC
+
+3️⃣ <b>Venda de USDC no Brasil</b>
+   🪙 USDC para vender : ${formatAmount(usdcAfterNetwork, 2, locale)} USDC
+   💱 Taxa USDC/BRL : ${formatRate(rates.usdcBRL, locale)}
+   📉 Taxa de trading (~0,1-0,2%) : −R${formatAmount(usdcAfterNetwork * rates.usdcBRL * 0.001, 2, locale)}
+   💰 BRL obtidos : R${formatAmount(brlAfterTrade, 2, locale)}
+
+4️⃣ <b>Saque Pix</b>
+   📉 Taxa Pix (~R$3,50) : −R${formatAmount(3.5, 2, locale)}
+   
+✅ <b>Total recebido : R${formatAmount(brlNet, 2, locale)}</b>
+📊 <b>Taxa efetiva : ${formatRate(onchain.rate, locale)}</b>
+
+💡 As taxas reais podem variar levemente segundo sua plataforma e seu volume de trading.`;
+    } else {
+      // BRL → EUR
+      const { usdcFromBRL, usdcAfterNetwork, eurOut, eurNet } = onchain.breakdown;
+      
+      return `${title}
+
+📊 BRL → EUR via USDC
+
+1️⃣ <b>Compra de USDC no Brasil</b>
+   💰 Valor : R${formatAmount(amount, 2, locale)}
+   💱 Taxa BRL/USDC : ${formatRate(1/rates.usdcBRL, locale)}
+   📉 Taxa de trading (~0,1-0,2%) : −R${formatAmount(amount * 0.001, 2, locale)}
+   🪙 USDC obtidos : ${formatAmount(usdcFromBRL, 2, locale)} USDC
+
+2️⃣ <b>Transferência blockchain</b>
+   🌍 Rede : Polygon (MATIC)
+   📉 Taxa de rede : −${formatAmount(1, 2, locale)} USDC
+   🪙 USDC recebidos na Europa : ${formatAmount(usdcAfterNetwork, 2, locale)} USDC
+
+3️⃣ <b>Venda de USDC na Europa</b>
+   🪙 USDC para vender : ${formatAmount(usdcAfterNetwork, 2, locale)} USDC
+   💱 Taxa USDC/EUR : ${formatRate(rates.usdcEUR, locale)}
+   📉 Taxa de trading (~0,1-0,2%) : −€${formatAmount(usdcAfterNetwork * rates.usdcEUR * 0.001, 2, locale)}
+   
+✅ <b>Total recebido : €${formatAmount(eurNet, 2, locale)}</b>
+📊 <b>Taxa efetiva : ${formatRate(onchain.rate, locale)}</b>
+
+💡 As taxas reais podem variar levemente segundo sua plataforma e seu volume de trading.`;
+    }
   },
 
   SOURCES_TEXT: `📊 Fontes dos dados
@@ -489,45 +625,39 @@ Taxas off-chain: API Wise Comparisons (taxas ao vivo dos provedores)
 
 Links de indicação: gratuitos para você, financiam o serviço.`,
 
-buildOffChain: ({ route, amount, bestBank, others, locale }) => {
+  buildOffChain: ({ route, amount, bestBank, others, locale }) => {
     const title = '🏦 Off-chain';
     
     if (!bestBank) {
-      return `${title}\n\n⚠️ Taux indisponibles pour le moment.`;
+      return `${title}\n\n⚠️ Taxas indisponíveis no momento.`;
     }
     
-    // Format pour afficher les frais
     const formatFee = (fee) => {
-      if (fee === null || fee === undefined || fee === 0) return 'Sans frais';
+      if (fee === null || fee === undefined || fee === 0) return 'Sem taxas';
       return route === 'eurbrl' ? `${formatAmount(fee, 2, locale)} EUR` : `${formatAmount(fee, 2, locale)} BRL`;
     };
     
-    // Construire la liste complète : prioritaires + top autres
     const priorityNames = ['Wise', 'PayPal', 'Western Union'];
     const allProviders = [bestBank, ...others];
     
-    // Séparer prioritaires et non-prioritaires
     const priorityProviders = allProviders.filter(p => priorityNames.includes(p.provider));
     const otherProviders = allProviders.filter(p => !priorityNames.includes(p.provider));
     
-    // Prendre top 2-3 des autres (pour avoir max ~6 au total)
     const maxOthers = 6 - priorityProviders.length;
     const topOthers = otherProviders.slice(0, Math.max(2, maxOthers));
     
-    // Combiner et trier par montant reçu
     const displayProviders = [...priorityProviders, ...topOthers]
       .sort((a, b) => b.out - a.out);
     
-    // Formater chaque provider
     const providersList = displayProviders.map((p, i) => {
       if (route === 'eurbrl') {
-        return `<b>${i + 1}. ${p.provider}</b>\n💰 Tu reçois : R${formatAmount(p.out, 2, locale)}\n📊 Taux : ${formatRate(p.rate, locale)}\n💳 Frais : ${formatFee(p.fee)}`;
+        return `<b>${i + 1}. ${p.provider}</b>\n💰 Você recebe : R${formatAmount(p.out, 2, locale)}\n📊 Taxa : ${formatRate(p.rate, locale)}\n💳 Taxas : ${formatFee(p.fee)}`;
       } else {
-        return `<b>${i + 1}. ${p.provider}</b>\n💰 Tu reçois : €${formatAmount(p.out, 2, locale)}\n📊 Taux : ${formatRate(p.rate, locale)}\n💳 Frais : ${formatFee(p.fee)}`;
+        return `<b>${i + 1}. ${p.provider}</b>\n💰 Você recebe : €${formatAmount(p.out, 2, locale)}\n📊 Taxa : ${formatRate(p.rate, locale)}\n💳 Taxas : ${formatFee(p.fee)}`;
       }
     }).join('\n\n');
     
-    const footer = `\n\n💡 Généralement un peu plus cher que on-chain, mais certains préfèrent ces solutions pour leur simplicité.\n\n✅ Plateformes régulées et fiables. Si tu n'as pas encore de compte, utilise nos liens de parrainage : c'est gratuit pour toi, ça finance le service (et tu peux même souvent y gagner).\n\n<i>*Données fournies par Wise Comparisons</i>`;
+    const footer = `\n\n💡 Geralmente um pouco mais caro que on-chain, mas alguns preferem essas soluções pela simplicidade.\n\n✅ Plataformas reguladas e confiáveis. Se você ainda não tem conta, use nossos links de indicação: é gratuito para você, financia o serviço (e você pode até ganhar bônus).\n\n<i>*Dados fornecidos por Wise Comparisons</i>`;
     
     return `${title}\n\n${providersList}${footer}`;
   },
@@ -872,20 +1002,101 @@ Free service, funded by referral links.`,
   buildComparison: ({ route, amount, rates, onchain, bestBank, others, delta, locale }) => {
     const title = route === 'eurbrl' ? '💱 EUR → BRL' : '💱 BRL → EUR';
     const ref = `📊 Ref. ${formatRate(rates.cross, locale)} • ${new Date().toLocaleTimeString(locale, {hour: '2-digit', minute: '2-digit'})}`;
+    
     const onchainLine = route === 'eurbrl'
       ? `🌍 On-chain\n€${formatAmount(amount, 0, locale)} → R${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`
       : `🌍 On-chain\nR${formatAmount(amount, 0, locale)} → €${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`;
-    const bankLine = route === 'eurbrl'
-      ? `🏦 ${bestBank.provider}\n€${formatAmount(amount, 0, locale)} → R${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`
-      : `🏦 ${bestBank.provider}\nR${formatAmount(amount, 0, locale)} → €${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`;
+    
+    let bankLine;
+    if (!bestBank) {
+      bankLine = `🏦 Best off-chain\n⚠️ Rate unavailable`;
+    } else {
+      bankLine = route === 'eurbrl'
+        ? `🏦 ${bestBank.provider}\n€${formatAmount(amount, 0, locale)} → R${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`
+        : `🏦 ${bestBank.provider}\nR${formatAmount(amount, 0, locale)} → €${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`;
+    }
+    
     let othersText = '';
     if (others.length > 0) {
-      const othersList = others.map(p => route === 'eurbrl' ? `${p.provider} R${formatAmount(p.out, 0, locale)}` : `${p.provider} €${formatAmount(p.out, 2, locale)}`).join(' • ');
+      const othersList = others.map(p => 
+        route === 'eurbrl' 
+          ? `${p.provider} R${formatAmount(p.out, 0, locale)}` 
+          : `${p.provider} €${formatAmount(p.out, 2, locale)}`
+      ).join(' • ');
       othersText = `\n\nOthers: ${othersList}`;
     }
-    const sign = delta >= 0 ? '+' : '−';
-    const deltaText = `\n\n✅ ${sign}${formatAmount(Math.abs(delta), 1, locale)}% on-chain`;
+    
+    let deltaText = '';
+    if (delta !== null && bestBank) {
+      const sign = delta >= 0 ? '+' : '−';
+      deltaText = `\n\n✅ ${sign}${formatAmount(Math.abs(delta), 1, locale)}% on-chain`;
+    }
+    
     return `${title}\n\n${ref}\n\n${onchainLine}\n\n${bankLine}${othersText}${deltaText}`;
+  },
+
+  buildCalcDetails: ({ route, amount, rates, onchain, locale }) => {
+    const title = '🔍 On-chain calculation details';
+    
+    if (route === 'eurbrl') {
+      const { usdcAfterBuy, usdcAfterNetwork, brlAfterTrade, brlNet } = onchain.breakdown;
+      
+      return `${title}
+
+📊 EUR → BRL via USDC
+
+1️⃣ <b>Buying USDC in Europe</b>
+   💰 Amount: €${formatAmount(amount, 2, locale)}
+   📉 Trading fees (~0.1-0.2%): −€${formatAmount(amount * 0.001, 2, locale)}
+   🪙 USDC obtained: ${formatAmount(usdcAfterBuy, 2, locale)} USDC
+
+2️⃣ <b>Blockchain transfer</b>
+   🌍 Network: Polygon (MATIC)
+   📉 Network fee: −${formatAmount(1, 2, locale)} USDC
+   🪙 USDC received in Brazil: ${formatAmount(usdcAfterNetwork, 2, locale)} USDC
+
+3️⃣ <b>Selling USDC in Brazil</b>
+   🪙 USDC to sell: ${formatAmount(usdcAfterNetwork, 2, locale)} USDC
+   💱 USDC/BRL rate: ${formatRate(rates.usdcBRL, locale)}
+   📉 Trading fees (~0.1-0.2%): −R${formatAmount(usdcAfterNetwork * rates.usdcBRL * 0.001, 2, locale)}
+   💰 BRL obtained: R${formatAmount(brlAfterTrade, 2, locale)}
+
+4️⃣ <b>Pix withdrawal</b>
+   📉 Pix fee (~R$3.50): −R${formatAmount(3.5, 2, locale)}
+   
+✅ <b>Total received: R${formatAmount(brlNet, 2, locale)}</b>
+📊 <b>Effective rate: ${formatRate(onchain.rate, locale)}</b>
+
+💡 Actual fees may vary slightly depending on your platform and trading volume.`;
+    } else {
+      // BRL → EUR
+      const { usdcFromBRL, usdcAfterNetwork, eurOut, eurNet } = onchain.breakdown;
+      
+      return `${title}
+
+📊 BRL → EUR via USDC
+
+1️⃣ <b>Buying USDC in Brazil</b>
+   💰 Amount: R${formatAmount(amount, 2, locale)}
+   💱 BRL/USDC rate: ${formatRate(1/rates.usdcBRL, locale)}
+   📉 Trading fees (~0.1-0.2%): −R${formatAmount(amount * 0.001, 2, locale)}
+   🪙 USDC obtained: ${formatAmount(usdcFromBRL, 2, locale)} USDC
+
+2️⃣ <b>Blockchain transfer</b>
+   🌍 Network: Polygon (MATIC)
+   📉 Network fee: −${formatAmount(1, 2, locale)} USDC
+   🪙 USDC received in Europe: ${formatAmount(usdcAfterNetwork, 2, locale)} USDC
+
+3️⃣ <b>Selling USDC in Europe</b>
+   🪙 USDC to sell: ${formatAmount(usdcAfterNetwork, 2, locale)} USDC
+   💱 USDC/EUR rate: ${formatRate(rates.usdcEUR, locale)}
+   📉 Trading fees (~0.1-0.2%): −€${formatAmount(usdcAfterNetwork * rates.usdcEUR * 0.001, 2, locale)}
+   
+✅ <b>Total received: €${formatAmount(eurNet, 2, locale)}</b>
+📊 <b>Effective rate: ${formatRate(onchain.rate, locale)}</b>
+
+💡 Actual fees may vary slightly depending on your platform and trading volume.`;
+    }
   },
 
   SOURCES_TEXT: `📊 Data sources
@@ -905,14 +1116,39 @@ Referral links: free for you, fund the service.`,
 
   buildOffChain: ({ route, amount, bestBank, others, locale }) => {
     const title = '🏦 Off-chain';
-    const bestLine = route === 'eurbrl'
-      ? `Best: ${bestBank.provider}\n€${formatAmount(amount, 0, locale)} → R${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`
-      : `Best: ${bestBank.provider}\nR${formatAmount(amount, 0, locale)} → €${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`;
-    let othersText = '';
-    if (others.length > 0) {
-      othersText = '\n\nOther options:\n' + others.map(p => route === 'eurbrl' ? `• ${p.provider}: R${formatAmount(p.out, 0, locale)} (${formatRate(p.rate, locale)})` : `• ${p.provider}: €${formatAmount(p.out, 2, locale)} (${formatRate(p.rate, locale)})`).join('\n');
+    
+    if (!bestBank) {
+      return `${title}\n\n⚠️ Rates currently unavailable.`;
     }
-    return `${title}\n\n${bestLine}${othersText}\n\n💡 Usually a bit more expensive than on-chain, but some prefer these solutions for their simplicity.\n\n✅ Regulated and trustworthy platforms. If you don't have an account yet, use our referral links: it's free for you, funds the service (and you might even get bonuses).\n\n*Data provided by Wise Comparisons*`;
+    
+    const formatFee = (fee) => {
+      if (fee === null || fee === undefined || fee === 0) return 'No fees';
+      return route === 'eurbrl' ? `${formatAmount(fee, 2, locale)} EUR` : `${formatAmount(fee, 2, locale)} BRL`;
+    };
+    
+    const priorityNames = ['Wise', 'PayPal', 'Western Union'];
+    const allProviders = [bestBank, ...others];
+    
+    const priorityProviders = allProviders.filter(p => priorityNames.includes(p.provider));
+    const otherProviders = allProviders.filter(p => !priorityNames.includes(p.provider));
+    
+    const maxOthers = 6 - priorityProviders.length;
+    const topOthers = otherProviders.slice(0, Math.max(2, maxOthers));
+    
+    const displayProviders = [...priorityProviders, ...topOthers]
+      .sort((a, b) => b.out - a.out);
+    
+    const providersList = displayProviders.map((p, i) => {
+      if (route === 'eurbrl') {
+        return `<b>${i + 1}. ${p.provider}</b>\n💰 You receive: R${formatAmount(p.out, 2, locale)}\n📊 Rate: ${formatRate(p.rate, locale)}\n💳 Fees: ${formatFee(p.fee)}`;
+      } else {
+        return `<b>${i + 1}. ${p.provider}</b>\n💰 You receive: €${formatAmount(p.out, 2, locale)}\n📊 Rate: ${formatRate(p.rate, locale)}\n💳 Fees: ${formatFee(p.fee)}`;
+      }
+    }).join('\n\n');
+    
+    const footer = `\n\n💡 Usually slightly more expensive than on-chain, but some prefer these solutions for their simplicity.\n\n✅ Regulated and trustworthy platforms. If you don't have an account yet, use our referral links: it's free for you, funds the service (and you might even get bonuses).\n\n<i>*Data provided by Wise Comparisons</i>`;
+    
+    return `${title}\n\n${providersList}${footer}`;
   },
 
   ONCHAIN_INTRO: `🚀 On-Chain Route
