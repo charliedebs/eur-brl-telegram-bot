@@ -502,27 +502,34 @@ buildOffChain: ({ route, amount, bestBank, others, locale }) => {
       return route === 'eurbrl' ? `${formatAmount(fee, 2, locale)} EUR` : `${formatAmount(fee, 2, locale)} BRL`;
     };
     
-    // Meilleur provider avec détails
-    const bestLine = route === 'eurbrl'
-      ? `<b>1. ${bestBank.provider}</b>\n💰 Tu reçois : R$${formatAmount(bestBank.out, 2, locale)}\n📊 Taux : ${formatRate(bestBank.rate, locale)}\n💳 Frais : ${formatFee(bestBank.fee)}`
-      : `<b>1. ${bestBank.provider}</b>\n💰 Tu reçois : €${formatAmount(bestBank.out, 2, locale)}\n📊 Taux : ${formatRate(bestBank.rate, locale)}\n💳 Frais : ${formatFee(bestBank.fee)}`;
+    // Construire la liste complète : prioritaires + top autres
+    const priorityNames = ['Wise', 'PayPal', 'Western Union'];
+    const allProviders = [bestBank, ...others];
     
-    // Top 4 autres (total = 5)
-    let othersText = '';
-    if (others.length > 0) {
-      const top4 = others.slice(0, 4);
-      othersText = '\n\n' + top4.map((p, i) => {
-        if (route === 'eurbrl') {
-          return `<b>${i + 2}. ${p.provider}</b>\n💰 R$${formatAmount(p.out, 2, locale)} • 📊 ${formatRate(p.rate, locale)}\n💳 ${formatFee(p.fee)}`;
-        } else {
-          return `<b>${i + 2}. ${p.provider}</b>\n💰 €${formatAmount(p.out, 2, locale)} • 📊 ${formatRate(p.rate, locale)}\n💳 ${formatFee(p.fee)}`;
-        }
-      }).join('\n\n');
-    }
+    // Séparer prioritaires et non-prioritaires
+    const priorityProviders = allProviders.filter(p => priorityNames.includes(p.provider));
+    const otherProviders = allProviders.filter(p => !priorityNames.includes(p.provider));
+    
+    // Prendre top 2-3 des autres (pour avoir max ~6 au total)
+    const maxOthers = 6 - priorityProviders.length;
+    const topOthers = otherProviders.slice(0, Math.max(2, maxOthers));
+    
+    // Combiner et trier par montant reçu
+    const displayProviders = [...priorityProviders, ...topOthers]
+      .sort((a, b) => b.out - a.out);
+    
+    // Formater chaque provider
+    const providersList = displayProviders.map((p, i) => {
+      if (route === 'eurbrl') {
+        return `<b>${i + 1}. ${p.provider}</b>\n💰 Tu reçois : R${formatAmount(p.out, 2, locale)}\n📊 Taux : ${formatRate(p.rate, locale)}\n💳 Frais : ${formatFee(p.fee)}`;
+      } else {
+        return `<b>${i + 1}. ${p.provider}</b>\n💰 Tu reçois : €${formatAmount(p.out, 2, locale)}\n📊 Taux : ${formatRate(p.rate, locale)}\n💳 Frais : ${formatFee(p.fee)}`;
+      }
+    }).join('\n\n');
     
     const footer = `\n\n💡 Généralement un peu plus cher que on-chain, mais certains préfèrent ces solutions pour leur simplicité.\n\n✅ Plateformes régulées et fiables. Si tu n'as pas encore de compte, utilise nos liens de parrainage : c'est gratuit pour toi, ça finance le service (et tu peux même souvent y gagner).\n\n<i>*Données fournies par Wise Comparisons</i>`;
     
-    return `${title}\n\n${bestLine}${othersText}${footer}`;
+    return `${title}\n\n${providersList}${footer}`;
   },
 
   ONCHAIN_INTRO: `🚀 Rota On-Chain
