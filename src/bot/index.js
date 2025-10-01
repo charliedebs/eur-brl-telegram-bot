@@ -2,7 +2,7 @@ import { Telegraf } from 'telegraf';
 import { messages } from './messages.js';
 import { buildKeyboards } from './keyboards.js';
 import { getRates, calculateOnChain, getLocale } from '../services/rates.js';
-import { getWiseComparison, getWiseFallback } from '../services/wise.js';
+import { getWiseComparison } from '../services/wise.js';
 import { AlertsService } from '../services/alerts.js';
 import { DatabaseService } from '../services/database.js';
 
@@ -113,44 +113,53 @@ bot.action(/^route:(eurbrl|brleur):(\d+)$/, async (ctx) => {
 
 // Show comparison
 async function showComparison(ctx, route, amount) {
-  const msg = getMsg(ctx);
-  const locale = getLocale(ctx.state.lang);
-  
-  const [rates, wiseData] = await Promise.all([
-    getRates(),
-    getWiseComparison(route, amount)
-  ]);
-  
-  if (!rates) {
-    await ctx.reply("⚠️ Taux indisponibles. Réessaie dans un instant.");
-    return;
+    const msg = getMsg(ctx);
+    const locale = getLocale(ctx.state.lang);
+    
+    const [rates, wiseData] = await Promise.all([
+      getRates(),
+      getWiseComparison(route, amount)
+    ]);
+    
+    if (!rates) {
+      await ctx.reply("⚠️ Taux crypto indisponibles. Réessaie dans un instant.");
+      return;
+    }
+    
+    const onchain = calculateOnChain(route, amount, rates);
+    
+    // Si pas de données Wise, on affiche "indisponible"
+    const bestBank = wiseData?.providers?.[0] || null;
+    const others = wiseData?.providers?.slice(1) || []; // Tous les autres pour passer à buildComparison
+    
+    let delta = null;
+    let winner = 'on-chain';
+    
+    if (bestBank) {
+      delta = ((onchain.out - bestBank.out) / bestBank.out) * 100;
+      winner = delta >= 0 ? 'on-chain' : bestBank.provider;
+    }
+    
+    const text = msg.buildComparison({
+      route,
+      amount,
+      rates,
+      onchain,
+      bestBank, // peut être null
+      others, // buildComparison prendra juste les 2 premiers
+      delta,
+      winner,
+      locale
+    });
+    
+    const kb = buildKeyboards(msg, 'comparison', { route, amount, locale });
+    
+    if (ctx.callbackQuery) {
+      await ctx.editMessageText(text, { parse_mode: 'HTML', ...kb });
+    } else {
+      await ctx.reply(text, { parse_mode: 'HTML', ...kb });
+    }
   }
-  
-  const onchain = calculateOnChain(route, amount, rates);
-  const bestBank = wiseData?.providers?.[0] || getWiseFallback(route, amount, rates.cross).providers[0];
-  const delta = ((onchain.out - bestBank.out) / bestBank.out) * 100;
-  const winner = delta >= 0 ? 'on-chain' : bestBank.provider;
-  
-  const text = msg.buildComparison({
-    route,
-    amount,
-    rates,
-    onchain,
-    bestBank,
-    others: wiseData?.providers?.slice(1, 3) || [],
-    delta,
-    winner,
-    locale
-  });
-  
-  const kb = buildKeyboards(msg, 'comparison', { route, amount, locale });
-  
-  if (ctx.callbackQuery) {
-    await ctx.editMessageText(text, { parse_mode: 'HTML', ...kb });
-  } else {
-    await ctx.reply(text, { parse_mode: 'HTML', ...kb });
-  }
-}
 
 // Sources
 bot.action('action:sources', async (ctx) => {
@@ -167,37 +176,67 @@ bot.action(/^action:back_comparison:(.+):(\d+)$/, async (ctx) => {
   await ctx.answerCbQuery();
 });
 
-// Stay off-chain
-bot.action(/^action:stay_offchain:(.+):(\d+)$/, async (ctx) => {
-  const route = ctx.match[1];
-  const amount = parseFloat(ctx.match[2]);
-  const msg = getMsg(ctx);
-  const locale = getLocale(ctx.state.lang);
-  
-  const [rates, wiseData] = await Promise.all([
-    getRates(),
-    getWiseComparison(route, amount)
-  ]);
-  
-  if (!rates) {
-    await ctx.reply("⚠️ Taux indisponibles.");
+// Calc details - nouveau handler
+bot.action(/^action:calc_details:(.+):(\d+)$/, async (ctx) => {
+    const route = ctx.match[1];
+    const amount = parseFloat(ctx.match[2]);
+    const msg = getMsg(ctx);
+    const locale = getLocale(ctx.state.lang);
+    
+    const rates = await getRates();
+    if (!rates) {
+      await ctx.reply("⚠️ Taux indisponibles.");
+      await ctx.answerCbQuery();
+      return;
+    }
+    
+    const onchain = calculateOnChain(route, amount, rates);
+    const text = msg.buildCalcDetails({ route, amount, rates, onchain, locale });
+    
+    const kb = Markup.inlineKeyboard([
+      [Markup.button.callback(msg.btn.back, `action:back_comparison:${route}:${amount}`)]
+    ]);
+    
+    await ctx.editMessageText(text, { parse_mode: 'HTML', ...kb });
     await ctx.answerCbQuery();
-    return;
-  }
-  
-  const bestBank = wiseData?.providers?.[0] || getWiseFallback(route, amount, rates.cross).providers[0];
-  const text = msg.buildOffChain({
-    route,
-    amount,
-    bestBank,
-    others: wiseData?.providers?.slice(1, 3) || [],
-    locale
   });
   
-  const kb = buildKeyboards(msg, 'offchain', { route, amount, locale });
-  await ctx.editMessageText(text, { parse_mode: 'HTML', ...kb });
-  await ctx.answerCbQuery();
-});
+  // Stay off-chain - modifié pour passer providers
+  bot.action(/^action:stay_offchain:(.+):(\d+)$/, async (ctx) => {
+    const route = ctx.match[1];
+    const amount = parseFloat(ctx.match[2]);
+    const msg = getMsg(ctx);
+    const locale = getLocale(ctx.state.lang);
+    
+    const [rates, wiseData] = await Promise.all([
+      getRates(),
+      getWiseComparison(route, amount)
+    ]);
+    
+    if (!rates) {
+      await ctx.reply("⚠️ Taux indisponibles.");
+      await ctx.answerCbQuery();
+      return;
+    }
+    
+    const bestBank = wiseData?.providers?.[0] || null;
+    const others = wiseData?.providers?.slice(1) || [];
+    
+    const text = msg.buildOffChain({
+      route,
+      amount,
+      bestBank,
+      others,
+      locale
+    });
+    
+    // Passer les providers pour les boutons dynamiques
+    const displayProviders = wiseData?.providers || [];
+    const kb = buildKeyboards(msg, 'offchain', { route, amount, locale, providers: displayProviders });
+    
+    await ctx.editMessageText(text, { parse_mode: 'HTML', ...kb });
+    await ctx.answerCbQuery();
+  });
 
 // Continue on-chain
 bot.action(/^action:continue_onchain:(.+):(\d+)$/, async (ctx) => {

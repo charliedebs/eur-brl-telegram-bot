@@ -1,5 +1,5 @@
 import { Markup } from 'telegraf';
-import { DEFAULTS, LINKS } from '../config/constants.js';
+import { DEFAULTS, LINKS, PROVIDER_LINKS } from '../config/constants.js';
 
 export function buildKeyboards(msg, type, options = {}) {
   const { route = 'eurbrl', amount = DEFAULTS.EUR, alerts = [] } = options;
@@ -41,6 +41,7 @@ export function buildKeyboards(msg, type, options = {}) {
     case 'comparison':
       return Markup.inlineKeyboard([
         [Markup.button.callback(msg.btn.contOn, `action:continue_onchain:${route}:${amount}`)],
+        [Markup.button.callback('🔍 Détails du calcul', `action:calc_details:${route}:${amount}`)],
         [Markup.button.callback(msg.btn.stayOff, `action:stay_offchain:${route}:${amount}`)],
         [Markup.button.callback(msg.btn.change, `action:change_amount:${route}`)],
         [Markup.button.callback(msg.btn.sources, 'action:sources')],
@@ -54,13 +55,20 @@ export function buildKeyboards(msg, type, options = {}) {
     
     // Écran 3 : Off-chain
     case 'offchain':
-      return Markup.inlineKeyboard([
-        [Markup.button.url(msg.btn.openWise, LINKS.WISE)],
-        [Markup.button.url(msg.btn.openRemitly, LINKS.REMITLY)],
-        [Markup.button.url(msg.btn.openInstarem, LINKS.INSTAREM)],
-        [Markup.button.callback(msg.btn.seeOnchain, `action:continue_onchain:${route}:${amount}`)],
-        [Markup.button.callback(msg.btn.back, `action:back_comparison:${route}:${amount}`)],
-      ]);
+          // Récupérer les providers disponibles depuis les options
+  const { providers = [] } = options;
+  
+  // Créer les boutons pour chaque provider
+  const providerButtons = providers.map(provider => {
+    const link = PROVIDER_LINKS[provider.provider] || '#';
+    const emoji = provider.provider === 'Wise' ? '⭐' : '🔗';
+    return [Markup.button.url(`${emoji} Ouvrir ${provider.provider}`, link)];
+  });
+  return Markup.inlineKeyboard([
+    ...providerButtons,
+    [Markup.button.callback(msg.btn.seeOnchain, `action:continue_onchain:${route}:${amount}`)],
+    [Markup.button.callback(msg.btn.back, `action:back_comparison:${route}:${amount}`)],
+  ]);
     
     // Écran 4 : Route on-chain
     case 'onchain_intro':

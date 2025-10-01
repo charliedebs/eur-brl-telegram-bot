@@ -43,3 +43,14 @@ export const LINKS = {
   
   // Providers to show in comparisons
   export const PROVIDERS = ['Wise', 'Remitly', 'Instarem'];
+
+  export const PROVIDER_LINKS = {
+    'Wise': 'https://wise.com/invite/dic/charlied197', // ✅ Parrainage
+    'Remitly': 'https://www.remitly.com/', // TODO: Ajouter parrainage
+    'Instarem': 'https://www.instarem.com/', // TODO: Ajouter parrainage
+    'PayPal': 'https://www.paypal.com/', // TODO: Vérifier si parrainage existe
+    'Western Union': 'https://www.westernunion.com/', // TODO: Ajouter parrainage
+    'Skrill': 'https://www.skrill.com/',
+    'BNP Paribas': 'https://mabanque.bnpparibas/',
+    'OFX': 'https://www.ofx.com/',
+  };
