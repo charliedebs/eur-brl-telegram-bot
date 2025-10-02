@@ -1,6 +1,7 @@
 import { Telegraf, Markup, session } from 'telegraf';
 import { messages } from './messages.js';
 import { buildKeyboards } from './keyboards.js';
+import { updateNLUFeedback } from '../services/nlu-logger.js';
 import { getRates, calculateOnChain, getLocale, formatAmount } from '../services/rates.js';
 import { getWiseComparison } from '../services/wise.js';
 import { AlertsService } from '../services/alerts.js';
@@ -385,122 +386,267 @@ bot.action(/^action:change_amount:(.+)$/, async (ctx) => {
 });
 
 // ==================== TEXT HANDLER WITH NLU ====================
+// ==================== TEXT HANDLER WITH NLU + CONFIRMATION + FEEDBACK ====================
 
 bot.on('text', async (ctx) => {
-  try {
-    const text = ctx.message.text;
-    const msg = getMsg(ctx);
-    const locale = getLocale(ctx.state.lang);
-    
-    // Skip si commande
-    if (text.startsWith('/')) return;
-    
-    // ✅ PRIORITÉ 1: Si on attend un montant spécifique
-    if (ctx.session?.awaitingAmount) {
-      const amount = parseAmount(text);
-      if (amount) {
-        await showComparison(ctx, ctx.session.awaitingAmount, amount);
-        delete ctx.session.awaitingAmount;
-      } else {
-        await ctx.reply("⚠️ Montant invalide. Entre un nombre (ex. 1000)");
+    try {
+      const text = ctx.message.text;
+      const msg = getMsg(ctx);
+      const locale = getLocale(ctx.state.lang);
+      
+      // Skip si commande
+      if (text.startsWith('/')) return;
+      
+      // ✅ PRIORITÉ 1: Si on attend un montant spécifique
+      if (ctx.session?.awaitingAmount) {
+        const amount = parseAmount(text);
+        if (amount) {
+          await showComparison(ctx, ctx.session.awaitingAmount, amount);
+          delete ctx.session.awaitingAmount;
+        } else {
+          await ctx.reply("⚠️ Montant invalide. Entre un nombre (ex. 1000)");
+        }
+        return;
       }
-      return;
-    }
-    
-    // ✅ PRIORITÉ 2: Utiliser l'IA avec contexte
-    console.log('[BOT] Analyzing with NLU:', text);
-    
-    // Initialise la session si nécessaire
-    if (!ctx.session) {
-      ctx.session = {};
-    }
-    if (!ctx.session.messageHistory) {
-      ctx.session.messageHistory = [];
-    }
-    
-    const context = {
-      language: ctx.state.lang,
-      history: ctx.session.messageHistory.slice(-3)
-    };
-    
-    const intent = await parseUserIntent(text, context);
-    console.log('[BOT] NLU result:', intent);
-    
-    // Sauvegarde dans l'historique
-    ctx.session.messageHistory.push(text);
-    if (ctx.session.messageHistory.length > 5) {
-      ctx.session.messageHistory.shift();
-    }
-    
-    // Traite selon l'intention
-    switch (intent.intent) {
-      case 'greeting':
-        // Détecte et met à jour la langue si différente
-        // Mais si c'est "hello/hi/hey" (universel), on garde la langue du profil
-        const universalGreetings = ['hello', 'hi', 'hey'];
-        const shouldUpdateLang = intent.entities.language 
-          && intent.entities.language !== ctx.state.lang
-          && !universalGreetings.includes(text.toLowerCase().trim());
+      
+      // Initialise la session si nécessaire
+      if (!ctx.session) {
+        ctx.session = {};
+      }
+      if (!ctx.session.messageHistory) {
+        ctx.session.messageHistory = [];
+      }
+      
+      // Context pour l'IA (avec userId pour logging)
+      const context = {
+        userId: ctx.state.user?.id,
+        language: ctx.state.lang,
+        history: ctx.session.messageHistory.slice(-3)
+      };
+      
+      console.log('[BOT] 🤖 Analyzing:', text);
+      
+      // ✅ PRIORITÉ 2: Parse avec NLU (patterns + IA)
+      let intent;
+      let aiSuccess = false;
+      
+      try {
+        const aiPromise = parseUserIntent(text, context);
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('AI timeout')), 5000)
+        );
         
-        if (shouldUpdateLang) {
-          await db.updateUser(ctx.from.id, { language: intent.entities.language });
-          ctx.state.lang = intent.entities.language;
-        }
+        intent = await Promise.race([aiPromise, timeoutPromise]);
+        aiSuccess = !intent.error;
         
-        const greetingKb = buildKeyboards(messages[ctx.state.lang], 'lang_select');
-        return ctx.reply(messages[ctx.state.lang].INTRO_TEXT, { parse_mode: 'HTML', ...greetingKb });
+        console.log('[BOT] ✅ Result:', intent);
+      } catch (error) {
+        console.warn('[BOT] ⚠️ NLU failed, using manual parsing:', error.message);
         
-      case 'compare':
-        // Cas 1: montant + route → affiche direct
-        if (intent.entities.amount && intent.entities.route) {
-          return showComparison(ctx, intent.entities.route, intent.entities.amount);
-        }
-        
-        // Cas 2: juste montant → demande route
-        if (intent.entities.amount) {
-          const kb = buildKeyboards(msg, 'route_choice', { amount: intent.entities.amount, locale });
-          return ctx.reply(msg.askRoute(intent.entities.amount, locale), { parse_mode: 'HTML', ...kb });
-        }
-        
-        // Cas 3: juste route → demande montant en mode attente
-        if (intent.entities.route) {
-          ctx.session.awaitingAmount = intent.entities.route;
-          const routeText = intent.entities.route === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
-          return ctx.reply(`✏️ ${routeText}\n\nEntre un montant (ex. 1000)`);
-        }
-        
-        // Cas 4: rien → menu principal
-        const kb = buildKeyboards(msg, 'main', { locale });
-        return ctx.reply(msg.promptAmt, { parse_mode: 'HTML', ...kb });
-        
-      case 'help':
-        return ctx.reply(msg.ABOUT_TEXT, { parse_mode: 'HTML' });
-        
-      case 'about':
-        const aboutKb = buildKeyboards(msg, 'about');
-        return ctx.reply(msg.ABOUT_TEXT, { parse_mode: 'HTML', ...aboutKb });
-        
-      case 'unknown':
-      default:
-        // Fallback: essaie parsing manuel
         const amount = parseAmount(text);
         const route = detectRoute(text);
         
-        if (amount && route) {
-          return showComparison(ctx, route, amount);
-        } else if (amount) {
-          const kb = buildKeyboards(msg, 'route_choice', { amount, locale });
-          return ctx.reply(msg.askRoute(amount, locale), { parse_mode: 'HTML', ...kb });
-        } else {
-          const kb = buildKeyboards(msg, 'main', { locale });
-          return ctx.reply(msg.promptAmt, { parse_mode: 'HTML', ...kb });
-        }
+        intent = {
+          intent: amount || route ? 'compare' : 'unknown',
+          entities: {
+            amount,
+            route,
+            language: ctx.state.lang
+          },
+          confidence: amount ? 0.7 : 0.3,
+          fallback: true
+        };
+      }
+      
+      // Sauvegarde message dans historique
+      ctx.session.messageHistory.push(text);
+      if (ctx.session.messageHistory.length > 5) {
+        ctx.session.messageHistory.shift();
+      }
+      
+      // Sauvegarde pour feedback
+      ctx.session.lastMessage = text;
+      ctx.session.lastIntent = intent.intent;
+      
+      // 🎯 Traite selon l'intention
+      switch (intent.intent) {
+        case 'greeting':
+          // Changement de langue si détecté
+          const universalGreetings = ['hello', 'hi', 'hey'];
+          const shouldUpdateLang = intent.entities.language 
+            && intent.entities.language !== ctx.state.lang
+            && !universalGreetings.includes(text.toLowerCase().trim());
+          
+          if (shouldUpdateLang) {
+            await db.updateUser(ctx.from.id, { language: intent.entities.language });
+            ctx.state.lang = intent.entities.language;
+          }
+          
+          const greetingKb = buildKeyboards(messages[ctx.state.lang], 'lang_select');
+          return ctx.reply(messages[ctx.state.lang].INTRO_TEXT, { parse_mode: 'HTML', ...greetingKb });
+          
+        case 'compare':
+          // 🌐 Changement de langue avec inertie
+          let shouldSwitchLanguage = false;
+          
+          if (intent.entities.language && intent.entities.language !== ctx.state.lang) {
+            const isFirstMessage = ctx.session.messageHistory.length <= 1;
+            const isHighConfidence = intent.confidence >= 0.85;
+            
+            shouldSwitchLanguage = isFirstMessage || isHighConfidence;
+            
+            if (shouldSwitchLanguage) {
+              console.log(`[BOT] 🌍 Language switch: ${ctx.state.lang} → ${intent.entities.language}`);
+              await db.updateUser(ctx.from.id, { language: intent.entities.language });
+              ctx.state.lang = intent.entities.language;
+            } else {
+              console.log(`[BOT] 🔒 Language switch blocked (low confidence: ${intent.confidence})`);
+            }
+          }
+          
+          const currentMsg = getMsg(ctx);
+          const currentLocale = getLocale(ctx.state.lang);
+          
+          // 🔍 SI CONFIDENCE BASSE OU ROUTE MANQUANTE → CONFIRMATION
+          if ((intent.confidence < 0.8 || !intent.entities.route) && intent.entities.amount) {
+            const amount = intent.entities.amount;
+            const kb = buildKeyboards(currentMsg, 'route_choice', { amount, locale: currentLocale });
+            
+            const confirmMessages = {
+              fr: `Je veux être sûr de bien comprendre :\n\nTu veux faire quoi avec ${formatAmount(amount, 0, currentLocale)} ?`,
+              pt: `Quero ter certeza de que entendi:\n\nO que você quer fazer com ${formatAmount(amount, 0, currentLocale)}?`,
+              en: `I want to make sure I understand:\n\nWhat do you want to do with ${formatAmount(amount, 0, currentLocale)}?`
+            };
+            
+            return ctx.reply(
+              confirmMessages[ctx.state.lang] || confirmMessages.fr,
+              { parse_mode: 'HTML', ...kb }
+            );
+          }
+          
+          // Cas 1: montant + route → affiche direct
+          if (intent.entities.amount && intent.entities.route) {
+            return showComparison(ctx, intent.entities.route, intent.entities.amount);
+          }
+          
+          // Cas 2: juste montant → demande route
+          if (intent.entities.amount) {
+            const kb = buildKeyboards(currentMsg, 'route_choice', { amount: intent.entities.amount, locale: currentLocale });
+            return ctx.reply(currentMsg.askRoute(intent.entities.amount, currentLocale), { parse_mode: 'HTML', ...kb });
+          }
+          
+          // Cas 3: juste route → demande montant
+          if (intent.entities.route) {
+            ctx.session.awaitingAmount = intent.entities.route;
+            const routeText = intent.entities.route === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+            return ctx.reply(`✏️ ${routeText}\n\n${currentMsg.askAmount || 'Enter amount (e.g. 1000)'}`, { parse_mode: 'HTML' });
+          }
+          
+          // Cas 4: rien de clair → menu principal
+          const kb = buildKeyboards(currentMsg, 'main', { locale: currentLocale });
+          
+          const fallbackMessages = {
+            fr: `😊 Je n'ai pas bien compris, mais pas de souci !\n\n${currentMsg.promptAmt}`,
+            pt: `😊 Não entendi bem, mas tudo bem!\n\n${currentMsg.promptAmt}`,
+            en: `😊 I didn't quite understand, but no worries!\n\n${currentMsg.promptAmt}`
+          };
+          
+          return ctx.reply(
+            intent.fallback ? fallbackMessages[ctx.state.lang] : currentMsg.promptAmt,
+            { parse_mode: 'HTML', ...kb }
+          );
+          
+        case 'help':
+          return ctx.reply(currentMsg.ABOUT_TEXT, { parse_mode: 'HTML' });
+          
+        case 'about':
+          const aboutKb = buildKeyboards(currentMsg, 'about');
+          return ctx.reply(currentMsg.ABOUT_TEXT, { parse_mode: 'HTML', ...aboutKb });
+          
+        case 'unknown':
+        default:
+          // Dernier fallback : parsing manuel
+          const amount = parseAmount(text);
+          const route = detectRoute(text);
+          
+          if (amount && route) {
+            return showComparison(ctx, route, amount);
+          } else if (amount) {
+            const kb = buildKeyboards(msg, 'route_choice', { amount, locale });
+            return ctx.reply(msg.askRoute(amount, locale), { parse_mode: 'HTML', ...kb });
+          } else {
+            const kb = buildKeyboards(msg, 'main', { locale });
+            
+            const unknownMessages = {
+              fr: `😊 Je n'ai pas compris ton message, mais ce n'est pas grave !\n\nUtilise les boutons ci-dessous, c'est plus simple 👇`,
+              pt: `😊 Não entendi sua mensagem, mas tudo bem!\n\nUse os botões abaixo, é mais fácil 👇`,
+              en: `😊 I didn't understand your message, but that's okay!\n\nUse the buttons below, it's easier 👇`
+            };
+            
+            return ctx.reply(
+              unknownMessages[ctx.state.lang] || unknownMessages.fr,
+              { parse_mode: 'HTML', ...kb }
+            );
+          }
+      }
+    } catch (error) {
+      console.error('[BOT] 💥 Critical error:', error);
+      
+      const emergencyMessages = {
+        fr: `😅 Oups, un petit bug ! Mais tout va bien.\n\nUtilise /start pour recommencer proprement.`,
+        pt: `😅 Ops, um pequeno erro! Mas está tudo bem.\n\nUse /start para recomeçar corretamente.`,
+        en: `😅 Oops, a small bug! But everything's fine.\n\nUse /start to restart properly.`
+      };
+      
+      const lang = ctx.state?.lang || 'fr';
+      await ctx.reply(emergencyMessages[lang]);
     }
-  } catch (error) {
-    console.error('[BOT] Error in text handler:', error);
-    await ctx.reply("❌ Une erreur est survenue. Réessaie ou utilise /start");
-  }
-});
+  });
+  
+  // ==================== FEEDBACK BUTTONS ====================
+  
+  // Ajoute ces handlers pour les boutons de feedback
+  bot.action('feedback:correct', async (ctx) => {
+    await ctx.answerCbQuery('👍 Merci !');
+    
+    // Log feedback positif
+    if (ctx.session?.lastMessage && ctx.state.user) {
+      await updateNLUFeedback(
+        ctx.state.user.id,
+        ctx.session.lastMessage,
+        'correct'
+      );
+    }
+  });
+  
+  bot.action('feedback:wrong', async (ctx) => {
+    await ctx.answerCbQuery();
+    
+    const msg = getMsg(ctx);
+    const locale = getLocale(ctx.state.lang);
+    
+    // Log feedback négatif
+    if (ctx.session?.lastMessage && ctx.state.user) {
+      await updateNLUFeedback(
+        ctx.state.user.id,
+        ctx.session.lastMessage,
+        'wrong'
+      );
+    }
+    
+    // Propose les bonnes options
+    const wrongMessages = {
+      fr: `Désolé ! Qu'est-ce que tu voulais faire ?`,
+      pt: `Desculpe! O que você queria fazer?`,
+      en: `Sorry! What did you want to do?`
+    };
+    
+    const kb = buildKeyboards(msg, 'main', { locale });
+    return ctx.editMessageText(
+      wrongMessages[ctx.state.lang] || wrongMessages.fr,
+      { parse_mode: 'HTML', ...kb }
+    );
+  });
 
 // Alerts
 bot.action(/^alerts:start/, async (ctx) => {

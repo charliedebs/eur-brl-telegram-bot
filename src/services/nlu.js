@@ -1,8 +1,87 @@
 import OpenAI from 'openai';
+import { logNLUResult } from './nlu-logger.js';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
+
+// ============================================
+// PATTERNS REGEX (pas besoin d'IA pour ça)
+// ============================================
+
+const OBVIOUS_PATTERNS = [
+  // EUR → BRL
+  { 
+    regex: /^(\d+(?:[.,]\d+)?)\s*€?\s*(?:to|→|vers|para|em)\s*(?:brl|reais?)/i,
+    route: 'eurbrl',
+    confidence: 0.95
+  },
+  {
+    regex: /^€?\s*(\d+(?:[.,]\d+)?)\s*(?:to|→|vers|para|em)\s*(?:brl|reais?)/i,
+    route: 'eurbrl',
+    confidence: 0.95
+  },
+  {
+    regex: /^(\d+(?:[.,]\d+)?)\s*(?:euros?|eur)\s*(?:to|→|vers|para|em)\s*(?:brl|reais?)/i,
+    route: 'eurbrl',
+    confidence: 0.95
+  },
+  
+  // BRL → EUR
+  {
+    regex: /^(\d+(?:[.,]\d+)?)\s*(?:r\$|reais?)\s*(?:to|→|vers|para|em)\s*(?:eur|euros?)/i,
+    route: 'brleur',
+    confidence: 0.95
+  },
+  {
+    regex: /^r\$?\s*(\d+(?:[.,]\d+)?)\s*(?:to|→|vers|para|em)\s*(?:eur|euros?)/i,
+    route: 'brleur',
+    confidence: 0.95
+  },
+  
+  // Juste montant avec symbole
+  {
+    regex: /^€?\s*(\d+(?:[.,]\d+)?)\s*€?$/i,
+    route: 'eurbrl',
+    confidence: 0.8
+  },
+  {
+    regex: /^r\$?\s*(\d+(?:[.,]\d+)?)\s*(?:reais?)?$/i,
+    route: 'brleur',
+    confidence: 0.8
+  }
+];
+
+function tryPatternMatch(text) {
+  const cleaned = text.trim();
+  
+  for (const pattern of OBVIOUS_PATTERNS) {
+    const match = cleaned.match(pattern.regex);
+    if (match) {
+      const amountStr = match[1].replace(',', '.');
+      const amount = parseFloat(amountStr);
+      
+      if (isFinite(amount) && amount > 0) {
+        return {
+          intent: 'compare',
+          entities: {
+            amount,
+            route: pattern.route,
+            language: null // Pas assez d'info pour langue
+          },
+          confidence: pattern.confidence,
+          source: 'regex'
+        };
+      }
+    }
+  }
+  
+  return null;
+}
+
+// ============================================
+// PROMPT SYSTÈME
+// ============================================
 
 const SYSTEM_PROMPT = `Tu es un assistant qui analyse les messages d'un bot de change EUR↔BRL.
 
@@ -16,75 +95,94 @@ Format:
   "entities": {
     "amount": number ou null,
     "route": "eurbrl|brleur" ou null,
-    "language": "fr|pt|en" (OBLIGATOIRE si détectable)
+    "language": "fr|pt|en" ou null
   },
   "confidence": 0-1
 }
 
-RÈGLES STRICTES pour la LANGUE:
-- Mots français (je, veux, changer, euros, combien, pour) → language = "fr"
-- Mots portugais (oi, quero, trocar, quanto, custa, reais) → language = "pt"  
-- Mots anglais (want, change, convert, how much) → language = "en"
-- TOUJOURS inclure "language" si tu détectes ne serait-ce qu'un seul mot dans une langue
-- Si plusieurs langues, prends celle dominante
+RÈGLES CRITIQUES pour LANGUE:
 
-RÈGLES pour ROUTE (direction du change):
-1. Cas standard:
-   - "euros en/vers/para reais" → route = "eurbrl"
-   - "reais en/vers/para euros" → route = "brleur"
+**Indicateurs PORTUGAIS (forte confiance):**
+- Verbes: quero, queria, gostaria, posso, preciso, vou, tenho, estou
+- Mots question: quanto, como, onde, quando, que, qual
+- Pronoms: eu, você, meu, minha
+- Connecteurs: mas, porque, então, também
 
-2. Cas "acheter/obtenir/recevoir X":
-   - "acheter/obtenir/recevoir X EUROS" → route = "brleur" (je vends BRL pour obtenir EUR)
-   - "acheter/obtenir/recevoir X REAIS" → route = "eurbrl" (je vends EUR pour obtenir BRL)
-   - "comprar/obter/receber X EUROS" → route = "brleur"
-   - "comprar/obter/receber X REAIS" → route = "eurbrl"
+**Indicateurs FRANÇAIS (forte confiance):**
+- Verbes: veux, voudrais, peux, dois, vais, suis, sais
+- Mots question: combien, comment, où, quand, que, quel
+- Articles: le, la, les, un, une, des
+- Pronoms: je, tu, mon, ma
+- Connecteurs: mais, parce que, donc, aussi
 
-3. Cas "vendre X":
-   - "vendre/vender X EUROS" → route = "eurbrl" (je vends EUR pour obtenir BRL)
-   - "vendre/vender X REAIS" → route = "brleur" (je vends BRL pour obtenir EUR)
+**Indicateurs ANGLAIS (forte confiance):**
+- Verbes: want, would, can, should, will, am
+- Mots question: how much, how, where, when, what
+- Articles: the, a, an
+- Pronoms: I, you, my
+- Connecteurs: but, because, so, also
 
-4. Si seulement "X euros" ou "X reais" sans contexte → route = null
+**IMPORTANT - Ce qui N'est PAS un indicateur:**
+- ❌ Devises: €, R$, EUR, BRL
+- ❌ Chiffres: 1000, 5000
+- ❌ Noms propres: Wise, Kraken
+
+**RÈGLES:**
+1. Minimum 2 indicateurs forts pour détecter langue
+2. Si < 2 indicateurs → language = null
+3. En cas d'égalité → language = null
+
+RÈGLES pour ROUTE:
+1. "change/trocar X REAIS" → brleur (possède reais)
+2. "change/trocar X EUROS" → eurbrl (possède euros)
+3. "acheter/comprar X EUROS" → brleur (veut euros)
+4. "acheter/comprar X REAIS" → eurbrl (veut reais)
 
 RÈGLES pour INTENT:
-- greeting = salutations (oi, olá, salut, bonjour, hello, hey, bom dia, boa tarde, boa noite, hi)
-- compare = toute demande de conversion/comparaison/change (même partielle)
-- help = demande d'aide explicite (aide, ajuda, help, comment ça marche, como funciona)
-- about = question sur le bot (c'est quoi, qui es-tu, quem é você, what is this, about, info)
-- unknown = vraiment rien compris
+- greeting = salut, oi, hello, hey, bonjour, bom dia
+- compare = demande conversion/comparaison
+- help = aide, ajuda, help
+- about = c'est quoi, quem é, what is
+- unknown = incompréhensible
 
 Exemples:
-"yo" → {"intent":"greeting","entities":{"language":"fr"},"confidence":0.95}
-"oi" → {"intent":"greeting","entities":{"language":"pt"},"confidence":0.95}
-"hello" → {"intent":"greeting","entities":{"language":"en"},"confidence":0.95}
-
-"1000€ en reais" → {"intent":"compare","entities":{"amount":1000,"route":"eurbrl","language":"fr"},"confidence":0.9}
+"I want to change 1000 reais" → {"intent":"compare","entities":{"amount":1000,"route":"brleur","language":"en"},"confidence":0.9}
+"quero trocar 1000€" → {"intent":"compare","entities":{"amount":1000,"route":"eurbrl","language":"pt"},"confidence":0.85}
 "je veux changer 500 euros" → {"intent":"compare","entities":{"amount":500,"route":"eurbrl","language":"fr"},"confidence":0.9}
-"je veux changer 500€" → {"intent":"compare","entities":{"amount":500,"route":"eurbrl","language":"fr"},"confidence":0.9}
-"quanto custa 2000 reais em euros" → {"intent":"compare","entities":{"amount":2000,"route":"brleur","language":"pt"},"confidence":0.9}
-
-"je souhaiterais acheter 2500€" → {"intent":"compare","entities":{"amount":2500,"route":"brleur","language":"fr"},"confidence":0.85}
-"quero comprar 1000 euros" → {"intent":"compare","entities":{"amount":1000,"route":"brleur","language":"pt"},"confidence":0.85}
-"I want to buy 500 BRL" → {"intent":"compare","entities":{"amount":500,"route":"eurbrl","language":"en"},"confidence":0.85}
-
-"vendre 1000€" → {"intent":"compare","entities":{"amount":1000,"route":"eurbrl","language":"fr"},"confidence":0.85}
-"vender 2000 reais" → {"intent":"compare","entities":{"amount":2000,"route":"brleur","language":"pt"},"confidence":0.85}
-
-"aide" → {"intent":"help","entities":{"language":"fr"},"confidence":1}
-"ajuda" → {"intent":"help","entities":{"language":"pt"},"confidence":1}
-
-"c'est quoi ce bot" → {"intent":"about","entities":{"language":"fr"},"confidence":0.9}
-"quem é você" → {"intent":"about","entities":{"language":"pt"},"confidence":0.9}
-
-"500€" → {"intent":"compare","entities":{"amount":500,"route":eurbrl,"language":"fr"},"confidence":0.7}
-"blabla random" → {"intent":"unknown","entities":{},"confidence":0.5}
+"1000€" → {"intent":"compare","entities":{"amount":1000,"route":"eurbrl","language":null},"confidence":0.7}
+"quanto custa 1000 euros" → {"intent":"compare","entities":{"amount":1000,"route":"brleur","language":"pt"},"confidence":0.9}
 `;
 
-/**
- * Parse l'intention de l'utilisateur avec GPT-4o-mini
- * @param {string} userMessage - Message de l'utilisateur
- * @returns {Promise<Object>} - { intent, entities, confidence }
- */
-export async function parseUserIntent(userMessage) {
+// ============================================
+// PARSE AVEC IA + FALLBACK
+// ============================================
+
+export async function parseUserIntent(userMessage, context = {}) {
+  const startTime = Date.now();
+  
+  // 🚀 ÉTAPE 1 : Essaie patterns regex d'abord
+  const patternResult = tryPatternMatch(userMessage);
+  if (patternResult) {
+    const processingTime = Date.now() - startTime;
+    console.log('[NLU] ✅ Pattern match (no AI needed):', patternResult);
+    
+    // Log sans user_id (pas critique pour patterns)
+    if (context.userId) {
+      await logNLUResult({
+        userId: context.userId,
+        userMessage,
+        detectedIntent: patternResult.intent,
+        detectedEntities: patternResult.entities,
+        confidence: patternResult.confidence,
+        wasSuccessful: true,
+        processingTime
+      });
+    }
+    
+    return patternResult;
+  }
+  
+  // 🤖 ÉTAPE 2 : Appel IA si pattern ne match pas
   try {
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -92,45 +190,74 @@ export async function parseUserIntent(userMessage) {
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: userMessage }
       ],
-      temperature: 0.1, // ← Légèrement plus flexible que 0, mais reste cohérent
+      temperature: 0.1,
       max_tokens: 150,
       response_format: { type: "json_object" }
     });
     
     const parsed = JSON.parse(response.choices[0].message.content);
+    const processingTime = Date.now() - startTime;
     
-    console.log('[NLU]', { 
+    // Patch: si pas de langue détectée, utilise contexte
+    if (!parsed.entities.language && context.language) {
+      parsed.entities.language = context.language;
+    }
+    
+    console.log('[NLU] 🤖 AI result:', { 
       input: userMessage, 
       output: parsed,
       tokens: response.usage.total_tokens,
-      cost: `~${(response.usage.total_tokens * 0.00015 / 1000).toFixed(6)}`
+      time: processingTime + 'ms'
     });
     
-    // 🚨 Log spécial si confidence basse (pour améliorer le prompt)
-    if (parsed.confidence < 0.6) {
-      console.warn('[NLU] ⚠️ Low confidence:', {
-        message: userMessage,
-        intent: parsed.intent,
-        confidence: parsed.confidence
+    // Log
+    if (context.userId) {
+      await logNLUResult({
+        userId: context.userId,
+        userMessage,
+        detectedIntent: parsed.intent,
+        detectedEntities: parsed.entities,
+        confidence: parsed.confidence,
+        wasSuccessful: true,
+        processingTime
       });
     }
     
     return parsed;
   } catch (error) {
-    console.error('[NLU] Error:', error);
-    // Fallback : intention unknown
-    return {
+    console.error('[NLU] ❌ Error:', error);
+    
+    const processingTime = Date.now() - startTime;
+    
+    // Fallback
+    const fallback = {
       intent: 'unknown',
-      entities: {},
-      confidence: 0
+      entities: {
+        language: context.language || 'fr'
+      },
+      confidence: 0,
+      error: true
     };
+    
+    // Log erreur
+    if (context.userId) {
+      await logNLUResult({
+        userId: context.userId,
+        userMessage,
+        detectedIntent: 'unknown',
+        detectedEntities: {},
+        confidence: 0,
+        wasSuccessful: false,
+        processingTime
+      });
+    }
+    
+    return fallback;
   }
 }
 
 /**
- * Version batch pour analyser plusieurs messages (utile pour tests)
- * @param {Array<string>} messages 
- * @returns {Promise<Array<Object>>}
+ * Version batch pour tests
  */
 export async function parseUserIntentBatch(messages) {
   const results = [];
