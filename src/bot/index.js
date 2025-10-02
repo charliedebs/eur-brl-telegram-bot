@@ -1,12 +1,17 @@
-import { Telegraf, Markup } from 'telegraf';
+import { Telegraf, Markup, session } from 'telegraf';
 import { messages } from './messages.js';
 import { buildKeyboards } from './keyboards.js';
-import { getRates, calculateOnChain, getLocale } from '../services/rates.js';
+import { getRates, calculateOnChain, getLocale, formatAmount } from '../services/rates.js';
 import { getWiseComparison } from '../services/wise.js';
 import { AlertsService } from '../services/alerts.js';
 import { DatabaseService } from '../services/database.js';
+import { parseUserIntent } from '../services/nlu.js';
 
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
+
+// ✅ Activer les sessions AVANT tout le reste
+bot.use(session());
+
 const db = new DatabaseService();
 const alerts = new AlertsService(db);
 
@@ -50,21 +55,12 @@ function detectRoute(text) {
 
 // ==================== COMMANDS ====================
 
-// /start + greetings
-const greetings = ['hi', 'hello', 'hey', 'bonjour', 'salut', 'oi', 'olá', 'ola', 'bom dia', 'boa tarde', 'boa noite'];
 bot.command('start', async (ctx) => {
   const msg = getMsg(ctx);
   const kb = buildKeyboards(msg, 'lang_select');
   await ctx.reply(msg.INTRO_TEXT, { parse_mode: 'HTML', ...kb });
 });
 
-bot.hears(greetings, async (ctx) => {
-  const msg = getMsg(ctx);
-  const kb = buildKeyboards(msg, 'lang_select');
-  await ctx.reply(msg.INTRO_TEXT, { parse_mode: 'HTML', ...kb });
-});
-
-// /help
 bot.command('help', async (ctx) => {
   const msg = getMsg(ctx);
   await ctx.reply(msg.ABOUT_TEXT, { parse_mode: 'HTML' });
@@ -72,7 +68,6 @@ bot.command('help', async (ctx) => {
 
 // ==================== CALLBACKS ====================
 
-// Language selection
 bot.action(/^lang:(.+)$/, async (ctx) => {
   const lang = ctx.match[1];
   await db.updateUser(ctx.from.id, { language: lang });
@@ -86,7 +81,6 @@ bot.action(/^lang:(.+)$/, async (ctx) => {
   await ctx.answerCbQuery();
 });
 
-// About
 bot.action('action:about', async (ctx) => {
   const msg = getMsg(ctx);
   const kb = buildKeyboards(msg, 'about');
@@ -94,7 +88,6 @@ bot.action('action:about', async (ctx) => {
   await ctx.answerCbQuery();
 });
 
-// Back to main
 bot.action('action:back_main', async (ctx) => {
   const msg = getMsg(ctx);
   const locale = getLocale(ctx.state.lang);
@@ -103,7 +96,6 @@ bot.action('action:back_main', async (ctx) => {
   await ctx.answerCbQuery();
 });
 
-// Route selection
 bot.action(/^route:(eurbrl|brleur):(\d+)$/, async (ctx) => {
   const route = ctx.match[1];
   const amount = parseFloat(ctx.match[2]);
@@ -111,57 +103,54 @@ bot.action(/^route:(eurbrl|brleur):(\d+)$/, async (ctx) => {
   await ctx.answerCbQuery();
 });
 
-// Show comparison
 async function showComparison(ctx, route, amount) {
-    const msg = getMsg(ctx);
-    const locale = getLocale(ctx.state.lang);
-    
-    const [rates, wiseData] = await Promise.all([
-      getRates(),
-      getWiseComparison(route, amount)
-    ]);
-    
-    if (!rates) {
-      await ctx.reply("⚠️ Taux crypto indisponibles. Réessaie dans un instant.");
-      return;
-    }
-    
-    const onchain = calculateOnChain(route, amount, rates);
-    
-    // Si pas de données Wise, on affiche "indisponible"
-    const bestBank = wiseData?.providers?.[0] || null;
-    const others = wiseData?.providers?.slice(1) || []; // Tous les autres pour passer à buildComparison
-    
-    let delta = null;
-    let winner = 'on-chain';
-    
-    if (bestBank) {
-      delta = ((onchain.out - bestBank.out) / bestBank.out) * 100;
-      winner = delta >= 0 ? 'on-chain' : bestBank.provider;
-    }
-    
-    const text = msg.buildComparison({
-      route,
-      amount,
-      rates,
-      onchain,
-      bestBank, // peut être null
-      others, // buildComparison prendra juste les 2 premiers
-      delta,
-      winner,
-      locale
-    });
-    
-    const kb = buildKeyboards(msg, 'comparison', { route, amount, locale });
-    
-    if (ctx.callbackQuery) {
-      await ctx.editMessageText(text, { parse_mode: 'HTML', ...kb });
-    } else {
-      await ctx.reply(text, { parse_mode: 'HTML', ...kb });
-    }
+  const msg = getMsg(ctx);
+  const locale = getLocale(ctx.state.lang);
+  
+  const [rates, wiseData] = await Promise.all([
+    getRates(),
+    getWiseComparison(route, amount)
+  ]);
+  
+  if (!rates) {
+    await ctx.reply("⚠️ Taux crypto indisponibles. Réessaie dans un instant.");
+    return;
   }
+  
+  const onchain = calculateOnChain(route, amount, rates);
+  
+  const bestBank = wiseData?.providers?.[0] || null;
+  const others = wiseData?.providers?.slice(1) || [];
+  
+  let delta = null;
+  let winner = 'on-chain';
+  
+  if (bestBank) {
+    delta = ((onchain.out - bestBank.out) / bestBank.out) * 100;
+    winner = delta >= 0 ? 'on-chain' : bestBank.provider;
+  }
+  
+  const text = msg.buildComparison({
+    route,
+    amount,
+    rates,
+    onchain,
+    bestBank,
+    others,
+    delta,
+    winner,
+    locale
+  });
+  
+  const kb = buildKeyboards(msg, 'comparison', { route, amount, locale });
+  
+  if (ctx.callbackQuery) {
+    await ctx.editMessageText(text, { parse_mode: 'HTML', ...kb });
+  } else {
+    await ctx.reply(text, { parse_mode: 'HTML', ...kb });
+  }
+}
 
-// Sources
 bot.action('action:sources', async (ctx) => {
   const msg = getMsg(ctx);
   const kb = buildKeyboards(msg, 'sources');
@@ -176,69 +165,65 @@ bot.action(/^action:back_comparison:(.+):(\d+)$/, async (ctx) => {
   await ctx.answerCbQuery();
 });
 
-// Calc details - nouveau handler
 bot.action(/^action:calc_details:(.+):(\d+)$/, async (ctx) => {
-    const route = ctx.match[1];
-    const amount = parseFloat(ctx.match[2]);
-    const msg = getMsg(ctx);
-    const locale = getLocale(ctx.state.lang);
-    
-    const rates = await getRates();
-    if (!rates) {
-      await ctx.reply("⚠️ Taux indisponibles.");
-      await ctx.answerCbQuery();
-      return;
-    }
-    
-    const onchain = calculateOnChain(route, amount, rates);
-    const text = msg.buildCalcDetails({ route, amount, rates, onchain, locale });
-    
-    const kb = Markup.inlineKeyboard([
-      [Markup.button.callback(msg.btn.back, `action:back_comparison:${route}:${amount}`)]
-    ]);
-    
-    await ctx.editMessageText(text, { parse_mode: 'HTML', ...kb });
+  const route = ctx.match[1];
+  const amount = parseFloat(ctx.match[2]);
+  const msg = getMsg(ctx);
+  const locale = getLocale(ctx.state.lang);
+  
+  const rates = await getRates();
+  if (!rates) {
+    await ctx.reply("⚠️ Taux indisponibles.");
     await ctx.answerCbQuery();
+    return;
+  }
+  
+  const onchain = calculateOnChain(route, amount, rates);
+  const text = msg.buildCalcDetails({ route, amount, rates, onchain, locale });
+  
+  const kb = Markup.inlineKeyboard([
+    [Markup.button.callback(msg.btn.back, `action:back_comparison:${route}:${amount}`)]
+  ]);
+  
+  await ctx.editMessageText(text, { parse_mode: 'HTML', ...kb });
+  await ctx.answerCbQuery();
+});
+
+bot.action(/^action:stay_offchain:(.+):(\d+)$/, async (ctx) => {
+  const route = ctx.match[1];
+  const amount = parseFloat(ctx.match[2]);
+  const msg = getMsg(ctx);
+  const locale = getLocale(ctx.state.lang);
+  
+  const [rates, wiseData] = await Promise.all([
+    getRates(),
+    getWiseComparison(route, amount)
+  ]);
+  
+  if (!rates) {
+    await ctx.reply("⚠️ Taux indisponibles.");
+    await ctx.answerCbQuery();
+    return;
+  }
+  
+  const bestBank = wiseData?.providers?.[0] || null;
+  const others = wiseData?.providers?.slice(1) || [];
+  
+  const text = msg.buildOffChain({
+    route,
+    amount,
+    bestBank,
+    others,
+    locale
   });
   
-  // Stay off-chain - modifié pour passer providers
-  bot.action(/^action:stay_offchain:(.+):(\d+)$/, async (ctx) => {
-    const route = ctx.match[1];
-    const amount = parseFloat(ctx.match[2]);
-    const msg = getMsg(ctx);
-    const locale = getLocale(ctx.state.lang);
-    
-    const [rates, wiseData] = await Promise.all([
-      getRates(),
-      getWiseComparison(route, amount)
-    ]);
-    
-    if (!rates) {
-      await ctx.reply("⚠️ Taux indisponibles.");
-      await ctx.answerCbQuery();
-      return;
-    }
-    
-    const bestBank = wiseData?.providers?.[0] || null;
-    const others = wiseData?.providers?.slice(1) || [];
-    
-    const text = msg.buildOffChain({
-      route,
-      amount,
-      bestBank,
-      others,
-      locale
-    });
-    
-    // Passer les providers pour les boutons dynamiques
-    const displayProviders = wiseData?.providers || [];
-    const kb = buildKeyboards(msg, 'offchain', { route, amount, locale, providers: displayProviders });
-    
-    await ctx.editMessageText(text, { parse_mode: 'HTML', ...kb });
-    await ctx.answerCbQuery();
-  });
+  const displayProviders = wiseData?.providers || [];
+  const kb = buildKeyboards(msg, 'offchain', { route, amount, locale, providers: displayProviders });
+  
+  await ctx.editMessageText(text, { parse_mode: 'HTML', ...kb });
+  await ctx.answerCbQuery();
+});
 
-// Continue on-chain
 bot.action(/^action:continue_onchain:(.+):(\d+)$/, async (ctx) => {
   const route = ctx.match[1];
   const amount = parseFloat(ctx.match[2]);
@@ -261,7 +246,6 @@ bot.action(/^action:onchain_intro:(.+):(\d+)$/, async (ctx) => {
   await ctx.answerCbQuery();
 });
 
-// Proof sources
 bot.action(/^action:proof_sources/, async (ctx) => {
   const msg = getMsg(ctx);
   const kb = buildKeyboards(msg, 'proof_sources');
@@ -269,7 +253,6 @@ bot.action(/^action:proof_sources/, async (ctx) => {
   await ctx.answerCbQuery();
 });
 
-// Exchanges screens
 bot.action('action:exchanges_eu', async (ctx) => {
   const msg = getMsg(ctx);
   const kb = buildKeyboards(msg, 'exchanges_eu');
@@ -284,7 +267,6 @@ bot.action('action:exchanges_br', async (ctx) => {
   await ctx.answerCbQuery();
 });
 
-// Pedago screens
 bot.action('action:what_usdc', async (ctx) => {
   const msg = getMsg(ctx);
   const kb = buildKeyboards(msg, 'what_usdc');
@@ -299,7 +281,6 @@ bot.action('action:what_exchange', async (ctx) => {
   await ctx.answerCbQuery();
 });
 
-// Start guide
 bot.action(/^action:start_guide:(.+):(\d+)$/, async (ctx) => {
   const route = ctx.match[1];
   const amount = parseFloat(ctx.match[2]);
@@ -310,7 +291,6 @@ bot.action(/^action:start_guide:(.+):(\d+)$/, async (ctx) => {
   await ctx.answerCbQuery();
 });
 
-// Guide steps
 bot.action(/^guide:step:(.+):(.+):(\d+)$/, async (ctx) => {
   const step = ctx.match[1];
   const route = ctx.match[2];
@@ -321,7 +301,6 @@ bot.action(/^guide:step:(.+):(.+):(\d+)$/, async (ctx) => {
   let text = '';
   let kbType = '';
   
-  // Fetch rates for calculations
   const rates = await getRates();
   
   switch (step) {
@@ -385,71 +364,152 @@ bot.action(/^guide:step:(.+):(.+):(\d+)$/, async (ctx) => {
   await ctx.answerCbQuery();
 });
 
-// Why not exact
 bot.action('action:why_not_exact', async (ctx) => {
   const msg = getMsg(ctx);
   await ctx.reply(msg.WHY_NOT_EXACT, { parse_mode: 'HTML' });
   await ctx.answerCbQuery();
 });
 
-// Market vs Limit
 bot.action('action:market_vs_limit', async (ctx) => {
   const msg = getMsg(ctx);
   await ctx.reply(msg.MARKET_VS_LIMIT, { parse_mode: 'HTML' });
   await ctx.answerCbQuery();
 });
 
-// Change amount
 bot.action(/^action:change_amount:(.+)$/, async (ctx) => {
   const route = ctx.match[1];
-  const msg = getMsg(ctx);
   
-  ctx.session = { awaitingAmount: route };
+  ctx.session.awaitingAmount = route;
   await ctx.reply("✏️ Entre un montant (ex. 1000)");
   await ctx.answerCbQuery();
 });
 
-// Text messages
+// ==================== TEXT HANDLER WITH NLU ====================
+
 bot.on('text', async (ctx) => {
-  const text = ctx.message.text;
-  const msg = getMsg(ctx);
-  const locale = getLocale(ctx.state.lang);
-  
-  // Handle amount input
-  if (ctx.session?.awaitingAmount) {
-    const amount = parseAmount(text);
-    if (amount) {
-      await showComparison(ctx, ctx.session.awaitingAmount, amount);
-      ctx.session = {};
-    } else {
-      await ctx.reply("⚠️ Montant invalide.");
+  try {
+    const text = ctx.message.text;
+    const msg = getMsg(ctx);
+    const locale = getLocale(ctx.state.lang);
+    
+    // Skip si commande
+    if (text.startsWith('/')) return;
+    
+    // ✅ PRIORITÉ 1: Si on attend un montant spécifique
+    if (ctx.session?.awaitingAmount) {
+      const amount = parseAmount(text);
+      if (amount) {
+        await showComparison(ctx, ctx.session.awaitingAmount, amount);
+        delete ctx.session.awaitingAmount;
+      } else {
+        await ctx.reply("⚠️ Montant invalide. Entre un nombre (ex. 1000)");
+      }
+      return;
     }
-    return;
-  }
-  
-  // Auto-detect amount + route
-  const amount = parseAmount(text);
-  const route = detectRoute(text);
-  
-  if (amount && route) {
-    await showComparison(ctx, route, amount);
-  } else if (amount) {
-    const kb = buildKeyboards(msg, 'route_choice', { amount, locale });
-    await ctx.reply(msg.askRoute(amount, locale), { parse_mode: 'HTML', ...kb });
-  } else {
-    const kb = buildKeyboards(msg, 'main', { locale });
-    await ctx.reply(msg.promptAmt, { parse_mode: 'HTML', ...kb });
+    
+    // ✅ PRIORITÉ 2: Utiliser l'IA avec contexte
+    console.log('[BOT] Analyzing with NLU:', text);
+    
+    // Initialise la session si nécessaire
+    if (!ctx.session) {
+      ctx.session = {};
+    }
+    if (!ctx.session.messageHistory) {
+      ctx.session.messageHistory = [];
+    }
+    
+    const context = {
+      language: ctx.state.lang,
+      history: ctx.session.messageHistory.slice(-3)
+    };
+    
+    const intent = await parseUserIntent(text, context);
+    console.log('[BOT] NLU result:', intent);
+    
+    // Sauvegarde dans l'historique
+    ctx.session.messageHistory.push(text);
+    if (ctx.session.messageHistory.length > 5) {
+      ctx.session.messageHistory.shift();
+    }
+    
+    // Traite selon l'intention
+    switch (intent.intent) {
+      case 'greeting':
+        // Détecte et met à jour la langue si différente
+        // Mais si c'est "hello/hi/hey" (universel), on garde la langue du profil
+        const universalGreetings = ['hello', 'hi', 'hey'];
+        const shouldUpdateLang = intent.entities.language 
+          && intent.entities.language !== ctx.state.lang
+          && !universalGreetings.includes(text.toLowerCase().trim());
+        
+        if (shouldUpdateLang) {
+          await db.updateUser(ctx.from.id, { language: intent.entities.language });
+          ctx.state.lang = intent.entities.language;
+        }
+        
+        const greetingKb = buildKeyboards(messages[ctx.state.lang], 'lang_select');
+        return ctx.reply(messages[ctx.state.lang].INTRO_TEXT, { parse_mode: 'HTML', ...greetingKb });
+        
+      case 'compare':
+        // Cas 1: montant + route → affiche direct
+        if (intent.entities.amount && intent.entities.route) {
+          return showComparison(ctx, intent.entities.route, intent.entities.amount);
+        }
+        
+        // Cas 2: juste montant → demande route
+        if (intent.entities.amount) {
+          const kb = buildKeyboards(msg, 'route_choice', { amount: intent.entities.amount, locale });
+          return ctx.reply(msg.askRoute(intent.entities.amount, locale), { parse_mode: 'HTML', ...kb });
+        }
+        
+        // Cas 3: juste route → demande montant en mode attente
+        if (intent.entities.route) {
+          ctx.session.awaitingAmount = intent.entities.route;
+          const routeText = intent.entities.route === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+          return ctx.reply(`✏️ ${routeText}\n\nEntre un montant (ex. 1000)`);
+        }
+        
+        // Cas 4: rien → menu principal
+        const kb = buildKeyboards(msg, 'main', { locale });
+        return ctx.reply(msg.promptAmt, { parse_mode: 'HTML', ...kb });
+        
+      case 'help':
+        return ctx.reply(msg.ABOUT_TEXT, { parse_mode: 'HTML' });
+        
+      case 'about':
+        const aboutKb = buildKeyboards(msg, 'about');
+        return ctx.reply(msg.ABOUT_TEXT, { parse_mode: 'HTML', ...aboutKb });
+        
+      case 'unknown':
+      default:
+        // Fallback: essaie parsing manuel
+        const amount = parseAmount(text);
+        const route = detectRoute(text);
+        
+        if (amount && route) {
+          return showComparison(ctx, route, amount);
+        } else if (amount) {
+          const kb = buildKeyboards(msg, 'route_choice', { amount, locale });
+          return ctx.reply(msg.askRoute(amount, locale), { parse_mode: 'HTML', ...kb });
+        } else {
+          const kb = buildKeyboards(msg, 'main', { locale });
+          return ctx.reply(msg.promptAmt, { parse_mode: 'HTML', ...kb });
+        }
+    }
+  } catch (error) {
+    console.error('[BOT] Error in text handler:', error);
+    await ctx.reply("❌ Une erreur est survenue. Réessaie ou utilise /start");
   }
 });
 
-// Alerts (keeping existing logic)
+// Alerts
 bot.action(/^alerts:start/, async (ctx) => {
   await ctx.reply("⏰ Créer une alerte\n\nDis-moi en une phrase (ex. 'Alerte EUR→BRL si > 6,20')");
-  ctx.session = { awaitingAlert: true };
+  ctx.session.awaitingAlert = true;
   await ctx.answerCbQuery();
 });
 
-// Premium (keeping existing logic)
+// Premium
 bot.action(/^premium:open/, async (ctx) => {
   await ctx.reply("🚀 Premium\n\nPour aller plus loin...");
   await ctx.answerCbQuery();
