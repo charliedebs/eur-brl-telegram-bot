@@ -10,6 +10,10 @@ if (!supabaseUrl || !supabaseKey) {
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 export class DatabaseService {
+  // ==========================================
+  // USERS
+  // ==========================================
+  
   async getUser(telegramId) {
     const { data, error } = await supabase
       .from('users')
@@ -18,14 +22,14 @@ export class DatabaseService {
       .single();
     
     if (error && error.code !== 'PGRST116') {
-      console.error('Failed to get user:', error);
+      console.error('[DB] Failed to get user:', error);
       return null;
     }
     
     return data;
   }
   
-  async createUser(telegramId, language = 'fr') {
+  async createUser(telegramId, language = 'pt') {
     const { data, error } = await supabase
       .from('users')
       .insert([{ telegram_id: telegramId, language }])
@@ -33,10 +37,11 @@ export class DatabaseService {
       .single();
     
     if (error) {
-      console.error('Failed to create user:', error);
+      console.error('[DB] Failed to create user:', error);
       return null;
     }
     
+    console.log(`[DB] ✅ User created: ${telegramId} (${language})`);
     return data;
   }
   
@@ -49,25 +54,157 @@ export class DatabaseService {
       .single();
     
     if (error) {
-      console.error('Failed to update user:', error);
+      console.error('[DB] Failed to update user:', error);
       return null;
     }
     
     return data;
   }
-  
+
+  async getAllActiveUsers() {
+    const { data, error } = await supabase
+      .from('users')
+      .select('telegram_id, language')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('[DB] Failed to get active users:', error);
+      return [];
+    }
+    
+    return data || [];
+  }
+
+  // ==========================================
+  // PREMIUM
+  // ==========================================
+
+  async isPremium(telegramId) {
+    const user = await this.getUser(telegramId);
+    if (!user) return false;
+    
+    if (!user.premium_until) return false;
+    
+    const now = new Date();
+    const premiumUntil = new Date(user.premium_until);
+    
+    return premiumUntil > now;
+  }
+
+  async getPremiumUsers() {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .not('premium_until', 'is', null)
+      .gte('premium_until', new Date().toISOString());
+    
+    if (error) {
+      console.error('[DB] Failed to get premium users:', error);
+      return [];
+    }
+    
+    return data || [];
+  }
+
+  async getUsersExpiringIn(days) {
+    const targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() + days);
+    
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .gte('premium_until', new Date().toISOString())
+      .lte('premium_until', targetDate.toISOString());
+    
+    if (error) {
+      console.error('[DB] Failed to get expiring users:', error);
+      return [];
+    }
+    
+    return data || [];
+  }
+
+  // ==========================================
+  // RATES HISTORY
+  // ==========================================
+
+  async saveRateHistory(rateData) {
+    const { data, error } = await supabase
+      .from('rates_history')
+      .insert([rateData])
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('[DB] Failed to save rate history:', error);
+      return null;
+    }
+    
+    console.log(`[DB] ✅ Rate saved: ${rateData.pair} = ${rateData.rate}`);
+    return data;
+  }
+
+  async getRateHistory(pair, days = 30) {
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+    
+    const { data, error } = await supabase
+      .from('rates_history')
+      .select('*')
+      .eq('pair', pair)
+      .gte('timestamp', since.toISOString())
+      .order('timestamp', { ascending: true });
+    
+    if (error) {
+      console.error('[DB] Failed to get rate history:', error);
+      return [];
+    }
+    
+    return data || [];
+  }
+
+  async getAverage30Days(pair) {
+    const history = await this.getRateHistory(pair, 30);
+    if (history.length === 0) return null;
+    
+    const sum = history.reduce((acc, h) => acc + parseFloat(h.rate), 0);
+    return sum / history.length;
+  }
+
+  async getLastRate(pair) {
+    const { data, error } = await supabase
+      .from('rates_history')
+      .select('*')
+      .eq('pair', pair)
+      .order('timestamp', { ascending: false })
+      .limit(1)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') {
+      console.error('[DB] Failed to get last rate:', error);
+      return null;
+    }
+    
+    return data;
+  }
+
+  // ==========================================
+  // ALERTS
+  // ==========================================
+
   async createAlert(userId, alertData) {
     const { data, error } = await supabase
-      .from('alerts')
+      .from('user_alerts')
       .insert([{ user_id: userId, ...alertData }])
       .select()
       .single();
     
     if (error) {
-      console.error('Failed to create alert:', error);
+      console.error('[DB] Failed to create alert:', error);
       return null;
     }
     
+    console.log(`[DB] ✅ Alert created: ${alertData.pair} ${alertData.threshold_percent}%`);
     return data;
   }
   
@@ -76,14 +213,14 @@ export class DatabaseService {
     if (!user) return [];
     
     const { data, error } = await supabase
-      .from('alerts')
+      .from('user_alerts')
       .select('*')
       .eq('user_id', user.id)
       .eq('active', true)
       .order('created_at', { ascending: false });
     
     if (error) {
-      console.error('Failed to get alerts:', error);
+      console.error('[DB] Failed to get user alerts:', error);
       return [];
     }
     
@@ -92,7 +229,7 @@ export class DatabaseService {
   
   async getActiveAlerts() {
     const { data, error } = await supabase
-      .from('alerts')
+      .from('user_alerts')
       .select(`
         *,
         users!inner (telegram_id, language)
@@ -100,7 +237,7 @@ export class DatabaseService {
       .eq('active', true);
     
     if (error) {
-      console.error('Failed to get active alerts:', error);
+      console.error('[DB] Failed to get active alerts:', error);
       return [];
     }
     
@@ -109,14 +246,14 @@ export class DatabaseService {
   
   async updateAlert(alertId, updates) {
     const { data, error } = await supabase
-      .from('alerts')
+      .from('user_alerts')
       .update(updates)
       .eq('id', alertId)
       .select()
       .single();
     
     if (error) {
-      console.error('Failed to update alert:', error);
+      console.error('[DB] Failed to update alert:', error);
       return null;
     }
     
@@ -126,4 +263,206 @@ export class DatabaseService {
   async disableAlert(alertId) {
     return this.updateAlert(alertId, { active: false });
   }
+
+  // ==========================================
+  // PIX PAYMENTS
+  // ==========================================
+
+  async createPixPayment(paymentData) {
+    const { data, error } = await supabase
+      .from('pix_payments')
+      .insert([paymentData])
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('[DB] Failed to create pix payment:', error);
+      return null;
+    }
+    
+    console.log(`[DB] ✅ Pix payment created: ${paymentData.amount} R$ (${paymentData.duration_months}m)`);
+    return data;
+  }
+
+  async getPixPayment(paymentId) {
+    const { data, error } = await supabase
+      .from('pix_payments')
+      .select('*')
+      .eq('payment_id', paymentId)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') {
+      console.error('[DB] Failed to get pix payment:', error);
+      return null;
+    }
+    
+    return data;
+  }
+
+  async updatePixPayment(paymentId, updates) {
+    const { data, error } = await supabase
+      .from('pix_payments')
+      .update(updates)
+      .eq('payment_id', paymentId)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('[DB] Failed to update pix payment:', error);
+      return null;
+    }
+    
+    return data;
+  }
+
+  async confirmPixPayment(paymentId) {
+    const payment = await this.getPixPayment(paymentId);
+    if (!payment) return null;
+
+    // Mettre à jour le paiement
+    await this.updatePixPayment(paymentId, {
+      status: 'confirmed',
+      confirmed_at: new Date().toISOString()
+    });
+
+    // Activer Premium pour l'user
+    const premiumUntil = new Date();
+    premiumUntil.setMonth(premiumUntil.getMonth() + payment.duration_months);
+
+    const { data: userData } = await supabase
+      .from('users')
+      .select('telegram_id')
+      .eq('id', payment.user_id)
+      .single();
+
+    if (userData) {
+      await this.updateUser(userData.telegram_id, {
+        premium_until: premiumUntil.toISOString(),
+        subscription_type: `pix_${payment.duration_months}months`,
+        subscription_amount: payment.amount
+      });
+
+      console.log(`[DB] ✅ Premium activated until ${premiumUntil.toISOString()}`);
+    }
+
+    return payment;
+  }
+
+  async getExpiredPixPayments() {
+    const { data, error } = await supabase
+      .from('pix_payments')
+      .select('*')
+      .eq('status', 'pending')
+      .lt('expires_at', new Date().toISOString());
+    
+    if (error) {
+      console.error('[DB] Failed to get expired payments:', error);
+      return [];
+    }
+    
+    return data || [];
+  }
+
+  // ==========================================
+  // FREE ALERTS (marketing)
+  // ==========================================
+
+  async logFreeAlert(pair, rate, usersCount) {
+    const { data, error } = await supabase
+      .from('free_alerts_sent')
+      .insert([{
+        pair,
+        rate,
+        users_count: usersCount
+      }])
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('[DB] Failed to log free alert:', error);
+      return null;
+    }
+    
+    console.log(`[DB] ✅ Free alert logged: ${pair} = ${rate} (${usersCount} users)`);
+    return data;
+  }
+
+  async getLastFreeAlert(pair) {
+    const { data, error } = await supabase
+      .from('free_alerts_sent')
+      .select('*')
+      .eq('pair', pair)
+      .order('sent_at', { ascending: false })
+      .limit(1)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') {
+      console.error('[DB] Failed to get last free alert:', error);
+      return null;
+    }
+    
+    return data;
+  }
+
+  // ==========================================
+  // NLU LOGS (déjà existant, on garde)
+  // ==========================================
+
+  async logNLU(logData) {
+    const { data, error } = await supabase
+      .from('nlu_logs')
+      .insert([logData])
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('[DB] Failed to log NLU:', error);
+      return null;
+    }
+    
+    return data;
+  }
+
+  async updateNLUFeedback(userId, inputText, feedback, actualIntent = null) {
+    const { data: logs } = await supabase
+      .from('nlu_logs')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('input_text', inputText)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    
+    if (logs && logs[0]) {
+      const { error } = await supabase
+        .from('nlu_logs')
+        .update({
+          user_feedback: feedback,
+          actual_intent: actualIntent,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', logs[0].id);
+      
+      if (error) {
+        console.error('[DB] Failed to update NLU feedback:', error);
+      }
+    }
+  }
+
+  async getNLUFeedbacks(limit = 100) {
+    const { data, error } = await supabase
+      .from('nlu_logs')
+      .select('*')
+      .not('user_feedback', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    
+    if (error) {
+      console.error('[DB] Failed to get NLU feedbacks:', error);
+      return [];
+    }
+    
+    return data || [];
+  }
 }
+
+export default DatabaseService;
