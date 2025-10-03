@@ -438,6 +438,188 @@ Ce que tu as appris aujourd'hui sera de plus en plus utilisé dans le futur : tu
 
 🙌 On espère que tu as kiffé l'expérience !`,
 
+
+PREMIUM_PRICING: `💎 PASSER À PREMIUM
+  
+  ✨ Avec Premium :
+  • 🔔 Alertes personnalisées illimitées
+  • 📢 Alertes spontanées régulières
+  • 🎯 Multi-paires (EUR→BRL + BRL→EUR)
+  • 📊 Analyses plus poussées
+  • 🌍 Multi-devises à venir
+  • ⚡ Accès prioritaire aux nouvelles fonctionnalités
+  
+  [ℹ️ Voir toutes les fonctionnalités Premium]
+  
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  
+  📱 15 R$ / 3 mois
+     Soit 5 R$/mois
+  
+  📱 27 R$ / 6 mois
+     Soit 4,50 R$/mois • Économie de 10%
+  
+  📱 50 R$ / 12 mois
+     Soit 4,17 R$/mois • Économie de 17%
+  
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  
+  🔜 Carte bancaire internationale bientôt disponible`,
+  
+    PREMIUM_DETAILS: `💎 FONCTIONNALITÉS PREMIUM
+  
+  🔔 ALERTES PERSONNALISÉES ILLIMITÉES
+  Configure tes propres seuils de déclenchement.
+  Exemple : "Alerte-moi si EUR→BRL dépasse 6,20"
+  
+  Tu peux créer autant d'alertes que tu veux, pour différents montants ou différentes situations.
+  
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  
+  📢 ALERTES SPONTANÉES RÉGULIÈRES
+  En mode gratuit : 1-2 alertes/mois (records exceptionnels)
+  
+  En Premium : alertes régulières dès que les conditions sont favorables, pas besoin d'attendre un record absolu.
+  
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  
+  🎯 MULTI-PAIRES
+  Surveille EUR→BRL ET BRL→EUR en même temps.
+  
+  Parfait si tu fais des allers-retours réguliers ou si tu veux optimiser dans les deux sens.
+  
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  
+  📊 ANALYSES PLUS POUSSÉES
+  • Comparaison avec moyennes 7/30/90 jours
+  • Identification des tendances
+  • Recommandations basées sur l'historique
+  • Insights pour optimiser tes transferts
+  
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  
+  🌍 MULTI-DEVISES (À VENIR)
+  Bientôt : USD, GBP, CHF, CAD et autres paires.
+  
+  Les abonnés Premium y auront accès en priorité, dès le lancement.
+  
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  
+  ⚡ ACCÈS PRIORITAIRE
+  • Nouvelles fonctionnalités en avant-première
+  • Influence sur la roadmap (propose et vote)
+  • Support prioritaire
+  • Évolution continue du service`,
+  
+    ALERT_CREATE_INTRO: `🔔 CRÉER UNE ALERTE
+  
+  Choisis comment tu veux être alerté :`,
+  
+    ALERT_PRESET_CONSERVATIVE: `🛡️ Conservateur
+  +2% vs moyenne 30j
+  Alerte ~1x par mois
+  Pour sécuriser un bon taux`,
+  
+    ALERT_PRESET_BALANCED: `⚖️ Équilibré (Notre choix ⭐)
+  +3% vs moyenne 30j
+  Alerte ~2-3x par mois
+  C'est ce qu'on utilise nous-mêmes`,
+  
+    ALERT_PRESET_AGGRESSIVE: `🎯 Opportuniste
+  +5% vs moyenne 30j
+  Alerte ~1x tous les 2 mois
+  Pour maximiser, plus rare mais meilleur`,
+  
+    ALERT_CREATED: (pair, threshold, currentRate, avg30d, alertThreshold, locale) => `✅ Alerte créée !
+  
+  ${pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'} : +${threshold}% vs moyenne 30j
+  
+  Je t'alerterai quand le taux dépasse la moyenne des 30 derniers jours de ${threshold}%.
+  
+  Actuellement :
+  • Taux actuel : ${formatRate(currentRate, locale)}
+  • Moyenne 30j : ${formatRate(avg30d, locale)}
+  • Seuil alerte : ${formatRate(alertThreshold, locale)} (+${threshold}%)`,
+  
+    ALERT_TRIGGERED: (pair, currentRate, avg30d, threshold, delta, amountExample, savings, locale) => `🔔 ALERTE PREMIUM
+  
+  ${pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'} : ${formatRate(currentRate, locale)}
+  
+  💡 Ton seuil est atteint !
+  
+  📊 Analyse :
+  • Taux actuel : ${formatRate(currentRate, locale)}
+  • Moyenne 30j : ${formatRate(avg30d, locale)}
+  • Écart : +${formatAmount(delta, 1, locale)}% ✅
+  • ${delta > threshold ? `C'est ${formatAmount(delta - threshold, 1, locale)}% au-dessus de ton seuil` : 'Pile sur ton seuil'}
+  
+  💰 Sur ${formatAmount(amountExample, 0, locale)}${pair === 'eurbrl' ? '€' : ' R$'}, tu gagnes ~${formatAmount(savings, 0, locale)}${pair === 'eurbrl' ? ' R$' : '€'} vs la moyenne`,
+  
+    FREE_ALERT: (pair, currentRate, recordDays, amountExample, savings, locale) => `🔔 ALERTE SPÉCIALE
+  
+  ${pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'} : ${formatRate(currentRate, locale)}
+  
+  📊 C'est le MEILLEUR taux depuis ${recordDays} jours !
+  
+  💰 Sur ${formatAmount(amountExample, 0, locale)}${pair === 'eurbrl' ? '€' : ' R$'}, tu gagnes ~${formatAmount(savings, 0, locale)}${pair === 'eurbrl' ? ' R$' : '€'} vs la moyenne
+  
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  
+  💎 Avec Premium (5 R$/mois) :
+  • Configure tes propres alertes
+  • Multi-paires (EUR→BRL + BRL→EUR)
+  • Plusieurs seuils personnalisés
+  • Alertes régulières (pas juste les records)`,
+  
+    ALERTS_LIST: (alerts, locale) => {
+      if (alerts.length === 0) {
+        return `🔔 Mes alertes\n\nAucune alerte active.\n\nCrée ta première alerte pour être prévenu des bons taux !`;
+      }
+      
+      const list = alerts.map((a, i) => {
+        const pairText = a.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+        const presetEmoji = {
+          'conservative': '🛡️',
+          'balanced': '⚖️',
+          'aggressive': '🎯',
+          'custom': '✏️'
+        }[a.preset] || '🔔';
+        
+        return `${i + 1}. ${presetEmoji} ${pairText} : +${a.threshold_percent}%`;
+      }).join('\n');
+      
+      return `🔔 Mes alertes\n\n${list}\n\nTu seras prévenu quand ces seuils seront atteints.`;
+    },
+  
+    PREMIUM_EXPIRED: `⚠️ Ton Premium a expiré
+  
+  Tu nous manques déjà ! 😢
+  
+  Reprends là où tu t'étais arrêté :
+  📱 15 R$ / 3 mois
+  📱 27 R$ / 6 mois (−10%)
+  📱 50 R$ / 12 mois (−17%)`,
+  
+    PREMIUM_EXPIRING_SOON: (daysLeft) => `⏰ Ton Premium expire dans ${daysLeft} jour${daysLeft > 1 ? 's' : ''}
+  
+  Tu veux renouveler ?
+  
+  📱 15 R$ / 3 mois
+  📱 27 R$ / 6 mois (−10%)
+  📱 50 R$ / 12 mois (−17%)`,
+  
+    NOT_PREMIUM: `🔒 Fonctionnalité Premium
+  
+  Cette fonctionnalité est réservée aux abonnés Premium.
+  
+  💎 Passe à Premium pour :
+  • Créer des alertes personnalisées
+  • Recevoir des alertes régulières
+  • Multi-paires et analyses avancées
+  
+  Prix : à partir de 5 R$/mois`,
+
+
   btn: {
     langFR: '🇫🇷 Français',
     langPT: '🇧🇷 Português',
@@ -486,7 +668,21 @@ Ce que tu as appris aujourd'hui sera de plus en plus utilisé dans le futur : tu
     setAlert: '⏰ Activer mon alerte',
     premium: '🚀 Découvrir Premium',
     giveFeedback: '💬 Donner une suggestion',
-  },
+    seePremium: '💎 Voir Premium',
+    subscribe3m: '📱 15 R$ - 3 mois',
+    subscribe6m: '📱 27 R$ - 6 mois',
+    subscribe12m: '📱 50 R$ - 12 mois',
+    premiumDetails: 'ℹ️ Voir toutes les fonctionnalités',
+    createAlert: '➕ Créer une alerte',
+    myAlerts: '🔔 Mes alertes',
+    conservative: '🛡️ Conservateur',
+    balanced: '⚖️ Équilibré',
+    aggressive: '🎯 Opportuniste',
+    custom: '✏️ Personnalisé',
+    disableAlert: '🔕 Désactiver',
+    editAlert: '✏️ Modifier',
+    backToPricing: '⬅️ Retour aux tarifs',
+  }
 };
 
 // ============================================
@@ -927,6 +1123,190 @@ O que você aprendeu hoje será cada vez mais usado no futuro: você acabou de d
 
 🙌 Esperamos que você tenha curtido a experiência!`,
 
+
+PREMIUM_PRICING: `💎 ASSINAR PREMIUM
+
+✨ Com Premium :
+• 🔔 Alertas personalizados ilimitados
+• 📢 Alertas espontâneos regulares
+• 🎯 Multi-pares (EUR→BRL + BRL→EUR)
+• 📊 Análises mais avançadas
+• 🌍 Multi-moedas em breve
+• ⚡ Acesso prioritário às novas funcionalidades
+
+[ℹ️ Ver todas as funcionalidades Premium]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📱 15 R$ / 3 meses
+   Ou seja 5 R$/mês
+
+📱 27 R$ / 6 meses
+   Ou seja 4,50 R$/mês • Economia de 10%
+
+📱 50 R$ / 12 meses
+   Ou seja 4,17 R$/mês • Economia de 17%
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔜 Cartão de crédito internacional em breve`,
+
+  PREMIUM_DETAILS: `💎 FUNCIONALIDADES PREMIUM
+
+🔔 ALERTAS PERSONALIZADOS ILIMITADOS
+Configure seus próprios limites de disparo.
+Exemplo: "Me avise se EUR→BRL ultrapassar 6,20"
+
+Você pode criar quantos alertas quiser, para diferentes valores ou situações.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📢 ALERTAS ESPONTÂNEOS REGULARES
+No modo gratuito: 1-2 alertas/mês (recordes excepcionais)
+
+No Premium: alertas regulares assim que as condições forem favoráveis, sem precisar esperar um recorde absoluto.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 MULTI-PARES
+Monitore EUR→BRL E BRL→EUR ao mesmo tempo.
+
+Perfeito se você faz transferências regulares nos dois sentidos ou quer otimizar em ambas as direções.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 ANÁLISES MAIS AVANÇADAS
+• Comparação com médias de 7/30/90 dias
+• Identificação de tendências
+• Recomendações baseadas no histórico
+• Insights para otimizar suas transferências
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🌍 MULTI-MOEDAS (EM BREVE)
+Em breve: USD, GBP, CHF, CAD e outros pares.
+
+Os assinantes Premium terão acesso prioritário, desde o lançamento.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚡ ACESSO PRIORITÁRIO
+• Novas funcionalidades em primeira mão
+• Influência no roadmap (proponha e vote)
+• Suporte prioritário
+• Evolução contínua do serviço`,
+
+  ALERT_CREATE_INTRO: `🔔 CRIAR UM ALERTA
+
+Escolha como você quer ser alertado:`,
+
+  ALERT_PRESET_CONSERVATIVE: `🛡️ Conservador
++2% vs média 30d
+Alerta ~1x por mês
+Para garantir uma boa taxa`,
+
+  ALERT_PRESET_BALANCED: `⚖️ Equilibrado (Nossa escolha ⭐)
++3% vs média 30d
+Alerta ~2-3x por mês
+É o que usamos nós mesmos`,
+
+  ALERT_PRESET_AGGRESSIVE: `🎯 Oportunista
++5% vs média 30d
+Alerta ~1x a cada 2 meses
+Para maximizar, mais raro mas melhor`,
+
+  ALERT_CREATED: (pair, threshold, currentRate, avg30d, alertThreshold, locale) => `✅ Alerta criado!
+
+${pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'} : +${threshold}% vs média 30d
+
+Vou te alertar quando a taxa ultrapassar a média dos últimos 30 dias em ${threshold}%.
+
+Atualmente:
+• Taxa atual: ${formatRate(currentRate, locale)}
+• Média 30d: ${formatRate(avg30d, locale)}
+• Limite alerta: ${formatRate(alertThreshold, locale)} (+${threshold}%)`,
+
+  ALERT_TRIGGERED: (pair, currentRate, avg30d, threshold, delta, amountExample, savings, locale) => `🔔 ALERTA PREMIUM
+
+${pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'} : ${formatRate(currentRate, locale)}
+
+💡 Seu limite foi atingido!
+
+📊 Análise:
+• Taxa atual: ${formatRate(currentRate, locale)}
+• Média 30d: ${formatRate(avg30d, locale)}
+• Diferença: +${formatAmount(delta, 1, locale)}% ✅
+• ${delta > threshold ? `É ${formatAmount(delta - threshold, 1, locale)}% acima do seu limite` : 'Exatamente no seu limite'}
+
+💰 Em ${formatAmount(amountExample, 0, locale)}${pair === 'eurbrl' ? '€' : ' R$'}, você ganha ~${formatAmount(savings, 0, locale)}${pair === 'eurbrl' ? ' R$' : '€'} vs a média`,
+
+  FREE_ALERT: (pair, currentRate, recordDays, amountExample, savings, locale) => `🔔 ALERTA ESPECIAL
+
+${pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'} : ${formatRate(currentRate, locale)}
+
+📊 É a MELHOR taxa dos últimos ${recordDays} dias!
+
+💰 Em ${formatAmount(amountExample, 0, locale)}${pair === 'eurbrl' ? '€' : ' R$'}, você ganha ~${formatAmount(savings, 0, locale)}${pair === 'eurbrl' ? ' R$' : '€'} vs a média
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💎 Com Premium (5 R$/mês):
+• Configure seus próprios alertas
+• Multi-pares (EUR→BRL + BRL→EUR)
+• Vários limites personalizados
+• Alertas regulares (não apenas recordes)`,
+
+  ALERTS_LIST: (alerts, locale) => {
+    if (alerts.length === 0) {
+      return `🔔 Meus alertas\n\nNenhum alerta ativo.\n\nCrie seu primeiro alerta para ser avisado das boas taxas!`;
+    }
+    
+    const list = alerts.map((a, i) => {
+      const pairText = a.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+      const presetEmoji = {
+        'conservative': '🛡️',
+        'balanced': '⚖️',
+        'aggressive': '🎯',
+        'custom': '✏️'
+      }[a.preset] || '🔔';
+      
+      return `${i + 1}. ${presetEmoji} ${pairText} : +${a.threshold_percent}%`;
+    }).join('\n');
+    
+    return `🔔 Meus alertas\n\n${list}\n\nVocê será avisado quando esses limites forem atingidos.`;
+  },
+
+  PREMIUM_EXPIRED: `⚠️ Seu Premium expirou
+
+Já sentimos sua falta! 😢
+
+Retome de onde parou:
+📱 15 R$ / 3 meses
+📱 27 R$ / 6 meses (−10%)
+📱 50 R$ / 12 meses (−17%)`,
+
+  PREMIUM_EXPIRING_SOON: (daysLeft) => `⏰ Seu Premium expira em ${daysLeft} dia${daysLeft > 1 ? 's' : ''}
+
+Quer renovar?
+
+📱 15 R$ / 3 meses
+📱 27 R$ / 6 meses (−10%)
+📱 50 R$ / 12 meses (−17%)`,
+
+  NOT_PREMIUM: `🔒 Funcionalidade Premium
+
+Esta funcionalidade é reservada aos assinantes Premium.
+
+💎 Assine Premium para:
+• Criar alertas personalizados
+• Receber alertas regulares
+• Multi-pares e análises avançadas
+
+Preço: a partir de 5 R$/mês`,
+
+
+
+
   btn: {
     langFR: '🇫🇷 Français',
     langPT: '🇧🇷 Português',
@@ -975,6 +1355,20 @@ O que você aprendeu hoje será cada vez mais usado no futuro: você acabou de d
     setAlert: '⏰ Ativar meu alerta',
     premium: '🚀 Descobrir Premium',
     giveFeedback: '💬 Dar uma sugestão',
+    seePremium: '💎 Ver Premium',
+    subscribe3m: '📱 15 R$ - 3 meses',
+    subscribe6m: '📱 27 R$ - 6 meses',
+    subscribe12m: '📱 50 R$ - 12 meses',
+    premiumDetails: 'ℹ️ Ver todas as funcionalidades',
+    createAlert: '➕ Criar um alerta',
+    myAlerts: '🔔 Meus alertas',
+    conservative: '🛡️ Conservador',
+    balanced: '⚖️ Equilibrado',
+    aggressive: '🎯 Oportunista',
+    custom: '✏️ Personalizado',
+    disableAlert: '🔕 Desativar',
+    editAlert: '✏️ Modificar',
+    backToPricing: '⬅️ Voltar aos preços',
   },
 };
 
@@ -1416,6 +1810,191 @@ What you learned today will be increasingly used in the future: you just took a 
 
 🙌 We hope you enjoyed the experience!`,
 
+PREMIUM_PRICING: `💎 GO PREMIUM
+
+✨ With Premium:
+• 🔔 Unlimited custom alerts
+• 📢 Regular spontaneous alerts
+• 🎯 Multi-pairs (EUR→BRL + BRL→EUR)
+• 📊 Advanced analytics
+• 🌍 Multi-currency coming soon
+• ⚡ Priority access to new features
+
+[ℹ️ See all Premium features]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📱 15 R$ / 3 months
+   That's 5 R$/month
+
+📱 27 R$ / 6 months
+   That's 4.50 R$/month • Save 10%
+
+📱 50 R$ / 12 months
+   That's 4.17 R$/month • Save 17%
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔜 International credit card coming soon`,
+
+  PREMIUM_DETAILS: `💎 PREMIUM FEATURES
+
+🔔 UNLIMITED CUSTOM ALERTS
+Set your own trigger thresholds.
+Example: "Alert me if EUR→BRL exceeds 6.20"
+
+You can create as many alerts as you want, for different amounts or situations.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📢 REGULAR SPONTANEOUS ALERTS
+Free mode: 1-2 alerts/month (exceptional records)
+
+Premium: regular alerts as soon as conditions are favorable, no need to wait for an absolute record.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 MULTI-PAIRS
+Monitor EUR→BRL AND BRL→EUR at the same time.
+
+Perfect if you make regular transfers both ways or want to optimize in both directions.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 ADVANCED ANALYTICS
+• Comparison with 7/30/90 day averages
+• Trend identification
+• History-based recommendations
+• Insights to optimize your transfers
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🌍 MULTI-CURRENCY (COMING SOON)
+Soon: USD, GBP, CHF, CAD and other pairs.
+
+Premium subscribers will have priority access from launch.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚡ PRIORITY ACCESS
+• New features in preview
+• Influence the roadmap (suggest and vote)
+• Priority support
+• Continuous service evolution`,
+
+  ALERT_CREATE_INTRO: `🔔 CREATE AN ALERT
+
+Choose how you want to be alerted:`,
+
+  ALERT_PRESET_CONSERVATIVE: `🛡️ Conservative
++2% vs 30d average
+Alert ~1x per month
+To secure a good rate`,
+
+  ALERT_PRESET_BALANCED: `⚖️ Balanced (Our choice ⭐)
++3% vs 30d average
+Alert ~2-3x per month
+It's what we use ourselves`,
+
+  ALERT_PRESET_AGGRESSIVE: `🎯 Opportunistic
++5% vs 30d average
+Alert ~1x every 2 months
+To maximize, rarer but better`,
+
+  ALERT_CREATED: (pair, threshold, currentRate, avg30d, alertThreshold, locale) => `✅ Alert created!
+
+${pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'} : +${threshold}% vs 30d average
+
+I'll alert you when the rate exceeds the 30-day average by ${threshold}%.
+
+Currently:
+• Current rate: ${formatRate(currentRate, locale)}
+• 30d average: ${formatRate(avg30d, locale)}
+• Alert threshold: ${formatRate(alertThreshold, locale)} (+${threshold}%)`,
+
+  ALERT_TRIGGERED: (pair, currentRate, avg30d, threshold, delta, amountExample, savings, locale) => `🔔 PREMIUM ALERT
+
+${pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'} : ${formatRate(currentRate, locale)}
+
+💡 Your threshold is reached!
+
+📊 Analysis:
+• Current rate: ${formatRate(currentRate, locale)}
+• 30d average: ${formatRate(avg30d, locale)}
+• Difference: +${formatAmount(delta, 1, locale)}% ✅
+• ${delta > threshold ? `That's ${formatAmount(delta - threshold, 1, locale)}% above your threshold` : 'Right on your threshold'}
+
+💰 On ${formatAmount(amountExample, 0, locale)}${pair === 'eurbrl' ? '€' : ' R$'}, you gain ~${formatAmount(savings, 0, locale)}${pair === 'eurbrl' ? ' R$' : '€'} vs average`,
+
+  FREE_ALERT: (pair, currentRate, recordDays, amountExample, savings, locale) => `🔔 SPECIAL ALERT
+
+${pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'} : ${formatRate(currentRate, locale)}
+
+📊 This is the BEST rate in ${recordDays} days!
+
+💰 On ${formatAmount(amountExample, 0, locale)}${pair === 'eurbrl' ? '€' : ' R$'}, you gain ~${formatAmount(savings, 0, locale)}${pair === 'eurbrl' ? ' R$' : '€'} vs average
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💎 With Premium (5 R$/month):
+• Configure your own alerts
+• Multi-pairs (EUR→BRL + BRL→EUR)
+• Multiple custom thresholds
+• Regular alerts (not just records)`,
+
+  ALERTS_LIST: (alerts, locale) => {
+    if (alerts.length === 0) {
+      return `🔔 My alerts\n\nNo active alerts.\n\nCreate your first alert to be notified of good rates!`;
+    }
+    
+    const list = alerts.map((a, i) => {
+      const pairText = a.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+      const presetEmoji = {
+        'conservative': '🛡️',
+        'balanced': '⚖️',
+        'aggressive': '🎯',
+        'custom': '✏️'
+      }[a.preset] || '🔔';
+      
+      return `${i + 1}. ${presetEmoji} ${pairText} : +${a.threshold_percent}%`;
+    }).join('\n');
+    
+    return `🔔 My alerts\n\n${list}\n\nYou'll be notified when these thresholds are reached.`;
+  },
+
+  PREMIUM_EXPIRED: `⚠️ Your Premium has expired
+
+We already miss you! 😢
+
+Pick up where you left off:
+📱 15 R$ / 3 months
+📱 27 R$ / 6 months (−10%)
+📱 50 R$ / 12 months (−17%)`,
+
+  PREMIUM_EXPIRING_SOON: (daysLeft) => `⏰ Your Premium expires in ${daysLeft} day${daysLeft > 1 ? 's' : ''}
+
+Want to renew?
+
+📱 15 R$ / 3 months
+📱 27 R$ / 6 months (−10%)
+📱 50 R$ / 12 months (−17%)`,
+
+  NOT_PREMIUM: `🔒 Premium Feature
+
+This feature is reserved for Premium subscribers.
+
+💎 Go Premium for:
+• Create custom alerts
+• Receive regular alerts
+• Multi-pairs and advanced analytics
+
+Price: from 5 R$/month`,
+
+
+    
+
+
+
   btn: {
     langFR: '🇫🇷 Français',
     langPT: '🇧🇷 Português',
@@ -1464,6 +2043,20 @@ What you learned today will be increasingly used in the future: you just took a 
     setAlert: '⏰ Activate my alert',
     premium: '🚀 Discover Premium',
     giveFeedback: '💬 Give feedback',
+    seePremium: '💎 See Premium',
+    subscribe3m: '📱 15 R$ - 3 months',
+    subscribe6m: '📱 27 R$ - 6 months',
+    subscribe12m: '📱 50 R$ - 12 months',
+    premiumDetails: 'ℹ️ See all features',
+    createAlert: '➕ Create an alert',
+    myAlerts: '🔔 My alerts',
+    conservative: '🛡️ Conservative',
+    balanced: '⚖️ Balanced',
+    aggressive: '🎯 Oportunistic',
+    custom: '✏️ Custom',
+    disableAlert: '🔕 Disable',
+    editAlert: '✏️ Edit',
+    backToPricing: '⬅️ Back to pricing',
   },
 };
 

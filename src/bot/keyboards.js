@@ -239,6 +239,65 @@ export function buildKeyboards(msg, type, options = {}) {
         [Markup.button.callback(msg.btn.back, 'action:back_context')],
       ]);
     
+ // Écran Premium Pricing
+ case 'premium_pricing':
+    return Markup.inlineKeyboard([
+      [Markup.button.callback(msg.btn.premiumDetails, 'premium:details')],
+      [Markup.button.callback(msg.btn.subscribe3m, 'premium:subscribe:3')],
+      [Markup.button.callback(msg.btn.subscribe6m, 'premium:subscribe:6')],
+      [Markup.button.callback(msg.btn.subscribe12m, 'premium:subscribe:12')],
+      [Markup.button.callback(msg.btn.back, 'action:back_main')],
+    ]);
+
+  // Écran Premium Details
+  case 'premium_details':
+    return Markup.inlineKeyboard([
+      [Markup.button.callback(msg.btn.backToPricing, 'premium:pricing')],
+      [Markup.button.callback(msg.btn.subscribe3m, 'premium:subscribe:3')],
+      [Markup.button.callback(msg.btn.subscribe6m, 'premium:subscribe:6')],
+      [Markup.button.callback(msg.btn.subscribe12m, 'premium:subscribe:12')],
+    ]);
+
+  // Écran Création Alerte (choix preset)
+  case 'alert_create':
+    return Markup.inlineKeyboard([
+      [Markup.button.callback(msg.btn.conservative, 'alert:preset:conservative:' + (options.pair || 'eurbrl'))],
+      [Markup.button.callback(msg.btn.balanced, 'alert:preset:balanced:' + (options.pair || 'eurbrl'))],
+      [Markup.button.callback(msg.btn.aggressive, 'alert:preset:aggressive:' + (options.pair || 'eurbrl'))],
+      [Markup.button.callback(msg.btn.custom, 'alert:preset:custom:' + (options.pair || 'eurbrl'))],
+      [Markup.button.callback(msg.btn.back, 'premium:pricing')],
+    ]);
+
+  // Écran Liste Alertes
+  case 'alerts_list':
+    const alertButtons = options.alerts?.map(alert => [
+      Markup.button.callback(
+        `${alert.pair === 'eurbrl' ? '🇪🇺→🇧🇷' : '🇧🇷→🇪🇺'} +${alert.threshold_percent}%`,
+        `alert:view:${alert.id}`
+      )
+    ]) || [];
+    
+    return Markup.inlineKeyboard([
+      ...alertButtons,
+      [Markup.button.callback(msg.btn.createAlert, 'alert:create:eurbrl')],
+      [Markup.button.callback(msg.btn.back, 'premium:pricing')],
+    ]);
+
+  // Écran Détails d'une Alerte
+  case 'alert_view':
+    return Markup.inlineKeyboard([
+      [Markup.button.callback(msg.btn.editAlert, `alert:edit:${options.alertId}`)],
+      [Markup.button.callback(msg.btn.disableAlert, `alert:disable:${options.alertId}`)],
+      [Markup.button.callback(msg.btn.back, 'alert:list')],
+    ]);
+
+  // Not Premium (message bloquant)
+  case 'not_premium':
+    return Markup.inlineKeyboard([
+      [Markup.button.callback(msg.btn.seePremium, 'premium:pricing')],
+      [Markup.button.callback(msg.btn.back, 'action:back_main')],
+    ]);
+
     default:
       return Markup.inlineKeyboard([[Markup.button.callback(msg.btn.back, 'action:back_main')]]);
   }

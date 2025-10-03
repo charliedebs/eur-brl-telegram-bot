@@ -76,6 +76,30 @@ bot.command('help', async (ctx) => {
   await ctx.reply(msg.ABOUT_TEXT, { parse_mode: 'HTML' });
 });
 
+bot.command('premium', async (ctx) => {
+    const msg = getMsg(ctx);
+    const kb = buildKeyboards(msg, 'premium_pricing');
+    await ctx.reply(msg.PREMIUM_PRICING, { parse_mode: 'HTML', ...kb });
+  });
+  
+  bot.command('alerts', async (ctx) => {
+    const msg = getMsg(ctx);
+    
+    // Vérifier Premium
+    const isPremium = await db.isPremium(ctx.from.id);
+    if (!isPremium) {
+      const kb = buildKeyboards(msg, 'not_premium');
+      return ctx.reply(msg.NOT_PREMIUM, { parse_mode: 'HTML', ...kb });
+    }
+    
+    // Récupérer alertes
+    const userAlerts = await db.getUserAlerts(ctx.from.id);
+    const locale = getLocale(ctx.state.lang);
+    
+    const kb = buildKeyboards(msg, 'alerts_list', { alerts: userAlerts });
+    await ctx.reply(msg.ALERTS_LIST(userAlerts, locale), { parse_mode: 'HTML', ...kb });
+  });
+
 // ==================== CALLBACKS ====================
 
 bot.action(/^lang:(.+)$/, async (ctx) => {
@@ -409,6 +433,260 @@ bot.action(/^action:change_amount:(.+)$/, async (ctx) => {
   await ctx.answerCbQuery();
 });
 
+
+// ==================== PREMIUM CALLBACKS ====================
+
+// Écran pricing
+bot.action('premium:pricing', async (ctx) => {
+    const msg = getMsg(ctx);
+    const kb = buildKeyboards(msg, 'premium_pricing');
+    await ctx.editMessageText(msg.PREMIUM_PRICING, { parse_mode: 'HTML', ...kb });
+    await ctx.answerCbQuery();
+  });
+  
+  // Écran détails
+  bot.action('premium:details', async (ctx) => {
+    const msg = getMsg(ctx);
+    const kb = buildKeyboards(msg, 'premium_details');
+    await ctx.editMessageText(msg.PREMIUM_DETAILS, { parse_mode: 'HTML', ...kb });
+    await ctx.answerCbQuery();
+  });
+  
+  // Souscription (placeholder - paiements Phase 2)
+  bot.action(/^premium:subscribe:(\d+)$/, async (ctx) => {
+    const months = parseInt(ctx.match[1]);
+    const prices = { 3: 15, 6: 27, 12: 50 };
+    const price = prices[months];
+    
+    await ctx.answerCbQuery('🚧 Paiement Pix bientôt disponible !');
+    
+    // TODO Phase 2: Intégrer Mercado Pago
+    await ctx.reply(
+      `💳 Souscription ${months} mois (${price} R$)\n\n` +
+      `🚧 Le paiement par Pix sera disponible très bientôt !\n\n` +
+      `En attendant, contacte-nous pour activer ton Premium manuellement.`
+    );
+  });
+  
+  // ==================== ALERTS CALLBACKS ====================
+  
+  // Créer alerte (choix pair)
+  bot.action(/^alert:create:(eurbrl|brleur)$/, async (ctx) => {
+    const pair = ctx.match[1];
+    const msg = getMsg(ctx);
+    
+    // Vérifier Premium
+    const isPremium = await db.isPremium(ctx.from.id);
+    if (!isPremium) {
+      await ctx.answerCbQuery('🔒 Fonctionnalité Premium');
+      const kb = buildKeyboards(msg, 'not_premium');
+      return ctx.reply(msg.NOT_PREMIUM, { parse_mode: 'HTML', ...kb });
+    }
+    
+    const kb = buildKeyboards(msg, 'alert_create', { pair });
+    await ctx.editMessageText(msg.ALERT_CREATE_INTRO, { parse_mode: 'HTML', ...kb });
+    await ctx.answerCbQuery();
+  });
+  
+  // Sélection preset
+  bot.action(/^alert:preset:(conservative|balanced|aggressive|custom):(eurbrl|brleur)$/, async (ctx) => {
+    const preset = ctx.match[1];
+    const pair = ctx.match[2];
+    const msg = getMsg(ctx);
+    const locale = getLocale(ctx.state.lang);
+    
+    // Vérifier Premium
+    const isPremium = await db.isPremium(ctx.from.id);
+    if (!isPremium) {
+      await ctx.answerCbQuery('🔒 Fonctionnalité Premium');
+      return;
+    }
+    
+    // Seuils des presets
+    const thresholds = {
+      conservative: 2.0,
+      balanced: 3.0,
+      aggressive: 5.0
+    };
+    
+    if (preset === 'custom') {
+      // TODO: Demander seuil personnalisé
+      await ctx.answerCbQuery('⏳ Fonctionnalité en cours de développement');
+      return ctx.reply('✏️ Seuil personnalisé\n\nEntre ton seuil souhaité (ex: 2.5 pour +2,5%)');
+    }
+    
+    const threshold = thresholds[preset];
+    
+    // Créer alerte
+    const user = await db.getUser(ctx.from.id);
+    const alertData = {
+      pair,
+      preset,
+      threshold_percent: threshold
+    };
+    
+    const alert = await db.createAlert(user.id, alertData);
+    
+    if (!alert) {
+      await ctx.answerCbQuery('❌ Erreur lors de la création');
+      return ctx.reply('❌ Une erreur est survenue. Réessaie.');
+    }
+    
+    // Récupérer données pour message
+    const rates = await getRates();
+    const currentRate = pair === 'eurbrl' ? rates.cross : 1 / rates.cross;
+    const avg30d = await db.getAverage30Days(pair);
+    const alertThreshold = avg30d * (1 + threshold / 100);
+    
+    await ctx.answerCbQuery('✅ Alerte créée !');
+    
+    const text = msg.ALERT_CREATED(pair, threshold, currentRate, avg30d, alertThreshold, locale);
+    const kb = buildKeyboards(msg, 'alerts_list', { alerts: [alert] });
+    
+    await ctx.editMessageText(text, { parse_mode: 'HTML', ...kb });
+  });
+  
+  // Liste alertes
+  bot.action('alert:list', async (ctx) => {
+    const msg = getMsg(ctx);
+    const locale = getLocale(ctx.state.lang);
+    
+    const isPremium = await db.isPremium(ctx.from.id);
+    if (!isPremium) {
+      await ctx.answerCbQuery('🔒 Fonctionnalité Premium');
+      const kb = buildKeyboards(msg, 'not_premium');
+      return ctx.reply(msg.NOT_PREMIUM, { parse_mode: 'HTML', ...kb });
+    }
+    
+    const userAlerts = await db.getUserAlerts(ctx.from.id);
+    const kb = buildKeyboards(msg, 'alerts_list', { alerts: userAlerts });
+    
+    await ctx.editMessageText(msg.ALERTS_LIST(userAlerts, locale), { parse_mode: 'HTML', ...kb });
+    await ctx.answerCbQuery();
+  });
+  
+  // Voir détails alerte
+  bot.action(/^alert:view:(.+)$/, async (ctx) => {
+    const alertId = ctx.match[1];
+    const msg = getMsg(ctx);
+    
+    // TODO: Récupérer détails alerte et afficher
+    await ctx.answerCbQuery();
+    await ctx.reply('📊 Détails de l\'alerte\n\n⏳ En cours de développement');
+  });
+  
+  // Désactiver alerte
+  bot.action(/^alert:disable:(.+)$/, async (ctx) => {
+    const alertId = ctx.match[1];
+    
+    await db.disableAlert(alertId);
+    await ctx.answerCbQuery('✅ Alerte désactivée');
+    
+    const msg = getMsg(ctx);
+    const locale = getLocale(ctx.state.lang);
+    const userAlerts = await db.getUserAlerts(ctx.from.id);
+    const kb = buildKeyboards(msg, 'alerts_list', { alerts: userAlerts });
+    
+    await ctx.editMessageText(msg.ALERTS_LIST(userAlerts, locale), { parse_mode: 'HTML', ...kb });
+  });
+
+  // ==================== HELPER FUNCTIONS ====================
+
+// Middleware: Vérifier si Premium requis
+async function requirePremium(ctx, next) {
+    const isPremium = await db.isPremium(ctx.from.id);
+    
+    if (!isPremium) {
+      const msg = getMsg(ctx);
+      const kb = buildKeyboards(msg, 'not_premium');
+      await ctx.reply(msg.NOT_PREMIUM, { parse_mode: 'HTML', ...kb });
+      return;
+    }
+    
+    await next();
+  }
+  
+  // Broadcast alerte gratuite (à utiliser dans CRON job)
+  async function broadcastFreeAlert(pair, currentRate, recordDays, amountExample) {
+    const users = await db.getAllActiveUsers();
+    
+    for (const user of users) {
+      try {
+        const locale = getLocale(user.language);
+        const msg = messages[user.language];
+        
+        // Calcul économie vs moyenne
+        const avg30d = await db.getAverage30Days(pair);
+        const savings = pair === 'eurbrl' 
+          ? (currentRate - avg30d) * amountExample
+          : (1/avg30d - 1/currentRate) * amountExample;
+        
+        const text = msg.FREE_ALERT(pair, currentRate, recordDays, amountExample, savings, locale);
+        const kb = buildKeyboards(msg, 'free_alert', { pair, amount: amountExample });
+        
+        await bot.telegram.sendMessage(user.telegram_id, text, {
+          parse_mode: 'HTML',
+          ...kb
+        });
+        
+        // Petit délai pour éviter rate limit Telegram
+        await new Promise(resolve => setTimeout(resolve, 50));
+      } catch (error) {
+        console.error(`[FREE-ALERT] Failed for user ${user.telegram_id}:`, error.message);
+      }
+    }
+    
+    console.log(`[FREE-ALERT] ✅ Sent to ${users.length} users`);
+  }
+  
+  // Broadcast alerte premium (à utiliser dans CRON job)
+  async function broadcastPremiumAlert(alert, currentRate, avg30d) {
+    try {
+      const user = await db.getUser(alert.users.telegram_id);
+      if (!user) return;
+      
+      const locale = getLocale(user.language);
+      const msg = messages[user.language];
+      
+      const threshold = alert.threshold_percent;
+      const delta = ((currentRate - avg30d) / avg30d) * 100;
+      
+      const amountExample = alert.pair === 'eurbrl' ? 1000 : 5000;
+      const savings = alert.pair === 'eurbrl'
+        ? (currentRate - avg30d) * amountExample
+        : (1/avg30d - 1/currentRate) * amountExample;
+      
+      const text = msg.ALERT_TRIGGERED(
+        alert.pair,
+        currentRate,
+        avg30d,
+        threshold,
+        delta,
+        amountExample,
+        savings,
+        locale
+      );
+      
+      const kb = buildKeyboards(msg, 'premium_alert', {
+        pair: alert.pair,
+        amount: amountExample,
+        alertId: alert.id
+      });
+      
+      await bot.telegram.sendMessage(user.telegram_id, text, {
+        parse_mode: 'HTML',
+        ...kb
+      });
+      
+      console.log(`[PREMIUM-ALERT] ✅ Sent to user ${user.telegram_id}`);
+    } catch (error) {
+      console.error(`[PREMIUM-ALERT] Failed:`, error.message);
+    }
+  }
+  
+  // Export pour utilisation dans CRON jobs
+  export { broadcastFreeAlert, broadcastPremiumAlert };
+
 // ==================== TEXT HANDLER WITH NEW NLU ====================
 
 bot.on('text', async (ctx) => {
@@ -664,5 +942,5 @@ bot.on('text', async (ctx) => {
     console.error('[BOT] Error:', err);
     ctx.reply("❌ Une erreur est survenue.").catch(() => {});
   });
-  
+
 export { bot };

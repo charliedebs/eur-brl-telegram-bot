@@ -20,6 +20,8 @@ app.post('/webhook/telegram', (req, res) => {
 app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
   
+  startCronJobs();
+
   if (process.env.NODE_ENV === 'production' && WEBHOOK_DOMAIN) {
     const webhookUrl = `${WEBHOOK_DOMAIN}/webhook/telegram`;
     await bot.telegram.setWebhook(webhookUrl);
