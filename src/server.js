@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import { bot } from './bot/index.js';
+import { startCronJobs } from './jobs/scheduler.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
