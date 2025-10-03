@@ -71,10 +71,13 @@ export async function getWiseComparison(route, amount) {
       const bestQuote = quotes.sort((a, b) => b.receivedAmount - a.receivedAmount)[0];
       
       if (bestQuote) {
+
+        const effectiveRate = bestQuote.receivedAmount / sendAmount;
+
         providers.push({
           provider: provider.name,
           out: bestQuote.receivedAmount,
-          rate: bestQuote.rate,
+          rate: effectiveRate, // ← CORRECTION : taux effectif basé sur montant reçu
           fee: bestQuote.fee,
           markup: bestQuote.markup,
           sourceCountry: bestQuote.sourceCountry,

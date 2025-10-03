@@ -1,11 +1,93 @@
+// src/services/rates.js
+// Version optimisée avec Binance API - Pairs USDC directes (0% écart)
+
 import { FEES } from '../config/constants.js';
 
-// Fetch USDC rates from CoinGecko
-export async function getRates() {
+// Cache simple en mémoire (1 minute de validité)
+let ratesCache = null;
+let cacheTimestamp = null;
+const CACHE_DURATION = 60 * 1000; // 1 minute
+
+/**
+ * Fetch rates from Binance Public API avec pairs USDC directes
+ * Pairs utilisées:
+ * - USDCBRL (USDC/BRL) - direct
+ * - EURUSDC (EUR/USDC) - direct OU USDCEUR inversé
+ */
+async function fetchBinanceRates() {
   try {
-    const response = await fetch(
-      'https://api.coingecko.com/api/v3/simple/price?ids=usd-coin&vs_currencies=brl,eur'
-    );
+    // Fetch les 2 pairs en parallèle
+    const [usdcBrlResponse, eurUsdcResponse] = await Promise.all([
+      // USDC/BRL direct
+      fetch('https://api.binance.com/api/v3/ticker/price?symbol=USDCBRL'),
+      
+      // EUR/USDC direct (ou USDCEUR si pair inversée sur Binance)
+      // On teste d'abord EURUSDC, si ça fail on essaie USDCEUR
+      fetch('https://api.binance.com/api/v3/ticker/price?symbol=EURUSDC')
+    ]);
+    
+    if (!usdcBrlResponse.ok) {
+      throw new Error(`Binance USDCBRL error: ${usdcBrlResponse.status}`);
+    }
+    
+    const usdcBrlData = await usdcBrlResponse.json();
+    const usdcBRL = parseFloat(usdcBrlData.price);
+    
+    // Gérer EUR/USDC (peut être EURUSDC ou USDCEUR selon Binance)
+    let usdcEUR;
+    
+    if (eurUsdcResponse.ok) {
+      // EURUSDC existe (EUR/USDC)
+      const eurUsdcData = await eurUsdcResponse.json();
+      const eurUsdc = parseFloat(eurUsdcData.price);
+      usdcEUR = 1 / eurUsdc; // Inverser pour avoir USDC/EUR
+      console.log('[RATES-BINANCE] Using EURUSDC pair');
+    } else {
+      // Essayer USDCEUR (USDC/EUR)
+      console.log('[RATES-BINANCE] EURUSDC not found, trying USDCEUR...');
+      const usdcEurResponse = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=USDCEUR');
+      
+      if (!usdcEurResponse.ok) {
+        throw new Error('Neither EURUSDC nor USDCEUR available on Binance');
+      }
+      
+      const usdcEurData = await usdcEurResponse.json();
+      usdcEUR = parseFloat(usdcEurData.price);
+      console.log('[RATES-BINANCE] Using USDCEUR pair');
+    }
+    
+    if (!usdcBRL || !usdcEUR || isNaN(usdcBRL) || isNaN(usdcEUR)) {
+      throw new Error('Invalid rate data from Binance');
+    }
+    
+    return {
+      usdcBRL,
+      usdcEUR,
+      source: 'binance'
+    };
+    
+  } catch (error) {
+    console.error('[RATES-BINANCE] ❌ Error:', error.message);
+    throw error;
+  }
+}
+
+/**
+ * Fetch rates from CoinGecko (fallback)
+ */
+async function fetchCoinGeckoRates() {
+  try {
+    const apiKey = process.env.COINGECKO_API_KEY;
+    const url = apiKey 
+      ? `https://api.coingecko.com/api/v3/simple/price?ids=usd-coin&vs_currencies=brl,eur&x_cg_demo_api_key=${apiKey}`
+      : 'https://api.coingecko.com/api/v3/simple/price?ids=usd-coin&vs_currencies=brl,eur';
+    
+    const response = await fetch(url, {
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'EUR-BRL-Bot/1.0'
+      }
+    });
     
     if (!response.ok) {
       throw new Error(`CoinGecko API error: ${response.status}`);
@@ -16,22 +98,101 @@ export async function getRates() {
     const usdcEUR = data['usd-coin']?.eur;
     
     if (!usdcBRL || !usdcEUR) {
-      throw new Error('Missing rate data');
+      throw new Error('Missing rate data from CoinGecko');
     }
-    
-    const eurToUsdc = 1 / usdcEUR;
-    const cross = eurToUsdc * usdcBRL;
     
     return {
       usdcBRL,
       usdcEUR,
+      source: 'coingecko'
+    };
+    
+  } catch (error) {
+    console.error('[RATES-COINGECKO] ❌ Error:', error.message);
+    throw error;
+  }
+}
+
+/**
+ * Get rates avec stratégie multi-source
+ * 1. Binance (principal, pairs USDC directes)
+ * 2. CoinGecko (fallback)
+ * 3. Cache (si tout fail)
+ */
+export async function getRates() {
+  // 1. Vérifier le cache
+  if (ratesCache && cacheTimestamp) {
+    const age = Date.now() - cacheTimestamp;
+    if (age < CACHE_DURATION) {
+      console.log(`[RATES] ✅ Using cache (age: ${Math.round(age/1000)}s)`);
+      return ratesCache;
+    }
+  }
+
+  // 2. Essayer Binance (principal)
+  try {
+    console.log('[RATES] 📡 Fetching from Binance...');
+    const { usdcBRL, usdcEUR, source } = await fetchBinanceRates();
+    
+    const eurToUsdc = 1 / usdcEUR;
+    const cross = eurToUsdc * usdcBRL;
+    
+    const rates = {
+      usdcBRL,
+      usdcEUR,
       eurToUsdc,
       cross,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      source
     };
-  } catch (error) {
-    console.error('Failed to fetch rates:', error);
-    return null;
+    
+    // Mettre à jour le cache
+    ratesCache = rates;
+    cacheTimestamp = Date.now();
+    
+    console.log(`[RATES] ✅ Binance: EUR/BRL = ${cross.toFixed(4)}`);
+    return rates;
+    
+  } catch (binanceError) {
+    console.warn('[RATES] ⚠️ Binance failed, trying CoinGecko fallback...');
+    
+    // 3. Fallback sur CoinGecko
+    try {
+      const { usdcBRL, usdcEUR, source } = await fetchCoinGeckoRates();
+      
+      const eurToUsdc = 1 / usdcEUR;
+      const cross = eurToUsdc * usdcBRL;
+      
+      const rates = {
+        usdcBRL,
+        usdcEUR,
+        eurToUsdc,
+        cross,
+        timestamp: new Date().toISOString(),
+        source
+      };
+      
+      // Mettre à jour le cache
+      ratesCache = rates;
+      cacheTimestamp = Date.now();
+      
+      console.log(`[RATES] ✅ CoinGecko: EUR/BRL = ${cross.toFixed(4)}`);
+      return rates;
+      
+    } catch (coinGeckoError) {
+      console.error('[RATES] ❌ CoinGecko also failed');
+      
+      // 4. Dernier recours : cache stale
+      if (ratesCache) {
+        const age = Date.now() - cacheTimestamp;
+        console.warn(`[RATES] ⚠️ Using stale cache (age: ${Math.round(age/1000)}s)`);
+        return ratesCache;
+      }
+      
+      // 5. Vraiment rien
+      console.error('[RATES] 💥 All sources failed, no cache available');
+      return null;
+    }
   }
 }
 
