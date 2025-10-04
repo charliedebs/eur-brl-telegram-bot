@@ -1,22 +1,18 @@
+// src/jobs/scheduler.js
 import cron from 'node-cron';
-import { saveRatesAndCheckFreeAlerts, checkPremiumAlerts } from './alerts.js';
+import { saveRatesHistory } from './rates-history.js';
 
 export function startCronJobs() {
   console.log('📅 Starting CRON jobs...');
   
-  // Job 1 : Toutes les 2 heures (00:00, 02:00, 04:00, etc.)
+  // Job unique : Sauvegarde historique toutes les 2h
   cron.schedule('0 */2 * * *', async () => {
-    console.log('\n⏰ [CRON] Job 1: Rates & Free Alerts');
-    await saveRatesAndCheckFreeAlerts();
+    await saveRatesHistory();
   });
   
-  // Job 2 : Toutes les 2 heures également (cohérence)
-  cron.schedule('0 */2 * * *', async () => {
-    console.log('\n⏰ [CRON] Job 2: Premium Alerts');
-    await checkPremiumAlerts();
-  });
-  
-  console.log('✅ CRON jobs started');
-  console.log('  - Job 1: Every 2 hours (rates + free alerts)');
-  console.log('  - Job 2: Every 2 hours (premium alerts)');
+  console.log('✅ CRON job started');
+  console.log('  - Rates History: Every 2 hours (00:00, 02:00, 04:00, etc. UTC)');
+  console.log('  - Timezone: Check Railway logs to confirm');
+  console.log('🕐 Server timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
+  console.log('🕐 Current time:', new Date().toISOString());
 }

@@ -46,7 +46,7 @@ export const PROVIDERS = ['Wise', 'Remitly', 'Instarem'];
 
 export const PROVIDER_LINKS = {
   'Wise': 'https://wise.com/invite/dic/charlied197',
-  'Remitly': 'https://www.remitly.com/',
+  'Remitly': 'https://remit.ly/gmt9kg4h',
   'Instarem': 'https://www.instarem.com/',
   'PayPal': 'https://www.paypal.com/',
   'Western Union': 'https://www.westernunion.com/',
