@@ -571,25 +571,25 @@ PREMIUM_PRICING: `💎 PASSER À PREMIUM
   • Plusieurs seuils personnalisés
   • Alertes régulières (pas juste les records)`,
   
-    ALERTS_LIST: (alerts, locale) => {
-      if (alerts.length === 0) {
-        return `🔔 Mes alertes\n\nAucune alerte active.\n\nCrée ta première alerte pour être prévenu des bons taux !`;
-      }
+  ALERTS_LIST: (alerts, locale) => {
+    if (alerts.length === 0) {
+      return `🔔 Mes alertes\n\nAucune alerte active.\n\nCrée ta première alerte pour être prévenu des bons taux !`;
+    }
+    
+    const list = alerts.map((a, i) => {
+      const pairText = a.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+      const presetEmoji = {
+        'conservative': '🛡️',
+        'balanced': '⚖️',
+        'aggressive': '🎯',
+        'custom': '✏️'
+      }[a.preset] || '🔔';
       
-      const list = alerts.map((a, i) => {
-        const pairText = a.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
-        const presetEmoji = {
-          'conservative': '🛡️',
-          'balanced': '⚖️',
-          'aggressive': '🎯',
-          'custom': '✏️'
-        }[a.preset] || '🔔';
-        
-        return `${i + 1}. ${presetEmoji} ${pairText} : +${a.threshold_percent}%`;
-      }).join('\n');
-      
-      return `🔔 Mes alertes\n\n${list}\n\nTu seras prévenu quand ces seuils seront atteints.`;
-    },
+      return `${i + 1}. ${presetEmoji} ${pairText} : +${a.threshold_percent}%`;
+    }).join('\n');
+    
+    return `🔔 <b>Mes alertes</b>\n\n${list}\n\n💡 Clique sur un bouton ci-dessous pour voir les détails ou supprimer.\n\nTu seras prévenu quand ces seuils seront atteints (max 1x/24h par alerte).`;
+  },
   
     PREMIUM_EXPIRED: `⚠️ Ton Premium a expiré
   

@@ -45,6 +45,8 @@ export function buildKeyboards(msg, type, options = {}) {
           [Markup.button.callback(msg.btn.stayOff, `action:stay_offchain:${route}:${amount}`)],
           [Markup.button.callback(msg.btn.change, `action:change_amount:${route}`)],
           [Markup.button.callback(msg.btn.sources, 'action:sources')],
+          [Markup.button.callback('🔔 Créer une alerte', `alert:create:${route}`)],
+
           // 👇 NOUVEAUX BOUTONS FEEDBACK
           [
             Markup.button.callback('👍', 'feedback:correct'),

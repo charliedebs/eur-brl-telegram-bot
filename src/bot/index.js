@@ -569,10 +569,71 @@ bot.action('premium:pricing', async (ctx) => {
   bot.action(/^alert:view:(.+)$/, async (ctx) => {
     const alertId = ctx.match[1];
     const msg = getMsg(ctx);
+    const locale = getLocale(ctx.state.lang);
     
-    // TODO: Récupérer détails alerte et afficher
-    await ctx.answerCbQuery();
-    await ctx.reply('📊 Détails de l\'alerte\n\n⏳ En cours de développement');
+    try {
+      // Récupérer l'alerte
+      const { data: alert } = await db.supabase
+        .from('user_alerts')
+        .select('*')
+        .eq('id', alertId)
+        .single();
+      
+      if (!alert) {
+        await ctx.answerCbQuery('❌ Alerte introuvable');
+        return;
+      }
+      
+      // Récupérer les taux actuels
+      const rates = await getRates();
+      const currentRate = alert.pair === 'eurbrl' ? rates.cross : 1 / rates.cross;
+      const avg30d = await db.getAverage30Days(alert.pair);
+      const alertThreshold = avg30d ? avg30d * (1 + alert.threshold_percent / 100) : null;
+      
+      // Construire le message détaillé
+      const pairText = alert.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+      const presetEmoji = {
+        'conservative': '🛡️',
+        'balanced': '⚖️',
+        'aggressive': '🎯',
+        'custom': '✏️'
+      }[alert.preset] || '🔔';
+      
+      let text = `${presetEmoji} <b>Alerte ${pairText}</b>\n\n`;
+      text += `Seuil : +${alert.threshold_percent}% vs moyenne 30j\n\n`;
+      text += `<b>État actuel :</b>\n`;
+      text += `• Taux actuel : ${formatRate(currentRate, locale)}\n`;
+      
+      if (avg30d && alertThreshold) {
+        text += `• Moyenne 30j : ${formatRate(avg30d, locale)}\n`;
+        text += `• Seuil alerte : ${formatRate(alertThreshold, locale)}\n`;
+        
+        const distance = ((alertThreshold - currentRate) / currentRate * 100);
+        if (distance > 0) {
+          text += `\n📊 Encore ${formatAmount(distance, 1, locale)}% pour déclencher l'alerte`;
+        } else {
+          text += `\n✅ Seuil atteint ! En attente de cooldown (max 1x/24h)`;
+        }
+      }
+      
+      if (alert.last_triggered_at) {
+        const lastTriggered = new Date(alert.last_triggered_at);
+        text += `\n\n🔔 Dernière alerte : ${lastTriggered.toLocaleDateString(locale)}`;
+      }
+      
+      // Keyboard avec option supprimer
+      const kb = Markup.inlineKeyboard([
+        [Markup.button.callback('🗑️ Supprimer', `alert:delete:${alertId}`)],
+        [Markup.button.callback(msg.btn.back, 'alert:list')]
+      ]);
+      
+      await ctx.editMessageText(text, { parse_mode: 'HTML', ...kb });
+      await ctx.answerCbQuery();
+      
+    } catch (error) {
+      console.error('[ALERT-VIEW] Error:', error);
+      await ctx.answerCbQuery('❌ Erreur');
+    }
   });
   
   // Désactiver alerte
@@ -935,6 +996,31 @@ bot.on('text', async (ctx) => {
   bot.action(/^premium:open/, async (ctx) => {
     await ctx.reply("🚀 Premium\n\nPour aller plus loin...");
     await ctx.answerCbQuery();
+  });
+
+  bot.action(/^alert:delete:(.+)$/, async (ctx) => {
+    const alertId = ctx.match[1];
+    const msg = getMsg(ctx);
+    
+    try {
+      // Supprimer l'alerte
+      await db.disableAlert(alertId);
+      
+      await ctx.answerCbQuery('✅ Alerte supprimée');
+      
+      // Recharger la liste
+      const userAlerts = await db.getUserAlerts(ctx.from.id);
+      const locale = getLocale(ctx.state.lang);
+      const kb = buildKeyboards(msg, 'alerts_list', { alerts: userAlerts });
+      
+      await ctx.editMessageText(
+        msg.ALERTS_LIST(userAlerts, locale), 
+        { parse_mode: 'HTML', ...kb }
+      );
+    } catch (error) {
+      console.error('[ALERT-DELETE] Error:', error);
+      await ctx.answerCbQuery('❌ Erreur lors de la suppression');
+    }
   });
   
   // Error handling
