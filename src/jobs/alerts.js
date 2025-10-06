@@ -9,6 +9,100 @@ import { getLocale, formatRate, formatAmount } from '../services/rates.js';
 
 const db = new DatabaseService();
 
+// ==========================================
+// JOB 1 : Sauvegarde taux + Alertes gratuites
+// Fréquence : Toutes les 6 heures
+// ==========================================
+
+export async function saveRatesAndCheckFreeAlerts() {
+  console.log('[CRON] 🔍 Checking rates & free alerts...');
+  
+  try {
+    // 1. Récupérer taux actuel
+    const rates = await getRates();
+    if (!rates) {
+      console.error('[CRON] ❌ Failed to fetch rates');
+      return;
+    }
+    
+    // 2. Sauvegarder historique
+    await db.saveRateHistory({
+      pair: 'eurbrl',
+      rate: rates.cross,
+      usdc_eur: rates.usdcEUR,
+      usdc_brl: rates.usdcBRL
+    });
+    
+    console.log(`[CRON] ✅ Rate saved: ${rates.cross.toFixed(4)}`);
+    
+    // 3. Vérifier alerte gratuite
+    const shouldSend = await shouldSendFreeAlert(rates.cross, 'eurbrl');
+    
+    if (shouldSend) {
+      console.log('[CRON] 🔔 Free alert criteria met! Broadcasting...');
+      await broadcastFreeAlert('eurbrl', rates.cross);
+    } else {
+      console.log('[CRON] ℹ️ Free alert criteria not met');
+    }
+    
+  } catch (error) {
+    console.error('[CRON] ❌ Error:', error);
+  }
+}
+
+// ==========================================
+// JOB 2 : Alertes Premium
+// Fréquence : Toutes les 2 heures
+// ==========================================
+
+export async function checkPremiumAlerts() {
+  console.log('[CRON] 🔔 Checking premium alerts...');
+  
+  try {
+    const rates = await getRates();
+    if (!rates) {
+      console.error('[CRON] ❌ Failed to fetch rates');
+      return;
+    }
+    
+    const alerts = await db.getActiveAlerts();
+    console.log(`[CRON] Found ${alerts.length} active alerts`);
+    
+    for (const alert of alerts) {
+      // Vérifier cooldown (24h)
+      if (alert.last_triggered_at) {
+        const hoursSince = (Date.now() - new Date(alert.last_triggered_at)) / (1000 * 60 * 60);
+        if (hoursSince < 24) {
+          continue; // Skip si déjà déclenchée il y a moins de 24h
+        }
+      }
+      
+      // Calculer seuil
+      const avg30d = await db.getAverage30Days(alert.pair);
+      if (!avg30d) continue;
+      
+      const threshold = avg30d * (1 + alert.threshold_percent / 100);
+      const currentRate = alert.pair === 'eurbrl' ? rates.cross : 1 / rates.cross;
+      
+      // Déclencher si seuil atteint
+      if (currentRate >= threshold) {
+        console.log(`[CRON] 🎯 Alert triggered for user ${alert.users.telegram_id}`);
+        
+        await broadcastPremiumAlert(alert, currentRate, avg30d);
+        
+        // Mettre à jour last_triggered_at
+        await db.updateAlert(alert.id, {
+          last_triggered_at: new Date().toISOString()
+        });
+      }
+    }
+    
+    console.log('[CRON] ✅ Premium alerts checked');
+    
+  } catch (error) {
+    console.error('[CRON] ❌ Error:', error);
+  }
+}
 
 // ==========================================
 // HELPER : Vérifier si alerte gratuite doit être envoyée
