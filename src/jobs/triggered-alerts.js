@@ -252,34 +252,18 @@ export async function triggerManualAlert(options = {}) {
 // node src/jobs/triggered-alerts.js --audience=premium --pairs=eurbrl
 // node src/jobs/triggered-alerts.js --audience=free --pairs=brleur
 
-if (import.meta.url === `file://${process.argv[1]}`) {
-  console.log('🚀 Triggered Alerts CLI');
-  console.log('============================\n');
-  
-  const args = process.argv.slice(2);
-  const options = {};
-  
-  args.forEach(arg => {
-    if (arg.startsWith('--')) {
-      const [key, value] = arg.slice(2).split('=');
-      if (key === 'pairs') {
-        options.pairs = value.split(',');
-      } else {
-        options[key] = value;
-      }
-    }
+console.log('🔍 DEBUG: import.meta.url =', import.meta.url);
+console.log('🔍 DEBUG: process.argv[1] =', process.argv[1]);
+console.log('🔍 DEBUG: Match?', import.meta.url === `file://${process.argv[1]}`);
+
+// Force l'exécution
+console.log('🚀 Forced execution...');
+triggerManualAlert({ audience: 'all', pairs: ['eurbrl'] })
+  .then(result => {
+    console.log('\n✅ DONE:', result);
+    process.exit(0);
+  })
+  .catch(error => {
+    console.error('\n💥 ERROR:', error);
+    process.exit(1);
   });
-  
-  console.log('Options:', options);
-  console.log('');
-  
-  triggerManualAlert(options)
-    .then(result => {
-      console.log('\n✅ DONE:', result);
-      process.exit(0);
-    })
-    .catch(error => {
-      console.error('\n💥 ERROR:', error);
-      process.exit(1);
-    });
-}
