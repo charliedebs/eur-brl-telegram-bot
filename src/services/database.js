@@ -198,7 +198,11 @@ export class DatabaseService {
   async createAlert(userId, alertData) {
     const { data, error } = await supabase
       .from('user_alerts')
-      .insert([{ user_id: userId, ...alertData }])
+      .insert([{ 
+        user_id: userId, 
+        alert_type: 'programmed', // ← Ajouter ça
+        ...alertData 
+      }])
       .select()
       .single();
     

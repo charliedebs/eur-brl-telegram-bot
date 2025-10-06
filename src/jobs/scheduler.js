@@ -1,38 +1,60 @@
-// ============================================
-// REMPLACER COMPLÈTEMENT src/jobs/scheduler.js
-// ============================================
-
+// src/jobs/scheduler.js
 import cron from 'node-cron';
 import { saveRatesHistory } from './rates-history.js';
-import { saveRatesAndCheckFreeAlerts, checkPremiumAlerts } from './alerts.js';
+import { checkSpontaneousAlerts } from './spontaneous-alerts.js';
+import { checkPremiumAlerts } from './alerts.js'; // Alertes PROGRAMMÉES uniquement
 
 export function startCronJobs() {
-  console.log('📅 Starting CRON jobs...');
+  console.log('📅 Starting CRON jobs...\n');
   
-  // Job 1 : Sauvegarde historique (toutes les 2h)
+  // ==========================================
+  // JOB 1 : Historique taux (toutes les 2h)
+  // ==========================================
   cron.schedule('0 */2 * * *', async () => {
-    console.log('\n⏰ [CRON] Rates History job starting...');
     await saveRatesHistory();
   });
+  console.log('✅ Job 1: Rates History - Every 2 hours');
   
-  // Job 2 : Alertes gratuites + sauvegarde taux (toutes les 6h)
+  // ==========================================
+  // JOB 2 : Alertes SPONTANÉES (toutes les 6h)
+  // Free: >5% avg90d + cooldown 14j
+  // Premium: >3% avg30d + cooldown 6h
+  // ==========================================
   cron.schedule('0 */6 * * *', async () => {
-    console.log('\n⏰ [CRON] Free Alerts job starting...');
-    await saveRatesAndCheckFreeAlerts();
+    await checkSpontaneousAlerts();
   });
+  console.log('✅ Job 2: Spontaneous Alerts (Free + Premium) - Every 6 hours');
   
-  // Job 3 : Alertes Premium (toutes les 15 minutes)
-  cron.schedule('*/15 * * * *', async () => {
-    console.log('\n⏰ [CRON] Premium Alerts job starting...');
+  // ==========================================
+  // JOB 3 : Alertes PROGRAMMÉES Premium (toutes les 2h)
+  // User configure seuil/preset/cooldown
+  // ==========================================
+  cron.schedule('0 */2 * * *', async () => {
     await checkPremiumAlerts();
   });
+  console.log('✅ Job 3: Programmed Alerts (Premium) - Every 2 hours');
   
-  console.log('✅ CRON jobs started successfully\n');
-  console.log('📋 Schedule:');
-  console.log('  • Rates History: Every 2 hours (00:00, 02:00, 04:00, etc.)');
-  console.log('  • Free Alerts: Every 6 hours (00:00, 06:00, 12:00, 18:00)');
-  console.log('  • Premium Alerts: Every 15 minutes');
-  console.log('\n🕐 Server timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
-  console.log('🕐 Current server time:', new Date().toISOString());
+  console.log('\n' + '='.repeat(60));
+  console.log('📋 SUMMARY');
+  console.log('='.repeat(60));
+  console.log('🕐 Server timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
+  console.log('🕐 Current time:', new Date().toISOString());
   console.log('');
+  console.log('Next executions (UTC):');
+  console.log('  - Rates History: Every 2 hours (00:00, 02:00, 04:00...)');
+  console.log('  - Spontaneous Alerts: Every 6 hours (00:00, 06:00, 12:00, 18:00)');
+  console.log('  - Programmed Alerts: Every 2 hours (00:00, 02:00, 04:00...)');
+  console.log('='.repeat(60) + '\n');
 }
+
+// ==========================================
+// INFO: Alertes DÉCLENCHÉES (manuelles)
+// ==========================================
+// Ces alertes ne sont PAS dans le CRON.
+// Elles sont déclenchées manuellement par l'admin via CLI :
+//
+// node src/jobs/triggered-alerts.js --audience=all
+// node src/jobs/triggered-alerts.js --audience=premium --pairs=eurbrl
+// node src/jobs/triggered-alerts.js --audience=free
+//
+// Voir src/jobs/triggered-alerts.js pour details.
