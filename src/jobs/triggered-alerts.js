@@ -3,16 +3,17 @@
 // Envoie taux actuel + stats complètes à tous/free/premium
 
 import 'dotenv/config';
-import { Telegraf } from 'telegraf'; // ✅ Import direct
+import { Telegraf } from 'telegraf';
 import { getRates } from '../services/rates.js';
 import { DatabaseService } from '../services/database.js';
 import { messages } from '../bot/messages.js';
 import { buildKeyboards } from '../bot/keyboards.js';
 import { getLocale, formatRate, formatAmount } from '../services/rates.js';
+import { fileURLToPath } from 'url';
+import { resolve } from 'path';
 
 const db = new DatabaseService();
 
-// ✅ Créer une instance bot locale pour CLI
 const botToken = process.env.TELEGRAM_BOT_TOKEN;
 if (!botToken) {
   throw new Error('TELEGRAM_BOT_TOKEN missing in environment');
@@ -25,14 +26,12 @@ const bot = new Telegraf(botToken);
 
 async function getCompleteStats(pair) {
   try {
-    // Récupérer historiques
     const [history30d, history90d, history365d] = await Promise.all([
       db.getRateHistory(pair, 30),
       db.getRateHistory(pair, 90),
       db.getRateHistory(pair, 365)
     ]);
     
-    // Calculs
     const calc = (hist) => {
       if (hist.length === 0) return null;
       const rates = hist.map(h => parseFloat(h.rate));
@@ -64,7 +63,6 @@ async function broadcastTriggered(pair, currentRate, stats, audience = 'all') {
   console.log(`[TRIGGERED] 📢 Broadcasting ${pair} to ${audience}...`);
   
   try {
-    // Récupérer users selon audience
     let users;
     if (audience === 'all') {
       users = await db.getAllActiveUsers();
@@ -92,12 +90,8 @@ async function broadcastTriggered(pair, currentRate, stats, audience = 'all') {
         const locale = getLocale(user.language);
         const msg = messages[user.language];
         
-        // Construire message riche
         const text = buildTriggeredMessage(pair, currentRate, stats, amountExample, locale, msg);
-        
         const kb = buildKeyboards(msg, 'triggered_alert', { pair, amount: amountExample });
-        
-        console.log(`[TRIGGERED] Sending to ${user.telegram_id}...`);
         
         await bot.telegram.sendMessage(user.telegram_id, text, {
           parse_mode: 'HTML',
@@ -106,8 +100,7 @@ async function broadcastTriggered(pair, currentRate, stats, audience = 'all') {
         
         successCount++;
         console.log(`[TRIGGERED] ✅ Sent ${successCount}/${users.length}`);
-        
-        await new Promise(resolve => setTimeout(resolve, 50)); // Anti-spam
+        await new Promise(resolve => setTimeout(resolve, 50));
         
       } catch (error) {
         console.error(`[TRIGGERED] ❌ Failed for user ${user.telegram_id}:`, error.message);
@@ -131,12 +124,10 @@ function buildTriggeredMessage(pair, currentRate, stats, amountExample, locale, 
   const pairText = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
   const currency = pair === 'eurbrl' ? '€' : ' R$';
   
-  // Calcul variations vs moyennes
   const var30d = stats.avg30d ? ((currentRate - stats.avg30d.avg) / stats.avg30d.avg * 100) : null;
   const var90d = stats.stats90d ? ((currentRate - stats.stats90d.avg) / stats.stats90d.avg * 100) : null;
   const var365d = stats.stats365d ? ((currentRate - stats.stats365d.avg) / stats.stats365d.avg * 100) : null;
   
-  // Gains/pertes exemples
   const gain30d = stats.avg30d ? (currentRate - stats.avg30d.avg) * amountExample : null;
   
   let text = `📢 ALERTE ADMIN
@@ -147,7 +138,6 @@ ${pairText} : ${formatRate(currentRate, locale)}
 
 `;
   
-  // Stats 30j
   if (stats.stats30d) {
     text += `<b>30 derniers jours :</b>
 • Moyenne : ${formatRate(stats.stats30d.avg, locale)}
@@ -156,7 +146,6 @@ ${pairText} : ${formatRate(currentRate, locale)}
 • Écart vs moyenne : ${var30d > 0 ? '+' : ''}${formatAmount(var30d, 1, locale)}%\n\n`;
   }
   
-  // Stats 90j
   if (stats.stats90d) {
     text += `<b>90 derniers jours :</b>
 • Moyenne : ${formatRate(stats.stats90d.avg, locale)}
@@ -165,7 +154,6 @@ ${pairText} : ${formatRate(currentRate, locale)}
 • Écart vs moyenne : ${var90d > 0 ? '+' : ''}${formatAmount(var90d, 1, locale)}%\n\n`;
   }
   
-  // Stats 365j
   if (stats.stats365d) {
     text += `<b>12 derniers mois :</b>
 • Moyenne : ${formatRate(stats.stats365d.avg, locale)}
@@ -174,7 +162,6 @@ ${pairText} : ${formatRate(currentRate, locale)}
 • Écart vs moyenne : ${var365d > 0 ? '+' : ''}${formatAmount(var365d, 1, locale)}%\n\n`;
   }
   
-  // Exemple gain/perte
   if (gain30d) {
     text += `💰 <b>Exemple sur ${formatAmount(amountExample, 0, locale)}${currency} :</b>
 ${gain30d > 0 ? 'Tu gagnes' : 'Tu perds'} ~${formatAmount(Math.abs(gain30d), 0, locale)}${pair === 'eurbrl' ? ' R$' : '€'} vs moyenne 30j\n\n`;
@@ -186,13 +173,13 @@ ${gain30d > 0 ? 'Tu gagnes' : 'Tu perds'} ~${formatAmount(Math.abs(gain30d), 0, 
 }
 
 // ==========================================
-// FONCTION PRINCIPALE (appelée manuellement)
+// FONCTION PRINCIPALE
 // ==========================================
 
 export async function triggerManualAlert(options = {}) {
   const {
-    pairs = ['eurbrl', 'brleur'], // Par défaut les 2
-    audience = 'all' // 'all', 'premium', 'free'
+    pairs = ['eurbrl', 'brleur'],
+    audience = 'all'
   } = options;
   
   console.log('\n📢 [TRIGGERED] Manual alert triggered');
@@ -215,7 +202,6 @@ export async function triggerManualAlert(options = {}) {
       const currentRate = pair === 'eurbrl' ? rates.cross : 1 / rates.cross;
       console.log(`\n[TRIGGERED] Processing ${pair.toUpperCase()}: ${currentRate.toFixed(4)}`);
       
-      // Récupérer stats
       console.log('[TRIGGERED] Fetching historical stats...');
       const stats = await getCompleteStats(pair);
       if (!stats) {
@@ -227,7 +213,6 @@ export async function triggerManualAlert(options = {}) {
       console.log(`  30d avg: ${stats.stats30d?.avg.toFixed(4)}`);
       console.log(`  90d avg: ${stats.stats90d?.avg.toFixed(4)}`);
       
-      // Broadcast
       const sent = await broadcastTriggered(pair, currentRate, stats, audience);
       results.push({ pair, sent });
     }
@@ -244,26 +229,40 @@ export async function triggerManualAlert(options = {}) {
 }
 
 // ==========================================
-// SCRIPT CLI (pour toi)
+// CLI - FIX WINDOWS/UNIX
 // ==========================================
 
-// Usage en ligne de commande :
-// node src/jobs/triggered-alerts.js --audience=all
-// node src/jobs/triggered-alerts.js --audience=premium --pairs=eurbrl
-// node src/jobs/triggered-alerts.js --audience=free --pairs=brleur
+// Normaliser les paths pour comparaison
+const currentFile = fileURLToPath(import.meta.url);
+const argFile = resolve(process.argv[1]);
+const isDirectExecution = currentFile === argFile;
 
-console.log('🔍 DEBUG: import.meta.url =', import.meta.url);
-console.log('🔍 DEBUG: process.argv[1] =', process.argv[1]);
-console.log('🔍 DEBUG: Match?', import.meta.url === `file://${process.argv[1]}`);
-
-// Force l'exécution
-console.log('🚀 Forced execution...');
-triggerManualAlert({ audience: 'all', pairs: ['eurbrl'] })
-  .then(result => {
-    console.log('\n✅ DONE:', result);
-    process.exit(0);
-  })
-  .catch(error => {
-    console.error('\n💥 ERROR:', error);
-    process.exit(1);
+if (isDirectExecution) {
+  console.log('🚀 Triggered Alerts CLI\n');
+  
+  const args = process.argv.slice(2);
+  const options = {};
+  
+  args.forEach(arg => {
+    if (arg.startsWith('--')) {
+      const [key, value] = arg.slice(2).split('=');
+      if (key === 'pairs') {
+        options.pairs = value.split(',');
+      } else {
+        options[key] = value;
+      }
+    }
   });
+  
+  console.log('Options:', options, '\n');
+  
+  triggerManualAlert(options)
+    .then(result => {
+      console.log('\n✅ DONE:', result);
+      process.exit(0);
+    })
+    .catch(error => {
+      console.error('\n💥 ERROR:', error);
+      process.exit(1);
+    });
+}
