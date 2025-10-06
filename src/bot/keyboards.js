@@ -45,7 +45,7 @@ export function buildKeyboards(msg, type, options = {}) {
           [Markup.button.callback(msg.btn.stayOff, `action:stay_offchain:${route}:${amount}`)],
           [Markup.button.callback(msg.btn.change, `action:change_amount:${route}`)],
           [Markup.button.callback(msg.btn.sources, 'action:sources')],
-          [Markup.button.callback('🔔 Créer une alerte', `alert:create:${route}`)],
+          [Markup.button.callback('🔔 Créer une alerte', 'alert:choose_pair')],
 
           // 👇 NOUVEAUX BOUTONS FEEDBACK
           [
@@ -260,46 +260,75 @@ export function buildKeyboards(msg, type, options = {}) {
       [Markup.button.callback(msg.btn.subscribe12m, 'premium:subscribe:12')],
     ]);
 
-  // Écran Création Alerte (choix preset)
-  case 'alert_create':
-    return Markup.inlineKeyboard([
-      [Markup.button.callback(msg.btn.conservative, 'alert:preset:conservative:' + (options.pair || 'eurbrl'))],
-      [Markup.button.callback(msg.btn.balanced, 'alert:preset:balanced:' + (options.pair || 'eurbrl'))],
-      [Markup.button.callback(msg.btn.aggressive, 'alert:preset:aggressive:' + (options.pair || 'eurbrl'))],
-      [Markup.button.callback(msg.btn.custom, 'alert:preset:custom:' + (options.pair || 'eurbrl'))],
-      [Markup.button.callback(msg.btn.back, 'premium:pricing')],
-    ]);
-
-  // Écran Liste Alertes
-  case 'alerts_list':
-    const alertButtons = options.alerts?.map(alert => [
-      Markup.button.callback(
-        `${alert.pair === 'eurbrl' ? '🇪🇺→🇧🇷' : '🇧🇷→🇪🇺'} +${alert.threshold_percent}%`,
-        `alert:view:${alert.id}`
-      )
-    ]) || [];
+   // 👇 NOUVEAUX CASES ALERTES
     
-    return Markup.inlineKeyboard([
-      ...alertButtons,
-      [Markup.button.callback(msg.btn.createAlert, 'alert:create:eurbrl')],
-      [Markup.button.callback(msg.btn.back, 'premium:pricing')],
-    ]);
-
-  // Écran Détails d'une Alerte
-  case 'alert_view':
-    return Markup.inlineKeyboard([
-      [Markup.button.callback(msg.btn.editAlert, `alert:edit:${options.alertId}`)],
-      [Markup.button.callback(msg.btn.disableAlert, `alert:disable:${options.alertId}`)],
-      [Markup.button.callback(msg.btn.back, 'alert:list')],
-    ]);
-
-  // Not Premium (message bloquant)
-  case 'not_premium':
-    return Markup.inlineKeyboard([
-      [Markup.button.callback(msg.btn.seePremium, 'premium:pricing')],
-      [Markup.button.callback(msg.btn.back, 'action:back_main')],
-    ]);
-
+    // Choix de la paire pour créer alerte
+    case 'alert_choose_pair':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback('🇪🇺 EUR → 🇧🇷 BRL', 'alert:create:eurbrl')],
+        [Markup.button.callback('🇧🇷 BRL → 🇪🇺 EUR', 'alert:create:brleur')],
+        [Markup.button.callback(msg.btn.back, 'alert:list')]
+      ]);
+    
+    // Choix du preset après sélection pair
+    case 'alert_create':
+      const pair = options.pair || 'eurbrl';
+      return Markup.inlineKeyboard([
+        [Markup.button.callback(msg.btn.conservative, `alert:preset:conservative:${pair}`)],
+        [Markup.button.callback(msg.btn.balanced, `alert:preset:balanced:${pair}`)],
+        [Markup.button.callback(msg.btn.aggressive, `alert:preset:aggressive:${pair}`)],
+        [Markup.button.callback(msg.btn.custom, `alert:preset:custom:${pair}`)],
+        [Markup.button.callback(msg.btn.back, 'alert:choose_pair')]
+      ]);
+    
+    // Choix du cooldown (pour custom uniquement)
+    case 'alert_choose_cooldown':
+      const alertData = options.alertData || {};
+      const { pair: p, threshold } = alertData;
+      return Markup.inlineKeyboard([
+        [Markup.button.callback(msg.btn.chooseCooldown15, `alert:cooldown:15:${p}:${threshold}`)],
+        [Markup.button.callback(msg.btn.chooseCooldown1h, `alert:cooldown:60:${p}:${threshold}`)],
+        [Markup.button.callback(msg.btn.chooseCooldown6h, `alert:cooldown:360:${p}:${threshold}`)],
+        [Markup.button.callback(msg.btn.chooseCooldown24h, `alert:cooldown:1440:${p}:${threshold}`)],
+        [Markup.button.callback(msg.btn.chooseCooldown1week, `alert:cooldown:10080:${p}:${threshold}`)],
+        [Markup.button.callback(msg.btn.back, `alert:create:${p}`)]
+      ]);
+    
+    // Liste des alertes (mise à jour)
+    case 'alerts_list':
+      const alertButtons = options.alerts?.map(alert => [
+        Markup.button.callback(
+          `${alert.pair === 'eurbrl' ? '🇪🇺→🇧🇷' : '🇧🇷→🇪🇺'} +${alert.threshold_percent}%`,
+          `alert:view:${alert.id}`
+        )
+      ]) || [];
+      
+      return Markup.inlineKeyboard([
+        ...alertButtons,
+        [Markup.button.callback(msg.btn.createAlert, 'alert:choose_pair')],
+        [Markup.button.callback(msg.btn.back, 'premium:pricing')]
+      ]);
+    
+    // Alerte gratuite (depuis broadcast)
+    case 'free_alert':
+      const freeAlertPair = options.pair || 'eurbrl';
+      const freeAlertAmount = options.amount || 1000;
+      return Markup.inlineKeyboard([
+        [Markup.button.callback('🚀 Comparer maintenant', `route:${freeAlertPair}:${freeAlertAmount}`)],
+        [Markup.button.callback('💎 Découvrir Premium', 'premium:pricing')]
+      ]);
+    
+    // Alerte premium déclenchée (depuis broadcast)
+    case 'premium_alert':
+      const alertPair = options.pair || 'eurbrl';
+      const alertAmount = options.amount || 1000;
+      const alertId = options.alertId;
+      return Markup.inlineKeyboard([
+        [Markup.button.callback('🚀 Comparer maintenant', `route:${alertPair}:${alertAmount}`)],
+        [Markup.button.callback('⚙️ Modifier mon alerte', `alert:view:${alertId}`)],
+        [Markup.button.callback('🔔 Mes alertes', 'alert:list')]
+      ]);
+    
     default:
       return Markup.inlineKeyboard([[Markup.button.callback(msg.btn.back, 'action:back_main')]]);
   }

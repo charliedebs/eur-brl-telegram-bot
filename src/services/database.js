@@ -10,6 +10,9 @@ if (!supabaseUrl || !supabaseKey) {
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 export class DatabaseService {
+  constructor() {
+    this.supabase = supabase; // Important pour bot/index.js
+  }
   // ==========================================
   // USERS
   // ==========================================

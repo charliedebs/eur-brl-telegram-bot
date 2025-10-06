@@ -1,0 +1,31 @@
+Tâches à exécuter:
+1. Carte Compare:
+- Lorsque c'est un week-end, préciser à côté que le taux de référence est figé durant le week-end. 
+- Titre doit inclure le montant. (Pour l'instant 💱 EUR → BRL ou 💱 BRL → EUR, on veut 💱 [MONTANT] EUR → BRL ou 💱 [MONTANT] BRL → EUR)
+- Pour la partie "Autre", réorganiser l'affichage car là l'UI est très moche avec les rates à la chaine. Et organiser du meilleur taux au moins bon. 
+- Changer boutons, Continuer onchain > Convertir on-chain / Rester off-chain > Convertir off-chain
+- Retirer totalement Instarem
+- Préciser fuseau horaire à côté dans taux de reF.
+
+2. Offchain:
+- Virer Instarem, voir si revolut dispo
+- Ces textes:
+💡 Généralement un peu plus cher que on-chain, mais certains préfèrent ces solutions pour leur simplicité.
+
+✅ Plateformes régulées et fiables. Si tu n'as pas encore de compte, utilise nos liens de parrainage : c'est gratuit pour toi, ça finance le service (et tu peux même souvent y gagner).
+
+A modifier, il faut dire que c'est plus cher qu'on chain, mais que certains préfèrent ces méthodes car c'est plus user friendly que le process onchain. A bien formuler.
+Ensuite, dire qu'on recommande fortement wise, qui hors promotions offre généralement le meilleur taux, ainsi que la meilleure UX! A bien formuler.
+
+- Remettre le taux onchain qqpart. en fin de carte.
+- Les boutons, on ne dirige que vers Wise et Remitly. 
+
+3. Premium: 
+-Ajouter Historical Data (Sur un an, 3 mois, 6 mois, par exemple, lowest, highest, average) avec graph sur telegram
+
+
+4. 🚀 Route On-Chain
+- Beaucoup moins de texte. On est dans le parcours UX, donc on reste que sur la pratique. On peut ajouter un fun fact en fin d'écran. Sur les frais par exemple. On met donc: Comment ça marche (avec emoji clair): les trois étapes. Et ce qu'il te faut (avec emoji clair); et les deux éléments compte EU et compte BR
+- Ajoute d'un écran pédagogique: pourquoi onchain où on ajoute les explications. Les preuves etc. 
+- "Démarrer le guide" > "Etape 1: EUR --> USDC"
+- On va faire un bouton: "You Don't understand Something, we proobably have the answers" ou un truc du style "FAQ" mais plus sympa, ou on stocke les écrans pédagogiques, auxquels on accède par boutons "Qu'est ce que l'USDC", "Qu'est ce qu'un Exchange", "Pourquioi onchain"

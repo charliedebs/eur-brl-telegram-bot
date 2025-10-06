@@ -1,4 +1,20 @@
-import { formatAmount, formatRate } from '../services/rates.js';
+import { formatAmount, formatRate, getLocale } from '../services/rates.js';
+
+// Helper pour formater cooldown
+function formatCooldown(minutes, lang) {
+    if (minutes === 15) {
+      return { fr: '15 minutes', pt: '15 minutos', en: '15 minutes' }[lang];
+    } else if (minutes === 60) {
+      return { fr: '1 heure', pt: '1 hora', en: '1 hour' }[lang];
+    } else if (minutes === 360) {
+      return { fr: '6 heures', pt: '6 horas', en: '6 hours' }[lang];
+    } else if (minutes === 1440) {
+      return { fr: '24 heures', pt: '24 horas', en: '24 hours' }[lang];
+    } else if (minutes === 10080) {
+      return { fr: '1 semaine', pt: '1 semana', en: '1 week' }[lang];
+    }
+    return `${minutes}min`;
+  }
 
 // ============================================
 // FRANÇAIS (FR) - COMPLET ✅
@@ -590,7 +606,7 @@ PREMIUM_PRICING: `💎 PASSER À PREMIUM
     
     return `🔔 <b>Mes alertes</b>\n\n${list}\n\n💡 Clique sur un bouton ci-dessous pour voir les détails ou supprimer.\n\nTu seras prévenu quand ces seuils seront atteints (max 1x/24h par alerte).`;
   },
-  
+
     PREMIUM_EXPIRED: `⚠️ Ton Premium a expiré
   
   Tu nous manques déjà ! 😢
@@ -600,6 +616,108 @@ PREMIUM_PRICING: `💎 PASSER À PREMIUM
   📱 27 R$ / 6 mois (−10%)
   📱 50 R$ / 12 mois (−17%)`,
   
+  ALERT_CHOOSE_PAIR: `🔔 CRÉER UNE ALERTE
+
+  Quelle route t'intéresse ?`,
+  
+    ALERT_CHOOSE_PRESET: (pair) => {
+      const pairText = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+      return `🔔 ALERTE ${pairText}
+  
+  Choisis un profil :`;
+    },
+  
+    ALERT_CHOOSE_COOLDOWN: `⏰ COOLDOWN
+  
+  Délai minimum entre deux alertes :
+  
+  💡 Cooldown : évite les notifications répétées.
+  Recommandé : 1 heure pour rester réactif.`,
+  
+    ALERT_CUSTOM_INSTRUCTIONS: (pair) => {
+      const pairText = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+      return `✏️ SEUIL PERSONNALISÉ
+  
+  ${pairText}
+  
+  Envoie ton seuil en pourcentage.
+  
+  Exemples :
+  • +2.5 (alerte à +2,5% vs moyenne 30j)
+  • +4 (alerte à +4%)
+  
+  Min : +1% • Max : +10%`;
+    },
+  
+    ALERT_CREATED_FULL: (pair, preset, threshold, cooldown, currentRate, avg30d, alertThreshold, locale) => {
+      const pairText = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+      const presetText = {
+        conservative: '🛡️ Conservateur',
+        balanced: '⚖️ Équilibré',
+        aggressive: '🎯 Opportuniste',
+        custom: '✏️ Personnalisé'
+      }[preset] || '🔔';
+      
+      const cooldownText = formatCooldown(cooldown, 'fr');
+      
+      return `✅ ALERTE CRÉÉE
+  
+  ${pairText}
+  ${presetText} : +${threshold}% vs moyenne 30j
+  ⏰ Cooldown : ${cooldownText}
+  
+  Actuellement :
+  • Taux actuel : ${formatRate(currentRate, locale)}
+  • Moyenne 30j : ${formatRate(avg30d, locale)}
+  • Seuil alerte : ${formatRate(alertThreshold, locale)}
+  
+  Je t'alerterai dès que ce seuil est atteint !`;
+    },
+  
+    ALERT_INVALID_THRESHOLD: `⚠️ Seuil invalide
+  
+  Entre un nombre entre 1 et 10.
+  
+  Exemples : 2.5, 3, 5`,
+  
+    ALERT_VIEW_DETAILS: (alert, currentRate, avg30d, alertThreshold, locale) => {
+      const pairText = alert.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+      const presetEmoji = {
+        conservative: '🛡️',
+        balanced: '⚖️',
+        aggressive: '🎯',
+        custom: '✏️'
+      }[alert.preset] || '🔔';
+      
+      const cooldownText = formatCooldown(alert.cooldown_minutes || 60, 'fr');
+      
+      let text = `${presetEmoji} <b>Alerte ${pairText}</b>\n\n`;
+      text += `Seuil : +${alert.threshold_percent}% vs moyenne 30j\n`;
+      text += `⏰ Cooldown : ${cooldownText}\n\n`;
+      text += `<b>État actuel :</b>\n`;
+      text += `• Taux actuel : ${formatRate(currentRate, locale)}\n`;
+      
+      if (avg30d && alertThreshold) {
+        text += `• Moyenne 30j : ${formatRate(avg30d, locale)}\n`;
+        text += `• Seuil alerte : ${formatRate(alertThreshold, locale)}\n`;
+        
+        const distance = ((alertThreshold - currentRate) / currentRate * 100);
+        if (distance > 0) {
+          text += `\n📊 Encore ${formatAmount(distance, 1, locale)}% pour déclencher`;
+        } else {
+          text += `\n✅ Seuil atteint ! Attente cooldown (max 1x/24h)`;
+        }
+      }
+      
+      if (alert.last_triggered_at) {
+        const lastDate = new Date(alert.last_triggered_at);
+        text += `\n\n🔔 Dernière alerte : ${lastDate.toLocaleDateString(locale)}`;
+      }
+      
+      return text;
+    },
+  
+
     PREMIUM_EXPIRING_SOON: (daysLeft) => `⏰ Ton Premium expire dans ${daysLeft} jour${daysLeft > 1 ? 's' : ''}
   
   Tu veux renouveler ?
@@ -682,6 +800,13 @@ PREMIUM_PRICING: `💎 PASSER À PREMIUM
     disableAlert: '🔕 Désactiver',
     editAlert: '✏️ Modifier',
     backToPricing: '⬅️ Retour aux tarifs',
+    chooseCooldown15: '⚡ 15 minutes',
+    chooseCooldown1h: '⏱️ 1 heure ⭐',
+    chooseCooldown6h: '⏰ 6 heures',
+    chooseCooldown24h: '📅 24 heures',
+    chooseCooldown1week: '📆 1 semaine',
+    deleteAlert: '🗑️ Supprimer',
+    viewAlert: '👁️ Voir détails',
   }
 };
 
@@ -1304,6 +1429,108 @@ Esta funcionalidade é reservada aos assinantes Premium.
 
 Preço: a partir de 5 R$/mês`,
 
+ALERT_CHOOSE_PAIR: `🔔 CRIAR UM ALERTA
+
+Qual rota te interessa?`,
+
+  ALERT_CHOOSE_PRESET: (pair) => {
+    const pairText = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+    return `🔔 ALERTA ${pairText}
+
+Escolha um perfil:`;
+  },
+
+  ALERT_CHOOSE_COOLDOWN: `⏰ COOLDOWN
+
+Intervalo mínimo entre dois alertas:
+
+💡 Cooldown: evita notificações repetidas.
+Recomendado: 1 hora para ficar reativo.`,
+
+  ALERT_CUSTOM_INSTRUCTIONS: (pair) => {
+    const pairText = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+    return `✏️ LIMITE PERSONALIZADO
+
+${pairText}
+
+Envie seu limite em porcentagem.
+
+Exemplos:
+• +2.5 (alerta em +2,5% vs média 30d)
+• +4 (alerta em +4%)
+
+Min: +1% • Max: +10%`;
+  },
+
+  ALERT_CREATED_FULL: (pair, preset, threshold, cooldown, currentRate, avg30d, alertThreshold, locale) => {
+    const pairText = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+    const presetText = {
+      conservative: '🛡️ Conservador',
+      balanced: '⚖️ Equilibrado',
+      aggressive: '🎯 Oportunista',
+      custom: '✏️ Personalizado'
+    }[preset] || '🔔';
+    
+    const cooldownText = formatCooldown(cooldown, 'pt');
+    
+    return `✅ ALERTA CRIADO
+
+${pairText}
+${presetText}: +${threshold}% vs média 30d
+⏰ Cooldown: ${cooldownText}
+
+Atualmente:
+• Taxa atual: ${formatRate(currentRate, locale)}
+• Média 30d: ${formatRate(avg30d, locale)}
+• Limite alerta: ${formatRate(alertThreshold, locale)}
+
+Vou te alertar assim que este limite for atingido!`;
+  },
+
+  ALERT_INVALID_THRESHOLD: `⚠️ Limite inválido
+
+Digite um número entre 1 e 10.
+
+Exemplos: 2.5, 3, 5`,
+
+  ALERT_VIEW_DETAILS: (alert, currentRate, avg30d, alertThreshold, locale) => {
+    const pairText = alert.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+    const presetEmoji = {
+      conservative: '🛡️',
+      balanced: '⚖️',
+      aggressive: '🎯',
+      custom: '✏️'
+    }[alert.preset] || '🔔';
+    
+    const cooldownText = formatCooldown(alert.cooldown_minutes || 60, 'pt');
+    
+    let text = `${presetEmoji} <b>Alerta ${pairText}</b>\n\n`;
+    text += `Limite: +${alert.threshold_percent}% vs média 30d\n`;
+    text += `⏰ Cooldown: ${cooldownText}\n\n`;
+    text += `<b>Estado atual:</b>\n`;
+    text += `• Taxa atual: ${formatRate(currentRate, locale)}\n`;
+    
+    if (avg30d && alertThreshold) {
+      text += `• Média 30d: ${formatRate(avg30d, locale)}\n`;
+      text += `• Limite alerta: ${formatRate(alertThreshold, locale)}\n`;
+      
+      const distance = ((alertThreshold - currentRate) / currentRate * 100);
+      if (distance > 0) {
+        text += `\n📊 Ainda falta ${formatAmount(distance, 1, locale)}% para disparar`;
+      } else {
+        text += `\n✅ Limite atingido! Aguardando cooldown (max 1x/24h)`;
+      }
+    }
+    
+    if (alert.last_triggered_at) {
+      const lastDate = new Date(alert.last_triggered_at);
+      text += `\n\n🔔 Último alerta: ${lastDate.toLocaleDateString(locale)}`;
+    }
+    
+    return text;
+  },
+
+
 
 
 
@@ -1369,6 +1596,13 @@ Preço: a partir de 5 R$/mês`,
     disableAlert: '🔕 Desativar',
     editAlert: '✏️ Modificar',
     backToPricing: '⬅️ Voltar aos preços',
+    chooseCooldown15: '⚡ 15 minutos',
+    chooseCooldown1h: '⏱️ 1 hora ⭐',
+    chooseCooldown6h: '⏰ 6 horas',
+    chooseCooldown24h: '📅 24 horas',
+    chooseCooldown1week: '📆 1 semana',
+    deleteAlert: '🗑️ Apagar',
+    viewAlert: '👁️ Ver detalhes',
   },
 };
 
@@ -1991,7 +2225,107 @@ This feature is reserved for Premium subscribers.
 Price: from 5 R$/month`,
 
 
+ALERT_CHOOSE_PAIR: `🔔 CREATE AN ALERT
+
+Which route interests you?`,
+
+  ALERT_CHOOSE_PRESET: (pair) => {
+    const pairText = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+    return `🔔 ALERT ${pairText}
+
+Choose a profile:`;
+  },
+
+  ALERT_CHOOSE_COOLDOWN: `⏰ COOLDOWN
+
+Minimum interval between two alerts:
+
+💡 Cooldown: avoids repeated notifications.
+Recommended: 1 hour to stay reactive.`,
+
+  ALERT_CUSTOM_INSTRUCTIONS: (pair) => {
+    const pairText = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+    return `✏️ CUSTOM THRESHOLD
+
+${pairText}
+
+Send your threshold as a percentage.
+
+Examples:
+• +2.5 (alert at +2.5% vs 30d average)
+• +4 (alert at +4%)
+
+Min: +1% • Max: +10%`;
+  },
+
+  ALERT_CREATED_FULL: (pair, preset, threshold, cooldown, currentRate, avg30d, alertThreshold, locale) => {
+    const pairText = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+    const presetText = {
+      conservative: '🛡️ Conservative',
+      balanced: '⚖️ Balanced',
+      aggressive: '🎯 Opportunistic',
+      custom: '✏️ Custom'
+    }[preset] || '🔔';
     
+    const cooldownText = formatCooldown(cooldown, 'en');
+    
+    return `✅ ALERT CREATED
+
+${pairText}
+${presetText}: +${threshold}% vs 30d average
+⏰ Cooldown: ${cooldownText}
+
+Currently:
+• Current rate: ${formatRate(currentRate, locale)}
+• 30d average: ${formatRate(avg30d, locale)}
+• Alert threshold: ${formatRate(alertThreshold, locale)}
+
+I'll alert you as soon as this threshold is reached!`;
+  },
+
+  ALERT_INVALID_THRESHOLD: `⚠️ Invalid threshold
+
+Enter a number between 1 and 10.
+
+Examples: 2.5, 3, 5`,
+
+  ALERT_VIEW_DETAILS: (alert, currentRate, avg30d, alertThreshold, locale) => {
+    const pairText = alert.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+    const presetEmoji = {
+      conservative: '🛡️',
+      balanced: '⚖️',
+      aggressive: '🎯',
+      custom: '✏️'
+    }[alert.preset] || '🔔';
+    
+    const cooldownText = formatCooldown(alert.cooldown_minutes || 60, 'en');
+    
+    let text = `${presetEmoji} <b>Alert ${pairText}</b>\n\n`;
+    text += `Threshold: +${alert.threshold_percent}% vs 30d average\n`;
+    text += `⏰ Cooldown: ${cooldownText}\n\n`;
+    text += `<b>Current state:</b>\n`;
+    text += `• Current rate: ${formatRate(currentRate, locale)}\n`;
+    
+    if (avg30d && alertThreshold) {
+      text += `• 30d average: ${formatRate(avg30d, locale)}\n`;
+      text += `• Alert threshold: ${formatRate(alertThreshold, locale)}\n`;
+      
+      const distance = ((alertThreshold - currentRate) / currentRate * 100);
+      if (distance > 0) {
+        text += `\n📊 Still ${formatAmount(distance, 1, locale)}% to trigger`;
+      } else {
+        text += `\n✅ Threshold reached! Waiting for cooldown (max 1x/24h)`;
+      }
+    }
+    
+    if (alert.last_triggered_at) {
+      const lastDate = new Date(alert.last_triggered_at);
+      text += `\n\n🔔 Last alert: ${lastDate.toLocaleDateString(locale)}`;
+    }
+    
+    return text;
+  },
+
 
 
 
@@ -2057,6 +2391,13 @@ Price: from 5 R$/month`,
     disableAlert: '🔕 Disable',
     editAlert: '✏️ Edit',
     backToPricing: '⬅️ Back to pricing',
+    chooseCooldown15: '⚡ 15 minutes',
+    chooseCooldown1h: '⏱️ 1 hour ⭐',
+    chooseCooldown6h: '⏰ 6 hours',
+    chooseCooldown24h: '📅 24 hours',
+    chooseCooldown1week: '📆 1 week',
+    deleteAlert: '🗑️ Delete',
+    viewAlert: '👁️ View details',
   },
 };
 
@@ -2064,4 +2405,5 @@ Price: from 5 R$/month`,
 // EXPORT
 // ============================================
 
+export { formatCooldown };
 export const messages = { fr, pt, en };
