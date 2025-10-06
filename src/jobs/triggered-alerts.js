@@ -3,7 +3,7 @@
 // Envoie taux actuel + stats complètes à tous/free/premium
 
 import 'dotenv/config';
-import { bot } from '../bot/index.js';
+import { Telegraf } from 'telegraf'; // ✅ Import direct
 import { getRates } from '../services/rates.js';
 import { DatabaseService } from '../services/database.js';
 import { messages } from '../bot/messages.js';
@@ -11,6 +11,13 @@ import { buildKeyboards } from '../bot/keyboards.js';
 import { getLocale, formatRate, formatAmount } from '../services/rates.js';
 
 const db = new DatabaseService();
+
+// ✅ Créer une instance bot locale pour CLI
+const botToken = process.env.TELEGRAM_BOT_TOKEN;
+if (!botToken) {
+  throw new Error('TELEGRAM_BOT_TOKEN missing in environment');
+}
+const bot = new Telegraf(botToken);
 
 // ==========================================
 // CALCULER STATS COMPLÈTES
@@ -72,6 +79,11 @@ async function broadcastTriggered(pair, currentRate, stats, audience = 'all') {
     
     console.log(`[TRIGGERED] Target: ${users.length} users (${audience})`);
     
+    if (users.length === 0) {
+      console.log('[TRIGGERED] ⚠️ No users found for this audience');
+      return 0;
+    }
+    
     let successCount = 0;
     const amountExample = pair === 'eurbrl' ? 1000 : 5000;
     
@@ -85,16 +97,20 @@ async function broadcastTriggered(pair, currentRate, stats, audience = 'all') {
         
         const kb = buildKeyboards(msg, 'triggered_alert', { pair, amount: amountExample });
         
+        console.log(`[TRIGGERED] Sending to ${user.telegram_id}...`);
+        
         await bot.telegram.sendMessage(user.telegram_id, text, {
           parse_mode: 'HTML',
           ...kb
         });
         
         successCount++;
+        console.log(`[TRIGGERED] ✅ Sent ${successCount}/${users.length}`);
+        
         await new Promise(resolve => setTimeout(resolve, 50)); // Anti-spam
         
       } catch (error) {
-        console.error(`[TRIGGERED] Failed for user ${user.telegram_id}:`, error.message);
+        console.error(`[TRIGGERED] ❌ Failed for user ${user.telegram_id}:`, error.message);
       }
     }
     
@@ -184,11 +200,14 @@ export async function triggerManualAlert(options = {}) {
   console.log(`   Audience: ${audience}`);
   
   try {
+    console.log('[TRIGGERED] Fetching rates...');
     const rates = await getRates();
     if (!rates) {
       console.error('[TRIGGERED] ❌ Failed to fetch rates');
       return { success: false, error: 'Failed to fetch rates' };
     }
+    
+    console.log(`[TRIGGERED] Rates: EURBRL=${rates.cross.toFixed(4)}`);
     
     const results = [];
     
@@ -197,11 +216,16 @@ export async function triggerManualAlert(options = {}) {
       console.log(`\n[TRIGGERED] Processing ${pair.toUpperCase()}: ${currentRate.toFixed(4)}`);
       
       // Récupérer stats
+      console.log('[TRIGGERED] Fetching historical stats...');
       const stats = await getCompleteStats(pair);
       if (!stats) {
         console.error(`[TRIGGERED] ❌ Failed to get stats for ${pair}`);
         continue;
       }
+      
+      console.log('[TRIGGERED] Stats retrieved:');
+      console.log(`  30d avg: ${stats.stats30d?.avg.toFixed(4)}`);
+      console.log(`  90d avg: ${stats.stats90d?.avg.toFixed(4)}`);
       
       // Broadcast
       const sent = await broadcastTriggered(pair, currentRate, stats, audience);
@@ -229,6 +253,9 @@ export async function triggerManualAlert(options = {}) {
 // node src/jobs/triggered-alerts.js --audience=free --pairs=brleur
 
 if (import.meta.url === `file://${process.argv[1]}`) {
+  console.log('🚀 Triggered Alerts CLI');
+  console.log('============================\n');
+  
   const args = process.argv.slice(2);
   const options = {};
   
@@ -243,16 +270,16 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     }
   });
   
-  console.log('🚀 Triggering manual alert...');
   console.log('Options:', options);
+  console.log('');
   
   triggerManualAlert(options)
     .then(result => {
-      console.log('\n✅ Done:', result);
+      console.log('\n✅ DONE:', result);
       process.exit(0);
     })
     .catch(error => {
-      console.error('\n💥 Error:', error);
+      console.error('\n💥 ERROR:', error);
       process.exit(1);
     });
 }
