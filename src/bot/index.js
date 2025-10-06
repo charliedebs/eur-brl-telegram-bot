@@ -506,8 +506,7 @@ bot.action(/^alert:preset:(conservative|balanced|aggressive|custom):(eurbrl|brle
     alert_type: 'programmed',
     preset,
     threshold_type: 'relative',
-    threshold_value: null,
-    threshold_percent: threshold,
+    threshold_value: threshold,
     cooldown_minutes: cooldown
   };
   
@@ -554,8 +553,7 @@ bot.action(/^alert:cooldown:(\d+):(eurbrl|brleur):(\d+(?:\.\d+)?)$/, async (ctx)
     alert_type: 'programmed',
     preset: 'custom',
     threshold_type: 'relative',
-    threshold_value: null,
-    threshold_percent: threshold,
+    threshold_value: threshold,
     cooldown_minutes: cooldown
   };
   
@@ -602,7 +600,7 @@ bot.action(/^alert:view:(.+)$/, async (ctx) => {
     const rates = await getRates();
     const currentRate = alert.pair === 'eurbrl' ? rates.cross : 1 / rates.cross;
     const avg30d = await db.getAverage30Days(alert.pair);
-    const alertThreshold = avg30d ? avg30d * (1 + alert.threshold_percent / 100) : null;
+    const alertThreshold = avg30d ? avg30d * (1 + alert.threshold_value / 100) : null;
     
     const text = msg.ALERT_VIEW_DETAILS(alert, currentRate, avg30d, alertThreshold, locale);
     

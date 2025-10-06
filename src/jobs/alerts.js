@@ -81,7 +81,7 @@ export async function checkPremiumAlerts() {
       const avg30d = await db.getAverage30Days(alert.pair);
       if (!avg30d) continue;
       
-      const threshold = avg30d * (1 + alert.threshold_percent / 100);
+      const threshold = avg30d * (1 + alert.threshold_value / 100);
       const currentRate = alert.pair === 'eurbrl' ? rates.cross : 1 / rates.cross;
       
       // Déclencher si seuil atteint
@@ -213,7 +213,7 @@ async function broadcastPremiumAlert(alert, currentRate, avg30d) {
     const locale = getLocale(user.language);
     const msg = messages[user.language];
     
-    const threshold = alert.threshold_percent;
+    const threshold = alert.threshold_value;
     const delta = ((currentRate - avg30d) / avg30d) * 100;
     
     const amountExample = alert.pair === 'eurbrl' ? 1000 : 5000;

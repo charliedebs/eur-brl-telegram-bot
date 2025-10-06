@@ -195,25 +195,50 @@ export class DatabaseService {
   // ALERTS
   // ==========================================
 
-  async createAlert(userId, alertData) {
-    const { data, error } = await supabase
-      .from('user_alerts')
-      .insert([{ 
-        user_id: userId, 
-        alert_type: 'programmed', // ← Ajouter ça
-        ...alertData 
-      }])
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('[DB] Failed to create alert:', error);
-      return null;
-    }
-    
-    console.log(`[DB] ✅ Alert created: ${alertData.pair} ${alertData.threshold_percent}%`);
-    return data;
+// ==========================================
+// ALERTS - Fonction createAlert CORRIGÉE
+// ==========================================
+
+async createAlert(userId, alertData) {
+  // Validation : threshold_type est requis pour les alertes programmées
+  if (!alertData.threshold_type) {
+    console.error('[DB] Missing threshold_type');
+    return null;
   }
+
+  // Validation : threshold_value requis
+  if (alertData.threshold_value === undefined || alertData.threshold_value === null) {
+    console.error('[DB] Missing threshold_value');
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from('user_alerts')
+    .insert([{ 
+      user_id: userId, 
+      alert_type: 'programmed',
+      pair: alertData.pair,
+      threshold_type: alertData.threshold_type, // 'absolute' | 'relative'
+      threshold_value: alertData.threshold_value, // 6.30 | 3.0
+      preset: alertData.preset || null, // 'conservative' | 'balanced' | etc
+      cooldown_minutes: alertData.cooldown_minutes || 60, // Défaut 1h
+      active: true
+    }])
+    .select()
+    .single();
+  
+  if (error) {
+    console.error('[DB] Failed to create alert:', error);
+    return null;
+  }
+  
+  const typeLabel = alertData.threshold_type === 'absolute' 
+    ? `seuil ${alertData.threshold_value}` 
+    : `+${alertData.threshold_value}%`;
+  
+  console.log(`[DB] ✅ Alert created: ${alertData.pair} ${typeLabel} (cooldown: ${alertData.cooldown_minutes}min)`);
+  return data;
+}
   
   async getUserAlerts(telegramId) {
     const user = await this.getUser(telegramId);
