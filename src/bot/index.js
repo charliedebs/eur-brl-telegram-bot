@@ -438,7 +438,7 @@ bot.action(/^premium:subscribe:(\d+)$/, async (ctx) => {
 });
 
 // ==================== ALERTS CALLBACKS ====================
-
+// Handler: Choix de la paire (déjà existant, garder tel quel)
 bot.action('alert:choose_pair', async (ctx) => {
   const msg = getMsg(ctx);
   
@@ -454,24 +454,25 @@ bot.action('alert:choose_pair', async (ctx) => {
   await ctx.answerCbQuery();
 });
 
+// Handler: Paire choisie → Choix type de seuil
 bot.action(/^alert:create:(eurbrl|brleur)$/, async (ctx) => {
-    const pair = ctx.match[1];
-    const msg = getMsg(ctx);
-    
-    const isPremium = await db.isPremium(ctx.from.id);
-    if (!isPremium) {
-      await ctx.answerCbQuery('🔒 Fonctionnalité Premium');
-      return;
-    }
-    
-    const kb = buildKeyboards(msg, 'alert_create', { pair });
-    await ctx.editMessageText(msg.ALERT_CHOOSE_PRESET(pair), { parse_mode: 'HTML', ...kb });
-    await ctx.answerCbQuery();
-  });
+  const pair = ctx.match[1];
+  const msg = getMsg(ctx);
+  
+  const isPremium = await db.isPremium(ctx.from.id);
+  if (!isPremium) {
+    await ctx.answerCbQuery('🔒 Fonctionnalité Premium');
+    return;
+  }
+  
+  const kb = buildKeyboards(msg, 'alert_choose_type', { pair });
+  await ctx.editMessageText(msg.ALERT_CHOOSE_TYPE(pair), { parse_mode: 'HTML', ...kb });
+  await ctx.answerCbQuery();
+});
 
-bot.action(/^alert:preset:(conservative|balanced|aggressive|custom):(eurbrl|brleur)$/, async (ctx) => {
-  const preset = ctx.match[1];
-  const pair = ctx.match[2];
+// Handler: Type choisi - RELATIF → Choix référence
+bot.action(/^alert:type:relative:(eurbrl|brleur)$/, async (ctx) => {
+  const pair = ctx.match[1];
   const msg = getMsg(ctx);
   const locale = getLocale(ctx.state.lang);
   
@@ -481,63 +482,98 @@ bot.action(/^alert:preset:(conservative|balanced|aggressive|custom):(eurbrl|brle
     return;
   }
   
-  const thresholds = {
-    conservative: 2.0,
-    balanced: 3.0,
-    aggressive: 5.0
-  };
+  // Récupérer taux et moyennes
+  const rates = await getRates();
+  const currentRate = pair === 'eurbrl' ? rates.cross : 1 / rates.cross;
   
-  if (preset === 'custom') {
-    ctx.session.awaitingCustomAlert = { pair };
-    
+  const [avg7d, avg30d, avg90d] = await Promise.all([
+    db.getAverage(pair, 7),
+    db.getAverage30Days(pair),
+    db.getAverage(pair, 90)
+  ]);
+  
+  const kb = buildKeyboards(msg, 'alert_choose_reference', {
+    pair,
+    currentRate,
+    avg7d: avg7d || currentRate,
+    avg30d: avg30d || currentRate,
+    avg90d: avg90d || currentRate,
+    locale
+  });
+  
+  await ctx.editMessageText(
+    msg.ALERT_CHOOSE_REFERENCE(pair, currentRate, avg7d, avg30d, avg90d, locale),
+    { parse_mode: 'HTML', ...kb }
+  );
+  await ctx.answerCbQuery();
+});
+
+// Handler: Référence choisie → Choix pourcentage
+bot.action(/^alert:ref:(current|avg7d|avg30d|avg90d):(eurbrl|brleur)$/, async (ctx) => {
+  const refType = ctx.match[1];
+  const pair = ctx.match[2];
+  const msg = getMsg(ctx);
+  const locale = getLocale(ctx.state.lang);
+  
+  // Récupérer valeur de référence
+  const rates = await getRates();
+  const currentRate = pair === 'eurbrl' ? rates.cross : 1 / rates.cross;
+  
+  let refValue;
+  if (refType === 'current') {
+    refValue = currentRate;
+  } else if (refType === 'avg7d') {
+    refValue = await db.getAverage(pair, 7) || currentRate;
+  } else if (refType === 'avg30d') {
+    refValue = await db.getAverage30Days(pair) || currentRate;
+  } else if (refType === 'avg90d') {
+    refValue = await db.getAverage(pair, 90) || currentRate;
+  }
+  
+  // Stocker dans session pour après
+  ctx.session.alertDraft = { pair, refType, refValue };
+  
+  const kb = buildKeyboards(msg, 'alert_choose_percent', { pair, refType });
+  
+  await ctx.editMessageText(
+    msg.ALERT_CHOOSE_PERCENT(pair, refType, refValue, locale),
+    { parse_mode: 'HTML', ...kb }
+  );
+  await ctx.answerCbQuery();
+});
+
+// Handler: Pourcentage choisi (preset ou custom)
+bot.action(/^alert:percent:(2|3|5|custom):(current|avg7d|avg30d|avg90d):(eurbrl|brleur)$/, async (ctx) => {
+  const percent = ctx.match[1];
+  const refType = ctx.match[2];
+  const pair = ctx.match[3];
+  const msg = getMsg(ctx);
+  
+  if (percent === 'custom') {
+    ctx.session.awaitingCustomPercent = { pair, refType };
     await ctx.answerCbQuery();
     return ctx.editMessageText(
-      msg.ALERT_CUSTOM_INSTRUCTIONS(pair), 
+      `✏️ Entre le pourcentage d'augmentation (1-10)\n\nExemple : 3.5`,
       { parse_mode: 'HTML' }
     );
   }
   
-  const threshold = thresholds[preset];
-  const cooldown = 60;
-  
-  const user = await db.getUser(ctx.from.id);
+  // Pourcentage preset choisi → Choix cooldown
   const alertData = {
     pair,
-    alert_type: 'programmed',
-    preset,
     threshold_type: 'relative',
-    threshold_value: threshold,
-    cooldown_minutes: cooldown
+    threshold_value: parseFloat(percent),
+    reference_type: refType
   };
   
-  const alert = await db.createAlert(user.id, alertData);
-  
-  if (!alert) {
-    await ctx.answerCbQuery('❌ Erreur');
-    return ctx.reply('❌ Erreur lors de la création. Réessaie.');
-  }
-  
-  const rates = await getRates();
-  const currentRate = pair === 'eurbrl' ? rates.cross : 1 / rates.cross;
-  const avg30d = await db.getAverage30Days(pair);
-  const alertThreshold = avg30d * (1 + threshold / 100);
-  
-  await ctx.answerCbQuery('✅ Alerte créée !');
-  
-  const text = msg.ALERT_CREATED_FULL(
-    pair, preset, threshold, cooldown, 
-    currentRate, avg30d, alertThreshold, locale
-  );
-  const kb = buildKeyboards(msg, 'alerts_list', { alerts: [alert] });
-  
-  await ctx.editMessageText(text, { parse_mode: 'HTML', ...kb });
+  const kb = buildKeyboards(msg, 'alert_choose_cooldown_v2', { alertData });
+  await ctx.editMessageText(msg.ALERT_CHOOSE_COOLDOWN, { parse_mode: 'HTML', ...kb });
+  await ctx.answerCbQuery();
 });
 
-bot.action(/^alert:cooldown:(\d+):(eurbrl|brleur):(\d+(?:\.\d+)?)$/, async (ctx) => {
-  const cooldown = parseInt(ctx.match[1]);
-  const pair = ctx.match[2];
-  const threshold = parseFloat(ctx.match[3]);
-  
+// Handler: Type choisi - ABSOLU → Demande valeur
+bot.action(/^alert:type:absolute:(eurbrl|brleur)$/, async (ctx) => {
+  const pair = ctx.match[1];
   const msg = getMsg(ctx);
   const locale = getLocale(ctx.state.lang);
   
@@ -547,16 +583,39 @@ bot.action(/^alert:cooldown:(\d+):(eurbrl|brleur):(\d+(?:\.\d+)?)$/, async (ctx)
     return;
   }
   
-  const user = await db.getUser(ctx.from.id);
-  const alertData = {
-    pair,
-    alert_type: 'programmed',
-    preset: 'custom',
-    threshold_type: 'relative',
-    threshold_value: threshold,
-    cooldown_minutes: cooldown
-  };
+  const rates = await getRates();
+  const currentRate = pair === 'eurbrl' ? rates.cross : 1 / rates.cross;
   
+  ctx.session.awaitingAbsoluteThreshold = { pair };
+  
+  await ctx.answerCbQuery();
+  await ctx.editMessageText(
+    msg.ALERT_ENTER_ABSOLUTE(pair, currentRate, locale),
+    { parse_mode: 'HTML' }
+  );
+});
+
+// Handler: Cooldown choisi V2 → Créer alerte
+bot.action(/^alert:cooldown2:(\d+):(.+)$/, async (ctx) => {
+  const cooldown = parseInt(ctx.match[1]);
+  const encoded = ctx.match[2];
+  
+  const msg = getMsg(ctx);
+  const locale = getLocale(ctx.state.lang);
+  
+  let alertData;
+  try {
+    alertData = JSON.parse(Buffer.from(encoded, 'base64').toString('utf-8'));
+  } catch (error) {
+    console.error('[ALERT] Failed to decode alertData:', error);
+    await ctx.answerCbQuery('❌ Erreur');
+    return ctx.reply('❌ Erreur de décodage. Réessaie.');
+  }
+  
+  alertData.cooldown_minutes = cooldown;
+  
+  // Créer l'alerte
+  const user = await db.getUser(ctx.from.id);
   const alert = await db.createAlert(user.id, alertData);
   
   if (!alert) {
@@ -564,17 +623,34 @@ bot.action(/^alert:cooldown:(\d+):(eurbrl|brleur):(\d+(?:\.\d+)?)$/, async (ctx)
     return ctx.reply('❌ Erreur lors de la création.');
   }
   
+  // Calculer seuil pour affichage
   const rates = await getRates();
-  const currentRate = pair === 'eurbrl' ? rates.cross : 1 / rates.cross;
-  const avg30d = await db.getAverage30Days(pair);
-  const alertThreshold = avg30d * (1 + threshold / 100);
+  const currentRate = alertData.pair === 'eurbrl' ? rates.cross : 1 / rates.cross;
+  
+  let refValue;
+  let calculatedThreshold;
+  
+  if (alertData.threshold_type === 'absolute') {
+    calculatedThreshold = alertData.threshold_value;
+    refValue = null;
+  } else {
+    // Relative
+    if (alertData.reference_type === 'current') {
+      refValue = currentRate;
+    } else if (alertData.reference_type === 'avg7d') {
+      refValue = await db.getAverage(alertData.pair, 7);
+    } else if (alertData.reference_type === 'avg30d') {
+      refValue = await db.getAverage30Days(alertData.pair);
+    } else if (alertData.reference_type === 'avg90d') {
+      refValue = await db.getAverage(alertData.pair, 90);
+    }
+    
+    calculatedThreshold = refValue * (1 + alertData.threshold_value / 100);
+  }
   
   await ctx.answerCbQuery('✅ Alerte créée !');
   
-  const text = msg.ALERT_CREATED_FULL(
-    pair, 'custom', threshold, cooldown,
-    currentRate, avg30d, alertThreshold, locale
-  );
+  const text = msg.ALERT_CREATED_FULL_V2(alert, currentRate, refValue, calculatedThreshold, locale);
   const kb = buildKeyboards(msg, 'alerts_list', { alerts: [alert] });
   
   await ctx.editMessageText(text, { parse_mode: 'HTML', ...kb });
@@ -682,26 +758,60 @@ bot.on('text', async (ctx) => {
     }
     
     // PRIORITÉ 2: Custom alert threshold
-    if (ctx.session?.awaitingCustomAlert) {
-      const pair = ctx.session.awaitingCustomAlert.pair;
+    if (ctx.session?.awaitingCustomPercent) {
+      const { pair, refType } = ctx.session.awaitingCustomPercent;
+      const msg = getMsg(ctx);
       
-      const match = text.trim().match(/^\+?(\d+(?:[.,]\d+)?)$/);
+      const match = ctx.message.text.trim().match(/^\+?(\d+(?:[.,]\d+)?)$/);
       if (!match) {
-        return ctx.reply(msg.ALERT_INVALID_THRESHOLD, { parse_mode: 'HTML' });
+        return ctx.reply('⚠️ Valeur invalide. Entre un nombre entre 1 et 10 (ex: 3.5)');
+      }
+      
+      const percent = parseFloat(match[1].replace(',', '.'));
+      
+      if (percent < 1 || percent > 10) {
+        return ctx.reply('⚠️ Le pourcentage doit être entre 1 et 10.');
+      }
+      
+      delete ctx.session.awaitingCustomPercent;
+      
+      const alertData = {
+        pair,
+        threshold_type: 'relative',
+        threshold_value: percent,
+        reference_type: refType
+      };
+      
+      const kb = buildKeyboards(msg, 'alert_choose_cooldown_v2', { alertData });
+      return ctx.reply(msg.ALERT_CHOOSE_COOLDOWN, { parse_mode: 'HTML', ...kb });
+    }
+    
+    // Custom threshold absolu
+    if (ctx.session?.awaitingAbsoluteThreshold) {
+      const { pair } = ctx.session.awaitingAbsoluteThreshold;
+      const msg = getMsg(ctx);
+      
+      const match = ctx.message.text.trim().match(/^(\d+(?:[.,]\d+)?)$/);
+      if (!match) {
+        return ctx.reply(msg.ALERT_INVALID_ABSOLUTE, { parse_mode: 'HTML' });
       }
       
       const threshold = parseFloat(match[1].replace(',', '.'));
       
-      if (threshold < 1 || threshold > 10) {
-        return ctx.reply(msg.ALERT_INVALID_THRESHOLD, { parse_mode: 'HTML' });
+      if (threshold < 1 || threshold > 20) {
+        return ctx.reply('⚠️ Le taux doit être entre 1 et 20.');
       }
       
-      delete ctx.session.awaitingCustomAlert;
+      delete ctx.session.awaitingAbsoluteThreshold;
       
-      const kb = buildKeyboards(msg, 'alert_choose_cooldown', {
-        alertData: { pair, threshold }
-      });
+      const alertData = {
+        pair,
+        threshold_type: 'absolute',
+        threshold_value: threshold,
+        reference_type: null
+      };
       
+      const kb = buildKeyboards(msg, 'alert_choose_cooldown_v2', { alertData });
       return ctx.reply(msg.ALERT_CHOOSE_COOLDOWN, { parse_mode: 'HTML', ...kb });
     }
     

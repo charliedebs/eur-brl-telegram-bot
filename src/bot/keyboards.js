@@ -294,6 +294,63 @@ export function buildKeyboards(msg, type, options = {}) {
         [Markup.button.callback(msg.btn.back, `alert:create:${p}`)]
       ]);
     
+
+      case 'alert_choose_type': {
+        const { pair } = options;
+        return Markup.inlineKeyboard([
+          [Markup.button.callback('📊 Relatif (+X%)', `alert:type:relative:${pair}`)],
+          [Markup.button.callback('🎯 Absolu (valeur fixe)', `alert:type:absolute:${pair}`)],
+          [Markup.button.callback(msg.btn.back, 'alert:choose_pair')]
+        ]);
+      }
+      
+      case 'alert_choose_reference': {
+        const { pair, currentRate, avg7d, avg30d, avg90d, locale } = options;
+        return Markup.inlineKeyboard([
+          [Markup.button.callback(
+            `💵 Taux actuel (${formatRate(currentRate, locale)})`,
+            `alert:ref:current:${pair}`
+          )],
+          [Markup.button.callback(
+            `📈 Moyenne 7j (${formatRate(avg7d, locale)})`,
+            `alert:ref:avg7d:${pair}`
+          )],
+          [Markup.button.callback(
+            `📊 Moyenne 30j (${formatRate(avg30d, locale)}) ⭐`,
+            `alert:ref:avg30d:${pair}`
+          )],
+          [Markup.button.callback(
+            `📉 Moyenne 90j (${formatRate(avg90d, locale)})`,
+            `alert:ref:avg90d:${pair}`
+          )],
+          [Markup.button.callback(msg.btn.back, `alert:create:${pair}`)]
+        ]);
+      }
+      
+      case 'alert_choose_percent': {
+        const { pair, refType } = options;
+        return Markup.inlineKeyboard([
+          [Markup.button.callback('🛡️ +2% (Conservateur)', `alert:percent:2:${refType}:${pair}`)],
+          [Markup.button.callback('⚖️ +3% (Équilibré) ⭐', `alert:percent:3:${refType}:${pair}`)],
+          [Markup.button.callback('🎯 +5% (Opportuniste)', `alert:percent:5:${refType}:${pair}`)],
+          [Markup.button.callback('✏️ Personnalisé', `alert:percent:custom:${refType}:${pair}`)],
+          [Markup.button.callback(msg.btn.back, `alert:type:relative:${pair}`)]
+        ]);
+      }
+      
+      case 'alert_choose_cooldown_v2': {
+        const { alertData } = options; // { pair, threshold_type, threshold_value, reference_type }
+        const encoded = Buffer.from(JSON.stringify(alertData)).toString('base64');
+        
+        return Markup.inlineKeyboard([
+          [Markup.button.callback('⚡ 15 minutes', `alert:cooldown2:15:${encoded}`)],
+          [Markup.button.callback('⏱️ 1 heure ⭐', `alert:cooldown2:60:${encoded}`)],
+          [Markup.button.callback('⏰ 6 heures', `alert:cooldown2:360:${encoded}`)],
+          [Markup.button.callback('📅 24 heures', `alert:cooldown2:1440:${encoded}`)],
+          [Markup.button.callback('📆 1 semaine', `alert:cooldown2:10080:${encoded}`)],
+          [Markup.button.callback(msg.btn.back, `alert:create:${alertData.pair}`)]
+        ]);
+      }
     // Liste des alertes (mise à jour)
     case 'alerts_list':
       const alertButtons = options.alerts?.map(alert => [

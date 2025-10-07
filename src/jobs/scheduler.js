@@ -3,6 +3,7 @@ import cron from 'node-cron';
 import { saveRatesHistory } from './rates-history.js';
 import { checkSpontaneousAlerts } from './spontaneous-alerts.js';
 import { checkPremiumAlerts } from './alerts.js'; // Alertes PROGRAMMÉES uniquement
+import { checkProgrammedAlerts } from './programmed-alerts.js';
 
 export function startCronJobs() {
   console.log('📅 Starting CRON jobs...\n');
@@ -29,9 +30,7 @@ export function startCronJobs() {
   // JOB 3 : Alertes PROGRAMMÉES Premium (toutes les 2h)
   // User configure seuil/preset/cooldown
   // ==========================================
-  cron.schedule('0 */2 * * *', async () => {
-    await checkPremiumAlerts();
-  });
+  cron.schedule('*/15 * * * *', checkProgrammedAlerts);
   console.log('✅ Job 3: Programmed Alerts (Premium) - Every 2 hours');
   
   console.log('\n' + '='.repeat(60));

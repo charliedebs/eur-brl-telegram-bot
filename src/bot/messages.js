@@ -634,6 +634,93 @@ PREMIUM_PRICING: `💎 PASSER À PREMIUM
   💡 Cooldown : évite les notifications répétées.
   Recommandé : 1 heure pour rester réactif.`,
   
+
+  ALERT_CHOOSE_TYPE: (pair) => `🔔 ALERTE ${pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'}
+
+  Comment veux-tu définir ton seuil ?`,
+  
+  // Étape 2a : Choix référence (si relatif)
+  ALERT_CHOOSE_REFERENCE: (pair, currentRate, avg7d, avg30d, avg90d, locale) => `📊 SEUIL RELATIF
+  
+  Taux actuel : ${formatRate(currentRate, locale)}
+  
+  +X% par rapport à quoi ?
+  
+  💡 <i>La référence sera recalculée à chaque vérification (toutes les 2h)</i>`,
+  
+  // Étape 2b : Pourcentage (si relatif)
+  ALERT_CHOOSE_PERCENT: (pair, refType, refValue, locale) => {
+    const refLabels = {
+      current: `Taux actuel (${formatRate(refValue, locale)})`,
+      avg7d: `Moyenne 7j (${formatRate(refValue, locale)})`,
+      avg30d: `Moyenne 30j (${formatRate(refValue, locale)})`,
+      avg90d: `Moyenne 90j (${formatRate(refValue, locale)})`
+    };
+    
+    return `📊 SEUIL RELATIF
+  Référence : ${refLabels[refType]}
+  
+  Entre le pourcentage d'augmentation :`;
+  },
+  
+  // Étape 2 : Valeur absolue
+  ALERT_ENTER_ABSOLUTE: (pair, currentRate, locale) => `🎯 SEUIL ABSOLU
+  
+  Taux actuel : ${formatRate(currentRate, locale)}
+  
+  Entre le taux qui déclenchera l'alerte :
+  (ex: ${formatRate(currentRate * 1.03, locale)})
+  
+  💡 <i>Conseil : Choisis ~3-5% au-dessus de l'actuel 
+     (≈${formatRate(currentRate * 1.03, locale)} - ${formatRate(currentRate * 1.05, locale)})</i>`,
+  
+  ALERT_INVALID_ABSOLUTE: `⚠️ Valeur invalide.
+  
+  Entre un nombre décimal (ex: 6.30)`,
+  
+  // Message confirmation création
+  ALERT_CREATED_FULL_V2: (alert, currentRate, refValue, calculatedThreshold, locale) => {
+    const typeLabels = {
+      absolute: '🎯 Absolu',
+      relative: '📊 Relatif'
+    };
+    
+    const refLabels = {
+      current: 'Taux actuel',
+      avg7d: 'Moyenne 7 jours',
+      avg30d: 'Moyenne 30 jours',
+      avg90d: 'Moyenne 90 jours'
+    };
+    
+    let text = `✅ ALERTE CRÉÉE
+  
+  ${alert.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'}
+  ${typeLabels[alert.threshold_type]}`;
+  
+    if (alert.threshold_type === 'relative') {
+      text += ` : +${formatAmount(alert.threshold_value, 1, locale)}% vs ${refLabels[alert.reference_type]}`;
+    } else {
+      text += ` : ≥ ${formatRate(alert.threshold_value, locale)}`;
+    }
+    
+    text += `\n⏰ Cooldown : ${formatCooldown(alert.cooldown_minutes)}
+  
+  <b>Actuellement :</b>
+  • Taux actuel : ${formatRate(currentRate, locale)}`;
+  
+    if (alert.threshold_type === 'relative') {
+      text += `
+  • ${refLabels[alert.reference_type]} : ${formatRate(refValue, locale)}`;
+    }
+    
+    text += `
+  • Seuil alerte : ${formatRate(calculatedThreshold, locale)}
+  
+  Je t'alerterai dès que le taux atteint ${formatRate(calculatedThreshold, locale)} !`;
+  
+    return text;
+  },
+
     ALERT_CUSTOM_INSTRUCTIONS: (pair) => {
       const pairText = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
       return `✏️ SEUIL PERSONNALISÉ
@@ -1447,6 +1534,90 @@ Intervalo mínimo entre dois alertas:
 💡 Cooldown: evita notificações repetidas.
 Recomendado: 1 hora para ficar reativo.`,
 
+
+ALERT_CHOOSE_TYPE: (pair) => `🔔 ALERTA ${pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'}
+
+Como você quer definir seu limite?`,
+
+ALERT_CHOOSE_REFERENCE: (pair, currentRate, avg7d, avg30d, avg90d, locale) => `📊 LIMITE RELATIVO
+
+Taxa atual: ${formatRate(currentRate, locale)}
+
++X% em relação a quê?
+
+💡 <i>A referência será recalculada a cada verificação (a cada 2h)</i>`,
+
+ALERT_CHOOSE_PERCENT: (pair, refType, refValue, locale) => {
+  const refLabels = {
+    current: `Taxa atual (${formatRate(refValue, locale)})`,
+    avg7d: `Média 7 dias (${formatRate(refValue, locale)})`,
+    avg30d: `Média 30 dias (${formatRate(refValue, locale)})`,
+    avg90d: `Média 90 dias (${formatRate(refValue, locale)})`
+  };
+  
+  return `📊 LIMITE RELATIVO
+Referência: ${refLabels[refType]}
+
+Digite a porcentagem de aumento:`;
+},
+
+ALERT_ENTER_ABSOLUTE: (pair, currentRate, locale) => `🎯 LIMITE ABSOLUTO
+
+Taxa atual: ${formatRate(currentRate, locale)}
+
+Digite a taxa que ativará o alerta:
+(ex: ${formatRate(currentRate * 1.03, locale)})
+
+💡 <i>Dica: Escolha ~3-5% acima da atual 
+   (≈${formatRate(currentRate * 1.03, locale)} - ${formatRate(currentRate * 1.05, locale)})</i>`,
+
+ALERT_INVALID_ABSOLUTE: `⚠️ Valor inválido.
+
+Digite um número decimal (ex: 6.30)`,
+
+ALERT_CREATED_FULL_V2: (alert, currentRate, refValue, calculatedThreshold, locale) => {
+  const typeLabels = {
+    absolute: '🎯 Absoluto',
+    relative: '📊 Relativo'
+  };
+  
+  const refLabels = {
+    current: 'Taxa atual',
+    avg7d: 'Média 7 dias',
+    avg30d: 'Média 30 dias',
+    avg90d: 'Média 90 dias'
+  };
+  
+  let text = `✅ ALERTA CRIADO
+
+${alert.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'}
+${typeLabels[alert.threshold_type]}`;
+
+  if (alert.threshold_type === 'relative') {
+    text += ` : +${formatAmount(alert.threshold_value, 1, locale)}% vs ${refLabels[alert.reference_type]}`;
+  } else {
+    text += ` : ≥ ${formatRate(alert.threshold_value, locale)}`;
+  }
+  
+  text += `\n⏰ Cooldown: ${formatCooldown(alert.cooldown_minutes)}
+
+<b>Atualmente:</b>
+• Taxa atual: ${formatRate(currentRate, locale)}`;
+
+  if (alert.threshold_type === 'relative') {
+    text += `
+• ${refLabels[alert.reference_type]}: ${formatRate(refValue, locale)}`;
+  }
+  
+  text += `
+• Limite do alerta: ${formatRate(calculatedThreshold, locale)}
+
+Vou te avisar assim que a taxa atingir ${formatRate(calculatedThreshold, locale)}!`;
+
+  return text;
+},
+
+
   ALERT_CUSTOM_INSTRUCTIONS: (pair) => {
     const pairText = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
     return `✏️ LIMITE PERSONALIZADO
@@ -2242,6 +2413,88 @@ Minimum interval between two alerts:
 
 💡 Cooldown: avoids repeated notifications.
 Recommended: 1 hour to stay reactive.`,
+
+ALERT_CHOOSE_TYPE: (pair) => `🔔 ALERT ${pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'}
+
+How do you want to define your threshold?`,
+
+ALERT_CHOOSE_REFERENCE: (pair, currentRate, avg7d, avg30d, avg90d, locale) => `📊 RELATIVE THRESHOLD
+
+Current rate: ${formatRate(currentRate, locale)}
+
++X% compared to what?
+
+💡 <i>The reference will be recalculated at each check (every 2h)</i>`,
+
+ALERT_CHOOSE_PERCENT: (pair, refType, refValue, locale) => {
+  const refLabels = {
+    current: `Current rate (${formatRate(refValue, locale)})`,
+    avg7d: `7-day avg (${formatRate(refValue, locale)})`,
+    avg30d: `30-day avg (${formatRate(refValue, locale)})`,
+    avg90d: `90-day avg (${formatRate(refValue, locale)})`
+  };
+  
+  return `📊 RELATIVE THRESHOLD
+Reference: ${refLabels[refType]}
+
+Enter the percentage increase:`;
+},
+
+ALERT_ENTER_ABSOLUTE: (pair, currentRate, locale) => `🎯 ABSOLUTE THRESHOLD
+
+Current rate: ${formatRate(currentRate, locale)}
+
+Enter the rate that will trigger the alert:
+(e.g.: ${formatRate(currentRate * 1.03, locale)})
+
+💡 <i>Tip: Choose ~3-5% above current 
+   (≈${formatRate(currentRate * 1.03, locale)} - ${formatRate(currentRate * 1.05, locale)})</i>`,
+
+ALERT_INVALID_ABSOLUTE: `⚠️ Invalid value.
+
+Enter a decimal number (e.g.: 6.30)`,
+
+ALERT_CREATED_FULL_V2: (alert, currentRate, refValue, calculatedThreshold, locale) => {
+  const typeLabels = {
+    absolute: '🎯 Absolute',
+    relative: '📊 Relative'
+  };
+  
+  const refLabels = {
+    current: 'Current rate',
+    avg7d: '7-day avg',
+    avg30d: '30-day avg',
+    avg90d: '90-day avg'
+  };
+  
+  let text = `✅ ALERT CREATED
+
+${alert.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'}
+${typeLabels[alert.threshold_type]}`;
+
+  if (alert.threshold_type === 'relative') {
+    text += ` : +${formatAmount(alert.threshold_value, 1, locale)}% vs ${refLabels[alert.reference_type]}`;
+  } else {
+    text += ` : ≥ ${formatRate(alert.threshold_value, locale)}`;
+  }
+  
+  text += `\n⏰ Cooldown: ${formatCooldown(alert.cooldown_minutes)}
+
+<b>Currently:</b>
+• Current rate: ${formatRate(currentRate, locale)}`;
+
+  if (alert.threshold_type === 'relative') {
+    text += `
+• ${refLabels[alert.reference_type]}: ${formatRate(refValue, locale)}`;
+  }
+  
+  text += `
+• Alert threshold: ${formatRate(calculatedThreshold, locale)}
+
+I'll alert you as soon as the rate reaches ${formatRate(calculatedThreshold, locale)}!`;
+
+  return text;
+},
 
   ALERT_CUSTOM_INSTRUCTIONS: (pair) => {
     const pairText = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';

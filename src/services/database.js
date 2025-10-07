@@ -191,16 +191,24 @@ export class DatabaseService {
     return data;
   }
 
-  // ==========================================
-  // ALERTS
-  // ==========================================
+// ==========================================
+// RATES HISTORY - Ajouter méthode getAverage générique
+// ==========================================
+
+async getAverage(pair, days = 30) {
+  const history = await this.getRateHistory(pair, days);
+  if (history.length === 0) return null;
+  
+  const sum = history.reduce((acc, h) => acc + parseFloat(h.rate), 0);
+  return sum / history.length;
+}
 
 // ==========================================
-// ALERTS - Fonction createAlert CORRIGÉE
+// ALERTS - Méthode createAlert mise à jour
 // ==========================================
 
 async createAlert(userId, alertData) {
-  // Validation : threshold_type est requis pour les alertes programmées
+  // Validation : threshold_type requis
   if (!alertData.threshold_type) {
     console.error('[DB] Missing threshold_type');
     return null;
@@ -211,17 +219,24 @@ async createAlert(userId, alertData) {
     console.error('[DB] Missing threshold_value');
     return null;
   }
+  
+  // Validation : reference_type requis si relatif
+  if (alertData.threshold_type === 'relative' && !alertData.reference_type) {
+    console.error('[DB] Missing reference_type for relative threshold');
+    return null;
+  }
 
-  const { data, error } = await supabase
+  const { data, error } = await this.supabase
     .from('user_alerts')
     .insert([{ 
       user_id: userId, 
       alert_type: 'programmed',
       pair: alertData.pair,
-      threshold_type: alertData.threshold_type, // 'absolute' | 'relative'
-      threshold_value: alertData.threshold_value, // 6.30 | 3.0
-      preset: alertData.preset || null, // 'conservative' | 'balanced' | etc
-      cooldown_minutes: alertData.cooldown_minutes || 60, // Défaut 1h
+      threshold_type: alertData.threshold_type,    // 'absolute' | 'relative'
+      threshold_value: alertData.threshold_value,   // 6.30 | 3.0
+      reference_type: alertData.reference_type,     // 'current' | 'avg7d' | 'avg30d' | 'avg90d' | null
+      preset: alertData.preset || null,
+      cooldown_minutes: alertData.cooldown_minutes || 60,
       active: true
     }])
     .select()
@@ -234,7 +249,7 @@ async createAlert(userId, alertData) {
   
   const typeLabel = alertData.threshold_type === 'absolute' 
     ? `seuil ${alertData.threshold_value}` 
-    : `+${alertData.threshold_value}%`;
+    : `+${alertData.threshold_value}% vs ${alertData.reference_type}`;
   
   console.log(`[DB] ✅ Alert created: ${alertData.pair} ${typeLabel} (cooldown: ${alertData.cooldown_minutes}min)`);
   return data;
