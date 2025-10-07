@@ -587,25 +587,60 @@ PREMIUM_PRICING: `💎 PASSER À PREMIUM
   • Plusieurs seuils personnalisés
   • Alertes régulières (pas juste les records)`,
   
-  ALERTS_LIST: (alerts, locale) => {
-    if (alerts.length === 0) {
-      return `🔔 Mes alertes\n\nAucune alerte active.\n\nCrée ta première alerte pour être prévenu des bons taux !`;
+ALERTS_LIST: (alerts, locale) => {
+  if (alerts.length === 0) {
+    return `🔔 <b>Mes alertes</b>
+
+Tu n'as aucune alerte active.
+
+Crée ta première alerte pour être notifié automatiquement !`;
+  }
+  
+  const emojis = {
+    conservative: '🛡️',
+    balanced: '⚖️',
+    aggressive: '🎯',
+    custom: '✏️',
+    absolute: '🎯',
+    relative: '📊'
+  };
+  
+  let text = `🔔 <b>Mes alertes</b>\n\n`;
+  
+  alerts.forEach((alert, index) => {
+    const pairText = alert.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+    
+    // Emoji selon preset ou type
+    let emoji;
+    if (alert.preset && emojis[alert.preset]) {
+      emoji = emojis[alert.preset];
+    } else {
+      emoji = emojis[alert.threshold_type] || '🔔';
     }
     
-    const list = alerts.map((a, i) => {
-      const pairText = a.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
-      const presetEmoji = {
-        'conservative': '🛡️',
-        'balanced': '⚖️',
-        'aggressive': '🎯',
-        'custom': '✏️'
-      }[a.preset] || '🔔';
-      
-      return `${i + 1}. ${presetEmoji} ${pairText} : +${a.threshold_percent}%`;
-    }).join('\n');
+    // Description du seuil
+    let threshold;
+    if (alert.threshold_type === 'absolute') {
+      threshold = `≥ ${formatRate(alert.threshold_value, locale)}`;
+    } else {
+      const refLabels = {
+        current: 'taux actuel',
+        avg7d: 'moy. 7j',
+        avg30d: 'moy. 30j',
+        avg90d: 'moy. 90j'
+      };
+      const refLabel = refLabels[alert.reference_type] || alert.reference_type;
+      threshold = `+${formatAmount(alert.threshold_value, 1, locale)}% vs ${refLabel}`;
+    }
     
-    return `🔔 <b>Mes alertes</b>\n\n${list}\n\n💡 Clique sur un bouton ci-dessous pour voir les détails ou supprimer.\n\nTu seras prévenu quand ces seuils seront atteints (max 1x/24h par alerte).`;
-  },
+    text += `${index + 1}. ${emoji} ${pairText} : ${threshold}\n`;
+  });
+  
+  text += `\nYou'll be notified when these thresholds are reached.`;
+  
+  return text;
+},
+
 
     PREMIUM_EXPIRED: `⚠️ Ton Premium a expiré
   
@@ -1468,25 +1503,57 @@ ${pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'} : ${formatRate(currentRate,
 • Vários limites personalizados
 • Alertas regulares (não apenas recordes)`,
 
-  ALERTS_LIST: (alerts, locale) => {
-    if (alerts.length === 0) {
-      return `🔔 Meus alertas\n\nNenhum alerta ativo.\n\nCrie seu primeiro alerta para ser avisado das boas taxas!`;
+ALERTS_LIST: (alerts, locale) => {
+  if (alerts.length === 0) {
+    return `🔔 <b>Meus alertas</b>
+
+Você não tem nenhum alerta ativo.
+
+Crie seu primeiro alerta para ser notificado automaticamente!`;
+  }
+  
+  const emojis = {
+    conservative: '🛡️',
+    balanced: '⚖️',
+    aggressive: '🎯',
+    custom: '✏️',
+    absolute: '🎯',
+    relative: '📊'
+  };
+  
+  let text = `🔔 <b>Meus alertas</b>\n\n`;
+  
+  alerts.forEach((alert, index) => {
+    const pairText = alert.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+    
+    let emoji;
+    if (alert.preset && emojis[alert.preset]) {
+      emoji = emojis[alert.preset];
+    } else {
+      emoji = emojis[alert.threshold_type] || '🔔';
     }
     
-    const list = alerts.map((a, i) => {
-      const pairText = a.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
-      const presetEmoji = {
-        'conservative': '🛡️',
-        'balanced': '⚖️',
-        'aggressive': '🎯',
-        'custom': '✏️'
-      }[a.preset] || '🔔';
-      
-      return `${i + 1}. ${presetEmoji} ${pairText} : +${a.threshold_percent}%`;
-    }).join('\n');
+    let threshold;
+    if (alert.threshold_type === 'absolute') {
+      threshold = `≥ ${formatRate(alert.threshold_value, locale)}`;
+    } else {
+      const refLabels = {
+        current: 'taxa atual',
+        avg7d: 'média 7d',
+        avg30d: 'média 30d',
+        avg90d: 'média 90d'
+      };
+      const refLabel = refLabels[alert.reference_type] || alert.reference_type;
+      threshold = `+${formatAmount(alert.threshold_value, 1, locale)}% vs ${refLabel}`;
+    }
     
-    return `🔔 Meus alertas\n\n${list}\n\nVocê será avisado quando esses limites forem atingidos.`;
-  },
+    text += `${index + 1}. ${emoji} ${pairText} : ${threshold}\n`;
+  });
+  
+  text += `\nVocê será notificado quando esses limites forem atingidos.`;
+  
+  return text;
+},
 
   PREMIUM_EXPIRED: `⚠️ Seu Premium expirou
 
@@ -2347,25 +2414,57 @@ ${pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'} : ${formatRate(currentRate,
 • Multiple custom thresholds
 • Regular alerts (not just records)`,
 
-  ALERTS_LIST: (alerts, locale) => {
-    if (alerts.length === 0) {
-      return `🔔 My alerts\n\nNo active alerts.\n\nCreate your first alert to be notified of good rates!`;
+ALERTS_LIST: (alerts, locale) => {
+  if (alerts.length === 0) {
+    return `🔔 <b>My alerts</b>
+
+You have no active alerts.
+
+Create your first alert to be notified automatically!`;
+  }
+  
+  const emojis = {
+    conservative: '🛡️',
+    balanced: '⚖️',
+    aggressive: '🎯',
+    custom: '✏️',
+    absolute: '🎯',
+    relative: '📊'
+  };
+  
+  let text = `🔔 <b>My alerts</b>\n\n`;
+  
+  alerts.forEach((alert, index) => {
+    const pairText = alert.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+    
+    let emoji;
+    if (alert.preset && emojis[alert.preset]) {
+      emoji = emojis[alert.preset];
+    } else {
+      emoji = emojis[alert.threshold_type] || '🔔';
     }
     
-    const list = alerts.map((a, i) => {
-      const pairText = a.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
-      const presetEmoji = {
-        'conservative': '🛡️',
-        'balanced': '⚖️',
-        'aggressive': '🎯',
-        'custom': '✏️'
-      }[a.preset] || '🔔';
-      
-      return `${i + 1}. ${presetEmoji} ${pairText} : +${a.threshold_percent}%`;
-    }).join('\n');
+    let threshold;
+    if (alert.threshold_type === 'absolute') {
+      threshold = `≥ ${formatRate(alert.threshold_value, locale)}`;
+    } else {
+      const refLabels = {
+        current: 'current rate',
+        avg7d: '7d avg',
+        avg30d: '30d avg',
+        avg90d: '90d avg'
+      };
+      const refLabel = refLabels[alert.reference_type] || alert.reference_type;
+      threshold = `+${formatAmount(alert.threshold_value, 1, locale)}% vs ${refLabel}`;
+    }
     
-    return `🔔 My alerts\n\n${list}\n\nYou'll be notified when these thresholds are reached.`;
-  },
+    text += `${index + 1}. ${emoji} ${pairText} : ${threshold}\n`;
+  });
+  
+  text += `\nYou'll be notified when these thresholds are reached.`;
+  
+  return text;
+},
 
   PREMIUM_EXPIRED: `⚠️ Your Premium has expired
 

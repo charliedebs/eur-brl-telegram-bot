@@ -771,14 +771,13 @@ bot.on('text', async (ctx) => {
       
       const match = ctx.message.text.trim().match(/^\+?(\d+(?:[.,]\d+)?)$/);
       if (!match) {
-        return ctx.reply('⚠️ Valeur invalide. Entre un nombre entre 1 et 10 (ex: 3.5)');
+        return ctx.reply('⚠️ Format invalide. Entre un nombre (ex: 3.5)');
       }
       
       const percent = parseFloat(match[1].replace(',', '.'));
       
-      if (percent < 1 || percent > 10) {
-        return ctx.reply('⚠️ Le pourcentage doit être entre 1 et 10.');
-      }
+      // ✅ SUPPRIMÉ : Validation min/max
+      // Laisse l'utilisateur libre
       
       delete ctx.session.awaitingCustomPercent;
       
@@ -800,14 +799,13 @@ bot.on('text', async (ctx) => {
       
       const match = ctx.message.text.trim().match(/^(\d+(?:[.,]\d+)?)$/);
       if (!match) {
-        return ctx.reply(msg.ALERT_INVALID_ABSOLUTE, { parse_mode: 'HTML' });
+        return ctx.reply('⚠️ Format invalide. Entre un nombre décimal (ex: 6.30)');
       }
       
       const threshold = parseFloat(match[1].replace(',', '.'));
       
-      if (threshold < 1 || threshold > 20) {
-        return ctx.reply('⚠️ Le taux doit être entre 1 et 20.');
-      }
+      // ✅ SUPPRIMÉ : Validation min/max
+      // Laisse l'utilisateur libre
       
       delete ctx.session.awaitingAbsoluteThreshold;
       
