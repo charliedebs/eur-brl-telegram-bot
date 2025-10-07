@@ -703,7 +703,7 @@ bot.action(/^alert:view:(.+)$/, async (ctx) => {
       calculatedThreshold = refValue * (1 + alert.threshold_value / 100);
     }
     
-    const text = msg.ALERT_VIEW_DETAILS_V2(alert, currentRate, refValue, calculatedThreshold, locale);
+    const text = msg.ALERT_VIEW_DETAILS(alert, currentRate, refValue, calculatedThreshold, locale);
     
     const kb = Markup.inlineKeyboard([
       [Markup.button.callback('✏️ Nommer', `alert:rename:${alertId}`)],
