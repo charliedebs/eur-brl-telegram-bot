@@ -595,24 +595,31 @@ bot.action(/^alert:type:absolute:(eurbrl|brleur)$/, async (ctx) => {
   );
 });
 
-// Handler: Cooldown choisi V2 → Créer alerte
-bot.action(/^alert:cooldown2:(\d+):(.+)$/, async (ctx) => {
+// Handler: Cooldown choisi V2 → Créer alerte (FIX: decode shortcode)
+bot.action(/^alert:cd2:(\d+):(.+)$/, async (ctx) => {
   const cooldown = parseInt(ctx.match[1]);
-  const encoded = ctx.match[2];
+  const shortcode = ctx.match[2];
   
   const msg = getMsg(ctx);
   const locale = getLocale(ctx.state.lang);
   
-  let alertData;
-  try {
-    alertData = JSON.parse(Buffer.from(encoded, 'base64').toString('utf-8'));
-  } catch (error) {
-    console.error('[ALERT] Failed to decode alertData:', error);
+  // Decoder shortcode : type-value-ref-pair
+  // Ex: "rel-3-avg30d-eurbrl" ou "abs-6.3-null-brleur"
+  const parts = shortcode.split('-');
+  
+  if (parts.length < 4) {
+    console.error('[ALERT] Invalid shortcode:', shortcode);
     await ctx.answerCbQuery('❌ Erreur');
     return ctx.reply('❌ Erreur de décodage. Réessaie.');
   }
   
-  alertData.cooldown_minutes = cooldown;
+  const alertData = {
+    threshold_type: parts[0] === 'rel' ? 'relative' : 'absolute',
+    threshold_value: parseFloat(parts[1]),
+    reference_type: parts[2] === 'null' ? null : parts[2],
+    pair: parts[3],
+    cooldown_minutes: cooldown
+  };
   
   // Créer l'alerte
   const user = await db.getUser(ctx.from.id);

@@ -1,5 +1,6 @@
 import { Markup } from 'telegraf';
 import { DEFAULTS, LINKS, PROVIDER_LINKS } from '../config/constants.js';
+import { formatRate } from '../services/rates.js';
 
 export function buildKeyboards(msg, type, options = {}) {
   const { route = 'eurbrl', amount = DEFAULTS.EUR, alerts = [] } = options;
@@ -339,15 +340,22 @@ export function buildKeyboards(msg, type, options = {}) {
       }
       
       case 'alert_choose_cooldown_v2': {
-        const { alertData } = options; // { pair, threshold_type, threshold_value, reference_type }
-        const encoded = Buffer.from(JSON.stringify(alertData)).toString('base64');
+        const { alertData } = options;
+        // Créer un shortcode : type-value-ref-pair
+        // Ex: "rel-3-avg30d-eurbrl" ou "abs-6.3-null-eurbrl"
+        const shortcode = [
+          alertData.threshold_type.slice(0, 3), // 'rel' ou 'abs'
+          alertData.threshold_value,
+          alertData.reference_type || 'null',
+          alertData.pair
+        ].join('-');
         
         return Markup.inlineKeyboard([
-          [Markup.button.callback('⚡ 15 minutes', `alert:cooldown2:15:${encoded}`)],
-          [Markup.button.callback('⏱️ 1 heure ⭐', `alert:cooldown2:60:${encoded}`)],
-          [Markup.button.callback('⏰ 6 heures', `alert:cooldown2:360:${encoded}`)],
-          [Markup.button.callback('📅 24 heures', `alert:cooldown2:1440:${encoded}`)],
-          [Markup.button.callback('📆 1 semaine', `alert:cooldown2:10080:${encoded}`)],
+          [Markup.button.callback('⚡ 15 minutes', `alert:cd2:15:${shortcode}`)],
+          [Markup.button.callback('⏱️ 1 heure ⭐', `alert:cd2:60:${shortcode}`)],
+          [Markup.button.callback('⏰ 6 heures', `alert:cd2:360:${shortcode}`)],
+          [Markup.button.callback('📅 24 heures', `alert:cd2:1440:${shortcode}`)],
+          [Markup.button.callback('📆 1 semaine', `alert:cd2:10080:${shortcode}`)],
           [Markup.button.callback(msg.btn.back, `alert:create:${alertData.pair}`)]
         ]);
       }
