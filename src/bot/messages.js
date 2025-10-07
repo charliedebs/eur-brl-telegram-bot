@@ -177,42 +177,52 @@ Taux off-chain : API Wise Comparisons (taux live des providers)
 
 Liens de parrainage : gratuits pour toi, financent le service.`,
 
-  buildOffChain: ({ route, amount, bestBank, others, locale }) => {
-    const title = '🏦 Off-chain';
-    
-    if (!bestBank) {
-      return `${title}\n\n⚠️ Taux indisponibles pour le moment.`;
+buildOffChain: ({ route, amount, bestBank, others, locale, onchainAmount }) => {
+  const title = '🏦 Off-chain';
+  
+  if (!bestBank) {
+    return `${title}\n\n⚠️ Taux indisponibles pour le moment.`;
+  }
+  
+  const priorityNames = ['Wise', 'Remitly'];
+  const allProviders = [bestBank, ...others];
+  
+  // Filtrer pour ne garder que Wise et Remitly
+  const displayProviders = allProviders
+    .filter(p => priorityNames.includes(p.provider))
+    .sort((a, b) => b.out - a.out);
+  
+  // ⚠️ NOUVEAU : Format sans frais, juste taux effectif
+  const providersList = displayProviders.map((p, i) => {
+    if (route === 'eurbrl') {
+      return `<b>${i + 1}. ${p.provider}</b>\n💰 Tu reçois : R$${formatAmount(p.out, 2, locale)}\n📊 Taux effectif : ${formatRate(p.rate, locale)}`;
+    } else {
+      return `<b>${i + 1}. ${p.provider}</b>\n💰 Tu reçois : €${formatAmount(p.out, 2, locale)}\n📊 Taux effectif : ${formatRate(p.rate, locale)}`;
     }
-    
-    const formatFee = (fee) => {
-      if (fee === null || fee === undefined || fee === 0) return 'Sans frais';
-      return route === 'eurbrl' ? `${formatAmount(fee, 2, locale)} EUR` : `${formatAmount(fee, 2, locale)} BRL`;
-    };
-    
-    const priorityNames = ['Wise', 'PayPal', 'Western Union'];
-    const allProviders = [bestBank, ...others];
-    
-    const priorityProviders = allProviders.filter(p => priorityNames.includes(p.provider));
-    const otherProviders = allProviders.filter(p => !priorityNames.includes(p.provider));
-    
-    const maxOthers = 6 - priorityProviders.length;
-    const topOthers = otherProviders.slice(0, Math.max(2, maxOthers));
-    
-    const displayProviders = [...priorityProviders, ...topOthers]
-      .sort((a, b) => b.out - a.out);
-    
-    const providersList = displayProviders.map((p, i) => {
-      if (route === 'eurbrl') {
-        return `<b>${i + 1}. ${p.provider}</b>\n💰 Tu reçois : R$${formatAmount(p.out, 2, locale)}\n📊 Taux : ${formatRate(p.rate, locale)}\n💳 Frais : ${formatFee(p.fee)}`;
-      } else {
-        return `<b>${i + 1}. ${p.provider}</b>\n💰 Tu reçois : €${formatAmount(p.out, 2, locale)}\n📊 Taux : ${formatRate(p.rate, locale)}\n💳 Frais : ${formatFee(p.fee)}`;
-      }
-    }).join('\n\n');
-    
-    const footer = `\n\n💡 Généralement un peu plus cher que on-chain, mais certains préfèrent ces solutions pour leur simplicité.\n\n✅ Plateformes régulées et fiables. Si tu n'as pas encore de compte, utilise nos liens de parrainage : c'est gratuit pour toi, ça finance le service (et tu peux même souvent y gagner).\n\n<i>*Données fournies par Wise Comparisons</i>`;
-    
-    return `${title}\n\n${providersList}${footer}`;
-  },
+  }).join('\n\n');
+  
+  // ⚠️ NOUVEAU : Footer avec rappel on-chain + reformulation
+  const onchainCompare = onchainAmount 
+    ? `~${formatAmount(onchainAmount, 0, locale)}${route === 'eurbrl' ? ' R$' : '€'}`
+    : '—';
+  
+  const offchainBest = displayProviders[0]?.out 
+    ? formatAmount(displayProviders[0].out, 0, locale)
+    : '—';
+  
+  const footer = `
+
+💡 Plus cher que l'on-chain (tu reçois ~${offchainBest}${route === 'eurbrl' ? ' R$' : '€'} avec la meilleure solution offchain vs ~${onchainCompare} on-chain), mais certains préfèrent ces méthodes car elles sont plus user-friendly que le process on-chain.
+
+⭐ On recommande fortement Wise, qui (hors promotions) offre généralement le meilleur taux ainsi que la meilleure UX !
+
+<i>N'hésite pas à utiliser nos liens de parrainage lorsque disponibles (⭐), c'est ce qui nous permet de financer ce service.
+
+*Données fournies par Wise Comparisons</i>`;
+  
+  return `${title}\n\n${providersList}${footer}`;
+},
+
 
   ONCHAIN_INTRO: `🚀 Route On-Chain
 
@@ -1145,42 +1155,48 @@ Taxas off-chain: API Wise Comparisons (taxas ao vivo dos provedores)
 
 Links de indicação: gratuitos para você, financiam o serviço.`,
 
-  buildOffChain: ({ route, amount, bestBank, others, locale }) => {
-    const title = '🏦 Off-chain';
-    
-    if (!bestBank) {
-      return `${title}\n\n⚠️ Taxas indisponíveis no momento.`;
+buildOffChain: ({ route, amount, bestBank, others, locale, onchainAmount }) => {
+  const title = '🏦 Off-chain';
+  
+  if (!bestBank) {
+    return `${title}\n\n⚠️ Taxas indisponíveis no momento.`;
+  }
+  
+  const priorityNames = ['Wise', 'Remitly'];
+  const allProviders = [bestBank, ...others];
+  
+  const displayProviders = allProviders
+    .filter(p => priorityNames.includes(p.provider))
+    .sort((a, b) => b.out - a.out);
+  
+  const providersList = displayProviders.map((p, i) => {
+    if (route === 'eurbrl') {
+      return `<b>${i + 1}. ${p.provider}</b>\n💰 Você recebe : R$${formatAmount(p.out, 2, locale)}\n📊 Taxa efetiva : ${formatRate(p.rate, locale)}`;
+    } else {
+      return `<b>${i + 1}. ${p.provider}</b>\n💰 Você recebe : €${formatAmount(p.out, 2, locale)}\n📊 Taxa efetiva : ${formatRate(p.rate, locale)}`;
     }
-    
-    const formatFee = (fee) => {
-      if (fee === null || fee === undefined || fee === 0) return 'Sem taxas';
-      return route === 'eurbrl' ? `${formatAmount(fee, 2, locale)} EUR` : `${formatAmount(fee, 2, locale)} BRL`;
-    };
-    
-    const priorityNames = ['Wise', 'PayPal', 'Western Union'];
-    const allProviders = [bestBank, ...others];
-    
-    const priorityProviders = allProviders.filter(p => priorityNames.includes(p.provider));
-    const otherProviders = allProviders.filter(p => !priorityNames.includes(p.provider));
-    
-    const maxOthers = 6 - priorityProviders.length;
-    const topOthers = otherProviders.slice(0, Math.max(2, maxOthers));
-    
-    const displayProviders = [...priorityProviders, ...topOthers]
-      .sort((a, b) => b.out - a.out);
-    
-    const providersList = displayProviders.map((p, i) => {
-      if (route === 'eurbrl') {
-        return `<b>${i + 1}. ${p.provider}</b>\n💰 Você recebe : R${formatAmount(p.out, 2, locale)}\n📊 Taxa : ${formatRate(p.rate, locale)}\n💳 Taxas : ${formatFee(p.fee)}`;
-      } else {
-        return `<b>${i + 1}. ${p.provider}</b>\n💰 Você recebe : €${formatAmount(p.out, 2, locale)}\n📊 Taxa : ${formatRate(p.rate, locale)}\n💳 Taxas : ${formatFee(p.fee)}`;
-      }
-    }).join('\n\n');
-    
-    const footer = `\n\n💡 Geralmente um pouco mais caro que on-chain, mas alguns preferem essas soluções pela simplicidade.\n\n✅ Plataformas reguladas e confiáveis. Se você ainda não tem conta, use nossos links de indicação: é gratuito para você, financia o serviço (e você pode até ganhar bônus).\n\n<i>*Dados fornecidos por Wise Comparisons</i>`;
-    
-    return `${title}\n\n${providersList}${footer}`;
-  },
+  }).join('\n\n');
+  
+  const onchainCompare = onchainAmount 
+    ? `~${formatAmount(onchainAmount, 0, locale)}${route === 'eurbrl' ? ' R$' : '€'}`
+    : '—';
+  
+  const offchainBest = displayProviders[0]?.out 
+    ? formatAmount(displayProviders[0].out, 0, locale)
+    : '—';
+  
+  const footer = `
+
+💡 Mais caro que on-chain (você recebe ~${offchainBest}${route === 'eurbrl' ? ' R$' : '€'} vs ~${onchainCompare} on-chain), mas alguns preferem esses métodos porque são mais user-friendly que o processo on-chain.
+
+⭐ Recomendamos fortemente Wise, que (fora promoções) oferece geralmente a melhor taxa e a melhor UX!
+
+💡 Não hesite em usar nossos links de indicação quando disponíveis (⭐), é isso que nos permite financiar este serviço.
+
+<i>*Dados fornecidos por Wise Comparisons</i>`;
+  
+  return `${title}\n\n${providersList}${footer}`;
+},
 
   ONCHAIN_INTRO: `🚀 Rota On-Chain
 
@@ -2108,42 +2124,48 @@ Off-chain rates: Wise Comparisons API (live provider rates)
 
 Referral links: free for you, fund the service.`,
 
-  buildOffChain: ({ route, amount, bestBank, others, locale }) => {
-    const title = '🏦 Off-chain';
-    
-    if (!bestBank) {
-      return `${title}\n\n⚠️ Rates currently unavailable.`;
+buildOffChain: ({ route, amount, bestBank, others, locale, onchainAmount }) => {
+  const title = '🏦 Off-chain';
+  
+  if (!bestBank) {
+    return `${title}\n\n⚠️ Rates currently unavailable.`;
+  }
+  
+  const priorityNames = ['Wise', 'Remitly'];
+  const allProviders = [bestBank, ...others];
+  
+  const displayProviders = allProviders
+    .filter(p => priorityNames.includes(p.provider))
+    .sort((a, b) => b.out - a.out);
+  
+  const providersList = displayProviders.map((p, i) => {
+    if (route === 'eurbrl') {
+      return `<b>${i + 1}. ${p.provider}</b>\n💰 You receive : R$${formatAmount(p.out, 2, locale)}\n📊 Effective rate : ${formatRate(p.rate, locale)}`;
+    } else {
+      return `<b>${i + 1}. ${p.provider}</b>\n💰 You receive : €${formatAmount(p.out, 2, locale)}\n📊 Effective rate : ${formatRate(p.rate, locale)}`;
     }
-    
-    const formatFee = (fee) => {
-      if (fee === null || fee === undefined || fee === 0) return 'No fees';
-      return route === 'eurbrl' ? `${formatAmount(fee, 2, locale)} EUR` : `${formatAmount(fee, 2, locale)} BRL`;
-    };
-    
-    const priorityNames = ['Wise', 'PayPal', 'Western Union'];
-    const allProviders = [bestBank, ...others];
-    
-    const priorityProviders = allProviders.filter(p => priorityNames.includes(p.provider));
-    const otherProviders = allProviders.filter(p => !priorityNames.includes(p.provider));
-    
-    const maxOthers = 6 - priorityProviders.length;
-    const topOthers = otherProviders.slice(0, Math.max(2, maxOthers));
-    
-    const displayProviders = [...priorityProviders, ...topOthers]
-      .sort((a, b) => b.out - a.out);
-    
-    const providersList = displayProviders.map((p, i) => {
-      if (route === 'eurbrl') {
-        return `<b>${i + 1}. ${p.provider}</b>\n💰 You receive: R${formatAmount(p.out, 2, locale)}\n📊 Rate: ${formatRate(p.rate, locale)}\n💳 Fees: ${formatFee(p.fee)}`;
-      } else {
-        return `<b>${i + 1}. ${p.provider}</b>\n💰 You receive: €${formatAmount(p.out, 2, locale)}\n📊 Rate: ${formatRate(p.rate, locale)}\n💳 Fees: ${formatFee(p.fee)}`;
-      }
-    }).join('\n\n');
-    
-    const footer = `\n\n💡 Usually slightly more expensive than on-chain, but some prefer these solutions for their simplicity.\n\n✅ Regulated and trustworthy platforms. If you don't have an account yet, use our referral links: it's free for you, funds the service (and you might even get bonuses).\n\n<i>*Data provided by Wise Comparisons</i>`;
-    
-    return `${title}\n\n${providersList}${footer}`;
-  },
+  }).join('\n\n');
+  
+  const onchainCompare = onchainAmount 
+    ? `~${formatAmount(onchainAmount, 0, locale)}${route === 'eurbrl' ? ' R$' : '€'}`
+    : '—';
+  
+  const offchainBest = displayProviders[0]?.out 
+    ? formatAmount(displayProviders[0].out, 0, locale)
+    : '—';
+  
+  const footer = `
+
+💡 More expensive than on-chain (you receive ~${offchainBest}${route === 'eurbrl' ? ' R$' : '€'} vs ~${onchainCompare} on-chain), but some prefer these methods because they're more user-friendly than the on-chain process.
+
+⭐ We strongly recommend Wise, which (outside promotions) generally offers the best rate and the best UX!
+
+💡 Don't hesitate to use our referral links when available (⭐), that's what allows us to fund this service.
+
+<i>*Data provided by Wise Comparisons</i>`;
+  
+  return `${title}\n\n${providersList}${footer}`;
+},
 
   ONCHAIN_INTRO: `🚀 On-Chain Route
 

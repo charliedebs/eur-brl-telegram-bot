@@ -232,12 +232,16 @@ bot.action(/^action:stay_offchain:(.+):(\d+)$/, async (ctx) => {
   const bestBank = wiseData?.providers?.[0] || null;
   const others = wiseData?.providers?.slice(1) || [];
   
+  // ⚠️ NOUVEAU : Calculer montant on-chain pour comparaison
+  const onchain = calculateOnChain(route, amount, rates);
+  
   const text = msg.buildOffChain({
     route,
     amount,
     bestBank,
     others,
-    locale
+    locale,
+    onchainAmount: onchain.out // ← NOUVEAU paramètre
   });
   
   const displayProviders = wiseData?.providers || [];

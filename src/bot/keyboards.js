@@ -62,21 +62,33 @@ export function buildKeyboards(msg, type, options = {}) {
       ]);
     
     // Écran 3 : Off-chain
-    case 'offchain':
-          // Récupérer les providers disponibles depuis les options
-  const { providers = [] } = options;
-  
-  // Créer les boutons pour chaque provider
-  const providerButtons = providers.map(provider => {
-    const link = PROVIDER_LINKS[provider.provider] || '#';
-    const emoji = provider.provider === 'Wise' ? '⭐' : '🔗';
-    return [Markup.button.url(`${emoji} Ouvrir ${provider.provider}`, link)];
-  });
-  return Markup.inlineKeyboard([
-    ...providerButtons,
-    [Markup.button.callback(msg.btn.seeOnchain, `action:continue_onchain:${route}:${amount}`)],
-    [Markup.button.callback(msg.btn.back, `action:back_comparison:${route}:${amount}`)],
-  ]);
+    case 'offchain': {
+      const { providers = [] } = options;
+      
+      // ⚠️ MODIFICATION : Filtrer pour ne garder que Wise et Remitly
+      const wiseProvider = providers.find(p => p.provider === 'Wise');
+      const remitlyProvider = providers.find(p => p.provider === 'Remitly');
+      
+      const buttons = [];
+      
+      // Ajouter Wise si disponible
+      if (wiseProvider) {
+        const wiseLink = PROVIDER_LINKS['Wise'] || '#';
+        buttons.push([Markup.button.url('⭐ Ouvrir Wise', wiseLink)]);
+      }
+      
+      // Ajouter Remitly si disponible
+      if (remitlyProvider) {
+        const remitlyLink = PROVIDER_LINKS['Remitly'] || '#';
+        buttons.push([Markup.button.url('⭐ Ouvrir Remitly', remitlyLink)]);
+      }
+      
+      // Boutons navigation
+      buttons.push([Markup.button.callback(msg.btn.seeOnchain, `action:continue_onchain:${route}:${amount}`)]);
+      buttons.push([Markup.button.callback(msg.btn.back, `action:back_comparison:${route}:${amount}`)]);
+      
+      return Markup.inlineKeyboard(buttons);
+    }
     
     // Écran 4 : Route on-chain
     case 'onchain_intro':
