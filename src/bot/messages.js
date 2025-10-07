@@ -187,10 +187,8 @@ buildOffChain: ({ route, amount, bestBank, others, locale, onchainAmount }) => {
   const priorityNames = ['Wise', 'Remitly'];
   const allProviders = [bestBank, ...others];
   
-  // Filtrer pour ne garder que Wise et Remitly
-  const displayProviders = allProviders
-    .filter(p => priorityNames.includes(p.provider))
-    .sort((a, b) => b.out - a.out);
+  // ⚠️ CORRECTION : Afficher TOUS les providers dans le texte (pas de filtre)
+  const displayProviders = allProviders.sort((a, b) => b.out - a.out);
   
   // ⚠️ NOUVEAU : Format sans frais, juste taux effectif
   const providersList = displayProviders.map((p, i) => {
@@ -212,16 +210,17 @@ buildOffChain: ({ route, amount, bestBank, others, locale, onchainAmount }) => {
   
   const footer = `
 
-💡 Plus cher que l'on-chain (tu reçois ~${offchainBest}${route === 'eurbrl' ? ' R$' : '€'} avec la meilleure solution offchain vs ~${onchainCompare} on-chain), mais certains préfèrent ces méthodes car elles sont plus user-friendly que le process on-chain.
+💡 Plus cher que l'on-chain (tu reçois ~${offchainBest}${route === 'eurbrl' ? ' R$' : '€'} vs ~${onchainCompare} on-chain), mais certains préfèrent ces méthodes car elles sont plus user-friendly que le process on-chain.
 
 ⭐ On recommande fortement Wise, qui (hors promotions) offre généralement le meilleur taux ainsi que la meilleure UX !
 
-<i>N'hésite pas à utiliser nos liens de parrainage lorsque disponibles (⭐), c'est ce qui nous permet de financer ce service.
+💡 N'hésite pas à utiliser nos liens de parrainage lorsque disponibles (⭐), c'est ce qui nous permet de financer ce service.
 
-*Données fournies par Wise Comparisons</i>`;
+<i>*Données fournies par Wise Comparisons</i>`;
   
   return `${title}\n\n${providersList}${footer}`;
 },
+
 
 
   ONCHAIN_INTRO: `🚀 Route On-Chain
@@ -1165,9 +1164,8 @@ buildOffChain: ({ route, amount, bestBank, others, locale, onchainAmount }) => {
   const priorityNames = ['Wise', 'Remitly'];
   const allProviders = [bestBank, ...others];
   
-  const displayProviders = allProviders
-    .filter(p => priorityNames.includes(p.provider))
-    .sort((a, b) => b.out - a.out);
+  // ⚠️ CORRECTION : Afficher TOUS les providers dans le texte
+  const displayProviders = allProviders.sort((a, b) => b.out - a.out);
   
   const providersList = displayProviders.map((p, i) => {
     if (route === 'eurbrl') {
@@ -2134,9 +2132,8 @@ buildOffChain: ({ route, amount, bestBank, others, locale, onchainAmount }) => {
   const priorityNames = ['Wise', 'Remitly'];
   const allProviders = [bestBank, ...others];
   
-  const displayProviders = allProviders
-    .filter(p => priorityNames.includes(p.provider))
-    .sort((a, b) => b.out - a.out);
+  // ⚠️ CORRECTION : Afficher TOUS les providers dans le texte
+  const displayProviders = allProviders.sort((a, b) => b.out - a.out);
   
   const providersList = displayProviders.map((p, i) => {
     if (route === 'eurbrl') {

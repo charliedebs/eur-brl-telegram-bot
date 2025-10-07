@@ -29,3 +29,8 @@ Ensuite, dire qu'on recommande fortement wise, qui hors promotions offre génér
 - Ajoute d'un écran pédagogique: pourquoi onchain où on ajoute les explications. Les preuves etc. 
 - "Démarrer le guide" > "Etape 1: EUR --> USDC"
 - On va faire un bouton: "You Don't understand Something, we proobably have the answers" ou un truc du style "FAQ" mais plus sympa, ou on stocke les écrans pédagogiques, auxquels on accède par boutons "Qu'est ce que l'USDC", "Qu'est ce qu'un Exchange", "Pourquioi onchain"
+
+5. alertes: 
+- relatives contre taux actuel ne fait pas de sens, car taux actuel évolue, donc alerte jamais touchée. Doit être contre taux actuel au moment de la création de l'alarme. 
+- Lorsqu'une alerte programmée est envoyée, mettre option de supprimer l'alerte.
+- Lorsque Alerte créée, possibilité de retourner à "Mes alertes"
