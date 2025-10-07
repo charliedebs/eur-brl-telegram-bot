@@ -38,8 +38,25 @@ Service gratuit, financé par des liens de parrainage.`,
   askRoute: (amount, locale) => `Tu veux faire quoi avec ${formatAmount(amount, 0, locale)} ?`,
   
   buildComparison: ({ route, amount, rates, onchain, bestBank, others, delta, locale }) => {
-    const title = route === 'eurbrl' ? '💱 EUR → BRL' : '💱 BRL → EUR';
-    const ref = `📊 Réf. ${formatRate(rates.cross, locale)} • ${new Date().toLocaleTimeString(locale, {hour: '2-digit', minute: '2-digit'})}`;
+    // ⚠️ NOUVEAU : Détection week-end
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0 = dimanche, 6 = samedi
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    
+    // ⚠️ NOUVEAU : Titre avec montant
+    const title = route === 'eurbrl' 
+      ? `💱 ${formatAmount(amount, 0, locale)} EUR → BRL`
+      : `💱 ${formatAmount(amount, 0, locale)} BRL → EUR`;
+    
+    // ⚠️ NOUVEAU : Timestamp avec timezone + warning week-end
+    const timeStr = now.toLocaleTimeString(locale, {hour: '2-digit', minute: '2-digit'});
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const tzAbbr = new Date().toLocaleTimeString('en-US', {timeZoneName: 'short'}).split(' ')[2];
+    
+    let ref = `📊 Réf. ${formatRate(rates.cross, locale)} • ${timeStr} ${tzAbbr}`;
+    if (isWeekend) {
+      ref += `\n⚠️ Week-end : taux figé jusqu'à lundi`;
+    }
     
     const onchainLine = route === 'eurbrl'
       ? `🌍 On-chain\n€${formatAmount(amount, 0, locale)} → R$${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`
@@ -54,14 +71,22 @@ Service gratuit, financé par des liens de parrainage.`,
         : `🏦 ${bestBank.provider}\nR$${formatAmount(amount, 0, locale)} → €${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`;
     }
     
+    // ⚠️ NOUVEAU : Format "Autres" amélioré (max 3)
     let othersText = '';
     if (others.length > 0) {
-      const othersList = others.map(p => 
-        route === 'eurbrl' 
-          ? `${p.provider} R$${formatAmount(p.out, 0, locale)}` 
-          : `${p.provider} €${formatAmount(p.out, 2, locale)}`
-      ).join(' • ');
-      othersText = `\n\nAutres : ${othersList}`;
+      const topOthers = others.slice(0, 3);
+      const formattedOthers = topOthers.map(p => 
+        route === 'eurbrl'
+          ? `• ${p.provider} : R$${formatAmount(p.out, 0, locale)}`
+          : `• ${p.provider} : €${formatAmount(p.out, 2, locale)}`
+      ).join('\n');
+      
+      const count = others.length;
+      othersText = `\n\nAutres (${count}) :\n${formattedOthers}`;
+      
+      if (count > 3) {
+        othersText += `\n<i>+ ${count - 3} autres disponibles</i>`;
+      }
     }
     
     let deltaText = '';
@@ -898,8 +923,9 @@ Crée ta première alerte pour être notifié automatiquement !`;
     about: 'ℹ️ À propos',
     eurbrl: (amt, locale) => `🇪🇺 EUR → 🇧🇷 BRL (Pix) · €${formatAmount(amt, 0, locale)}`,
     brleur: (amt, locale) => `🇧🇷 BRL → 🇪🇺 EUR (SEPA) · R$${formatAmount(amt, 0, locale)}`,
-    contOn: '🚀 Continuer on-chain',
-    stayOff: '🏦 Rester off-chain',
+    contOn: '🚀 Convertir on-chain',
+    stayOff: '🏦 Convertir off-chain',
+    calcdetails: '🔍 Détails du calcul',
     change: '✏️ Changer montant',
     back: '⬅️ Retour',
     sources: '📊 Sources des données',
@@ -985,30 +1011,50 @@ Serviço gratuito, financiado por links de indicação.`,
   askRoute: (amount, locale) => `O que você quer fazer com ${formatAmount(amount, 0, locale)}?`,
   
   buildComparison: ({ route, amount, rates, onchain, bestBank, others, delta, locale }) => {
-    const title = route === 'eurbrl' ? '💱 EUR → BRL' : '💱 BRL → EUR';
-    const ref = `📊 Ref. ${formatRate(rates.cross, locale)} • ${new Date().toLocaleTimeString(locale, {hour: '2-digit', minute: '2-digit'})}`;
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    
+    const title = route === 'eurbrl' 
+      ? `💱 ${formatAmount(amount, 0, locale)} EUR → BRL`
+      : `💱 ${formatAmount(amount, 0, locale)} BRL → EUR`;
+    
+    const timeStr = now.toLocaleTimeString(locale, {hour: '2-digit', minute: '2-digit'});
+    const tzAbbr = new Date().toLocaleTimeString('en-US', {timeZoneName: 'short'}).split(' ')[2];
+    
+    let ref = `📊 Ref. ${formatRate(rates.cross, locale)} • ${timeStr} ${tzAbbr}`;
+    if (isWeekend) {
+      ref += `\n⚠️ Fim de semana: taxa congelada até segunda`;
+    }
     
     const onchainLine = route === 'eurbrl'
-      ? `🌍 On-chain\n€${formatAmount(amount, 0, locale)} → R${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`
-      : `🌍 On-chain\nR${formatAmount(amount, 0, locale)} → €${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`;
+      ? `🌍 On-chain\n€${formatAmount(amount, 0, locale)} → R$${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`
+      : `🌍 On-chain\nR$${formatAmount(amount, 0, locale)} → €${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`;
     
     let bankLine;
     if (!bestBank) {
       bankLine = `🏦 Melhor off-chain\n⚠️ Taxa indisponível`;
     } else {
       bankLine = route === 'eurbrl'
-        ? `🏦 ${bestBank.provider}\n€${formatAmount(amount, 0, locale)} → R${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`
-        : `🏦 ${bestBank.provider}\nR${formatAmount(amount, 0, locale)} → €${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`;
+        ? `🏦 ${bestBank.provider}\n€${formatAmount(amount, 0, locale)} → R$${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`
+        : `🏦 ${bestBank.provider}\nR$${formatAmount(amount, 0, locale)} → €${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`;
     }
     
     let othersText = '';
     if (others.length > 0) {
-      const othersList = others.map(p => 
-        route === 'eurbrl' 
-          ? `${p.provider} R${formatAmount(p.out, 0, locale)}` 
-          : `${p.provider} €${formatAmount(p.out, 2, locale)}`
-      ).join(' • ');
-      othersText = `\n\nOutros: ${othersList}`;
+      const topOthers = others.slice(0, 3);
+      const formattedOthers = topOthers.map(p => 
+        route === 'eurbrl'
+          ? `• ${p.provider} : R$${formatAmount(p.out, 0, locale)}`
+          : `• ${p.provider} : €${formatAmount(p.out, 2, locale)}`
+      ).join('\n');
+      
+      const count = others.length;
+      othersText = `\n\nOutros (${count}) :\n${formattedOthers}`;
+      
+      if (count > 3) {
+        othersText += `\n<i>+ ${count - 3} outros disponíveis</i>`;
+      }
     }
     
     let deltaText = '';
@@ -1840,9 +1886,10 @@ Exemplos: 2.5, 3, 5`,
     about: 'ℹ️ Sobre',
     eurbrl: (amt, locale) => `🇪🇺 EUR → 🇧🇷 BRL (Pix) · €${formatAmount(amt, 0, locale)}`,
     brleur: (amt, locale) => `🇧🇷 BRL → 🇪🇺 EUR (SEPA) · R${formatAmount(amt, 0, locale)}`,
-    contOn: '🚀 Continuar on-chain',
-    stayOff: '🏦 Ficar off-chain',
-    change: '✏️ Mudar valor',
+    contOn: '🚀 Converter on-chain',
+    stayOff: '🏦 Converter off-chain',
+    calcdetails: '🔍 Detalhes do cálculo',
+    change: '✏️ Alterar valor',
     back: '⬅️ Voltar',
     sources: '📊 Fontes dos dados',
     openWise: '🔗 Abrir Wise',
@@ -1927,30 +1974,50 @@ Free service, funded by referral links.`,
   askRoute: (amount, locale) => `What do you want to do with ${formatAmount(amount, 0, locale)}?`,
   
   buildComparison: ({ route, amount, rates, onchain, bestBank, others, delta, locale }) => {
-    const title = route === 'eurbrl' ? '💱 EUR → BRL' : '💱 BRL → EUR';
-    const ref = `📊 Ref. ${formatRate(rates.cross, locale)} • ${new Date().toLocaleTimeString(locale, {hour: '2-digit', minute: '2-digit'})}`;
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    
+    const title = route === 'eurbrl' 
+      ? `💱 ${formatAmount(amount, 0, locale)} EUR → BRL`
+      : `💱 ${formatAmount(amount, 0, locale)} BRL → EUR`;
+    
+    const timeStr = now.toLocaleTimeString(locale, {hour: '2-digit', minute: '2-digit'});
+    const tzAbbr = new Date().toLocaleTimeString('en-US', {timeZoneName: 'short'}).split(' ')[2];
+    
+    let ref = `📊 Ref. ${formatRate(rates.cross, locale)} • ${timeStr} ${tzAbbr}`;
+    if (isWeekend) {
+      ref += `\n⚠️ Weekend: rate frozen until Monday`;
+    }
     
     const onchainLine = route === 'eurbrl'
-      ? `🌍 On-chain\n€${formatAmount(amount, 0, locale)} → R${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`
-      : `🌍 On-chain\nR${formatAmount(amount, 0, locale)} → €${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`;
+      ? `🌍 On-chain\n€${formatAmount(amount, 0, locale)} → R$${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`
+      : `🌍 On-chain\nR$${formatAmount(amount, 0, locale)} → €${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`;
     
     let bankLine;
     if (!bestBank) {
       bankLine = `🏦 Best off-chain\n⚠️ Rate unavailable`;
     } else {
       bankLine = route === 'eurbrl'
-        ? `🏦 ${bestBank.provider}\n€${formatAmount(amount, 0, locale)} → R${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`
-        : `🏦 ${bestBank.provider}\nR${formatAmount(amount, 0, locale)} → €${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`;
+        ? `🏦 ${bestBank.provider}\n€${formatAmount(amount, 0, locale)} → R$${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`
+        : `🏦 ${bestBank.provider}\nR$${formatAmount(amount, 0, locale)} → €${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`;
     }
     
     let othersText = '';
     if (others.length > 0) {
-      const othersList = others.map(p => 
-        route === 'eurbrl' 
-          ? `${p.provider} R${formatAmount(p.out, 0, locale)}` 
-          : `${p.provider} €${formatAmount(p.out, 2, locale)}`
-      ).join(' • ');
-      othersText = `\n\nOthers: ${othersList}`;
+      const topOthers = others.slice(0, 3);
+      const formattedOthers = topOthers.map(p => 
+        route === 'eurbrl'
+          ? `• ${p.provider} : R$${formatAmount(p.out, 0, locale)}`
+          : `• ${p.provider} : €${formatAmount(p.out, 2, locale)}`
+      ).join('\n');
+      
+      const count = others.length;
+      othersText = `\n\nOthers (${count}) :\n${formattedOthers}`;
+      
+      if (count > 3) {
+        othersText += `\n<i>+ ${count - 3} more available</i>`;
+      }
     }
     
     let deltaText = '';
@@ -2779,8 +2846,9 @@ Examples: 2.5, 3, 5`,
     about: 'ℹ️ About',
     eurbrl: (amt, locale) => `🇪🇺 EUR → 🇧🇷 BRL (Pix) · €${formatAmount(amt, 0, locale)}`,
     brleur: (amt, locale) => `🇧🇷 BRL → 🇪🇺 EUR (SEPA) · R${formatAmount(amt, 0, locale)}`,
-    contOn: '🚀 Continue on-chain',
-    stayOff: '🏦 Stay off-chain',
+    contOn: '🚀 Convert on-chain',
+    stayOff: '🏦 Convert off-chain',
+    calcdetails: '🔍 Calculation details',
     change: '✏️ Change amount',
     back: '⬅️ Back',
     sources: '📊 Data sources',

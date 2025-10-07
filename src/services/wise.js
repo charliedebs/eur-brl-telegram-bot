@@ -44,7 +44,7 @@ export async function getWiseComparison(route, amount) {
     const providers = [];
     
     // Providers à exclure
-    const excludeProviders = ['Xoom']; // TODO: enquêter sur Xoom (taux suspect)
+    const excludeProviders = ['Xoom', 'Instarem']; // TODO: enquêter sur Xoom (taux suspect)
     
     // Providers prioritaires (toujours afficher si disponibles)
     const priorityProviders = ['Wise', 'PayPal', 'Western Union'];
@@ -59,16 +59,7 @@ export async function getWiseComparison(route, amount) {
       // Trier les quotes par receivedAmount (décroissant)
       let quotes = provider.quotes?.filter(q => q.receivedAmount && q.rate) || [];
       
-      // Pour Instarem, forcer quote FR si disponible
-      if (provider.name === 'Instarem') {
-        const frQuote = quotes.find(q => q.sourceCountry === 'FR');
-        if (frQuote) {
-          quotes = [frQuote]; // Utiliser uniquement la quote FR
-          console.log(`🇫🇷 Instarem: using FR quote (${frQuote.receivedAmount.toFixed(2)})`);
-        }
-      }
-      
-      const bestQuote = quotes.sort((a, b) => b.receivedAmount - a.receivedAmount)[0];
+          const bestQuote = quotes.sort((a, b) => b.receivedAmount - a.receivedAmount)[0];
       
       if (bestQuote) {
 

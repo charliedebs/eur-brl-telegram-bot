@@ -42,7 +42,7 @@ export function buildKeyboards(msg, type, options = {}) {
     case 'comparison':
         return Markup.inlineKeyboard([
           [Markup.button.callback(msg.btn.contOn, `action:continue_onchain:${route}:${amount}`)],
-          [Markup.button.callback('🔍 Détails du calcul', `action:calc_details:${route}:${amount}`)],
+          [Markup.button.callback(msg.btn.calcdetails, `action:calc_details:${route}:${amount}`)],
           [Markup.button.callback(msg.btn.stayOff, `action:stay_offchain:${route}:${amount}`)],
           [Markup.button.callback(msg.btn.change, `action:change_amount:${route}`)],
           [Markup.button.callback(msg.btn.sources, 'action:sources')],
