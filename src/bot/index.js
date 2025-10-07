@@ -680,14 +680,33 @@ bot.action(/^alert:view:(.+)$/, async (ctx) => {
       return;
     }
     
+    // Récupérer taux et calculer seuil
     const rates = await getRates();
     const currentRate = alert.pair === 'eurbrl' ? rates.cross : 1 / rates.cross;
-    const avg30d = await db.getAverage30Days(alert.pair);
-    const alertThreshold = avg30d ? avg30d * (1 + alert.threshold_value / 100) : null;
     
-    const text = msg.ALERT_VIEW_DETAILS(alert, currentRate, avg30d, alertThreshold, locale);
+    let refValue;
+    let calculatedThreshold;
+    
+    if (alert.threshold_type === 'absolute') {
+      calculatedThreshold = alert.threshold_value;
+      refValue = null;
+    } else {
+      if (alert.reference_type === 'current') {
+        refValue = currentRate;
+      } else if (alert.reference_type === 'avg7d') {
+        refValue = await db.getAverage(alert.pair, 7);
+      } else if (alert.reference_type === 'avg30d') {
+        refValue = await db.getAverage30Days(alert.pair);
+      } else if (alert.reference_type === 'avg90d') {
+        refValue = await db.getAverage(alert.pair, 90);
+      }
+      calculatedThreshold = refValue * (1 + alert.threshold_value / 100);
+    }
+    
+    const text = msg.ALERT_VIEW_DETAILS_V2(alert, currentRate, refValue, calculatedThreshold, locale);
     
     const kb = Markup.inlineKeyboard([
+      [Markup.button.callback('✏️ Nommer', `alert:rename:${alertId}`)],
       [Markup.button.callback('🗑️ Supprimer', `alert:delete:${alertId}`)],
       [Markup.button.callback(msg.btn.back, 'alert:list')]
     ]);
@@ -700,6 +719,18 @@ bot.action(/^alert:view:(.+)$/, async (ctx) => {
     await ctx.answerCbQuery('❌ Erreur');
   }
 });
+
+// NOUVEAU: Handler pour déclencher le nommage
+bot.action(/^alert:rename:(.+)$/, async (ctx) => {
+  const alertId = ctx.match[1];
+  const msg = getMsg(ctx);
+  
+  ctx.session.awaitingAlertName = { alertId };
+  
+  await ctx.answerCbQuery();
+  await ctx.editMessageText(msg.ALERT_NAME_PROMPT, { parse_mode: 'HTML' });
+});
+
 
 bot.action(/^alert:delete:(.+)$/, async (ctx) => {
   const alertId = ctx.match[1];
@@ -820,6 +851,46 @@ bot.on('text', async (ctx) => {
       return ctx.reply(msg.ALERT_CHOOSE_COOLDOWN, { parse_mode: 'HTML', ...kb });
     }
     
+// Nommer une alerte
+if (ctx.session?.awaitingAlertName) {
+  const { alertId } = ctx.session.awaitingAlertName;
+  const msg = getMsg(ctx);
+  const text = ctx.message.text.trim();
+  
+  // Annuler
+  if (text.toLowerCase() === 'annuler' || text.toLowerCase() === 'cancelar' || text.toLowerCase() === 'cancel') {
+    delete ctx.session.awaitingAlertName;
+    return ctx.reply(msg.ALERT_NAME_CANCELLED, { parse_mode: 'HTML' });
+  }
+  
+  // Validation longueur
+  if (text.length > 50) {
+    return ctx.reply(msg.ALERT_NAME_TOO_LONG, { parse_mode: 'HTML' });
+  }
+  
+  // Mettre à jour le nom
+  const { error } = await db.supabase
+    .from('user_alerts')
+    .update({ name: text })
+    .eq('id', alertId);
+  
+  if (error) {
+    console.error('[ALERT-RENAME] Error:', error);
+    return ctx.reply('❌ Erreur lors de la mise à jour.');
+  }
+  
+  delete ctx.session.awaitingAlertName;
+  
+  await ctx.reply(msg.ALERT_NAME_SET(text), { parse_mode: 'HTML' });
+  
+  // Retour à la liste
+  const userAlerts = await db.getUserAlerts(ctx.from.id);
+  const locale = getLocale(ctx.state.lang);
+  const kb = buildKeyboards(msg, 'alerts_list', { alerts: userAlerts });
+  
+  return ctx.reply(msg.ALERTS_LIST(userAlerts, locale), { parse_mode: 'HTML', ...kb });
+}
+
     // PRIORITÉ 3: NLU
     const context = {
       userId: ctx.state.user?.id,

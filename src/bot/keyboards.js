@@ -46,7 +46,7 @@ export function buildKeyboards(msg, type, options = {}) {
           [Markup.button.callback(msg.btn.stayOff, `action:stay_offchain:${route}:${amount}`)],
           [Markup.button.callback(msg.btn.change, `action:change_amount:${route}`)],
           [Markup.button.callback(msg.btn.sources, 'action:sources')],
-          [Markup.button.callback('🔔 Créer une alerte', 'alert:choose_pair')],
+          [Markup.button.callback(msg.btn.myAlerts, 'alert:list')],
 
           // 👇 NOUVEAUX BOUTONS FEEDBACK
           [
@@ -360,19 +360,52 @@ export function buildKeyboards(msg, type, options = {}) {
         ]);
       }
     // Liste des alertes (mise à jour)
-    case 'alerts_list':
-      const alertButtons = options.alerts?.map(alert => [
-        Markup.button.callback(
-          `${alert.pair === 'eurbrl' ? '🇪🇺→🇧🇷' : '🇧🇷→🇪🇺'} +${alert.threshold_percent}%`,
-          `alert:view:${alert.id}`
-        )
-      ]) || [];
+    case 'alerts_list': {
+      const { alerts } = options;
       
-      return Markup.inlineKeyboard([
-        ...alertButtons,
-        [Markup.button.callback(msg.btn.createAlert, 'alert:choose_pair')],
-        [Markup.button.callback(msg.btn.back, 'premium:pricing')]
-      ]);
+      const buttons = [];
+      
+      alerts.forEach((alert) => {
+        // Label du bouton
+        let label;
+        
+        if (alert.name) {
+          // Si nom défini : "💼 Nom - EUR→BRL"
+          const pairText = alert.pair === 'eurbrl' ? 'EUR→BRL' : 'BRL→EUR';
+          label = `${alert.name} - ${pairText}`;
+        } else {
+          // Sinon : "EUR→BRL : critères"
+          const pairText = alert.pair === 'eurbrl' ? 'EUR→BRL' : 'BRL→EUR';
+          
+          let criteria;
+          if (alert.threshold_type === 'absolute') {
+            criteria = `≥${alert.threshold_value}`;
+          } else {
+            const refShort = {
+              current: 'actuel',
+              avg7d: '7j',
+              avg30d: '30j',
+              avg90d: '90j'
+            };
+            criteria = `+${alert.threshold_value}% vs ${refShort[alert.reference_type] || alert.reference_type}`;
+          }
+          
+          label = `${pairText}: ${criteria}`;
+        }
+        
+        // Tronquer si trop long (limite Telegram = 64 chars)
+        if (label.length > 60) {
+          label = label.substring(0, 57) + '...';
+        }
+        
+        buttons.push([Markup.button.callback(label, `alert:view:${alert.id}`)]);
+      });
+      
+      buttons.push([Markup.button.callback('➕ Créer une alerte', 'alert:choose_pair')]);
+      buttons.push([Markup.button.callback(msg.btn.back, 'action:back_main')]);
+      
+      return Markup.inlineKeyboard(buttons);
+    }
     
     // Alerte gratuite (depuis broadcast)
     case 'free_alert':

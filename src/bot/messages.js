@@ -802,42 +802,73 @@ Crée ta première alerte pour être notifié automatiquement !`;
   
   Exemples : 2.5, 3, 5`,
   
-    ALERT_VIEW_DETAILS: (alert, currentRate, avg30d, alertThreshold, locale) => {
+    ALERT_VIEW_DETAILS:  (alert, currentRate, refValue, calculatedThreshold, locale) => {
+      const typeLabels = {
+        absolute: '🎯 Absolu',
+        relative: '📊 Relatif'
+      };
+      
+      const refLabels = {
+        current: 'Taux actuel',
+        avg7d: 'Moyenne 7 jours',
+        avg30d: 'Moyenne 30 jours',
+        avg90d: 'Moyenne 90 jours'
+      };
+      
       const pairText = alert.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
-      const presetEmoji = {
-        conservative: '🛡️',
-        balanced: '⚖️',
-        aggressive: '🎯',
-        custom: '✏️'
-      }[alert.preset] || '🔔';
       
-      const cooldownText = formatCooldown(alert.cooldown_minutes || 60, 'fr');
+      let text = `🔔 <b>Détails de l'alerte</b>\n\n`;
       
-      let text = `${presetEmoji} <b>Alerte ${pairText}</b>\n\n`;
-      text += `Seuil : +${alert.threshold_percent}% vs moyenne 30j\n`;
-      text += `⏰ Cooldown : ${cooldownText}\n\n`;
-      text += `<b>État actuel :</b>\n`;
-      text += `• Taux actuel : ${formatRate(currentRate, locale)}\n`;
-      
-      if (avg30d && alertThreshold) {
-        text += `• Moyenne 30j : ${formatRate(avg30d, locale)}\n`;
-        text += `• Seuil alerte : ${formatRate(alertThreshold, locale)}\n`;
-        
-        const distance = ((alertThreshold - currentRate) / currentRate * 100);
-        if (distance > 0) {
-          text += `\n📊 Encore ${formatAmount(distance, 1, locale)}% pour déclencher`;
-        } else {
-          text += `\n✅ Seuil atteint ! Attente cooldown (max 1x/24h)`;
-        }
+      // Nom si défini
+      if (alert.name) {
+        text += `<b>Nom :</b> ${alert.name}\n\n`;
       }
       
-      if (alert.last_triggered_at) {
-        const lastDate = new Date(alert.last_triggered_at);
-        text += `\n\n🔔 Dernière alerte : ${lastDate.toLocaleDateString(locale)}`;
+      text += `<b>Paire :</b> ${pairText}\n`;
+      text += `<b>Type :</b> ${typeLabels[alert.threshold_type]}\n`;
+      
+      if (alert.threshold_type === 'relative') {
+        text += `<b>Seuil :</b> +${formatAmount(alert.threshold_value, 1, locale)}% vs ${refLabels[alert.reference_type]}\n`;
+      } else {
+        text += `<b>Seuil :</b> ≥ ${formatRate(alert.threshold_value, locale)}\n`;
+      }
+      
+      text += `<b>Cooldown :</b> ${formatCooldown(alert.cooldown_minutes)}\n\n`;
+      
+      text += `<b>État actuel :</b>\n`;
+      text += `• Taux : ${formatRate(currentRate, locale)}\n`;
+      
+      if (alert.threshold_type === 'relative' && refValue) {
+        text += `• ${refLabels[alert.reference_type]} : ${formatRate(refValue, locale)}\n`;
+      }
+      
+      text += `• Seuil alerte : ${formatRate(calculatedThreshold, locale)}\n\n`;
+      
+      if (currentRate >= calculatedThreshold) {
+        text += `🎯 <b>Seuil atteint !</b> Tu devrais être alerté bientôt.`;
+      } else {
+        const gap = ((calculatedThreshold - currentRate) / currentRate * 100);
+        text += `⏳ Encore ${formatAmount(gap, 1, locale)}% avant déclenchement.`;
       }
       
       return text;
     },
+    
+    ALERT_NAME_PROMPT: `✏️ <b>Nommer l'alerte</b>
+    
+    Entre un nom pour cette alerte (max 50 caractères) :
+    
+    <i>Exemple : "Transfert août", "Vacances Brésil", etc.</i>
+    
+    Ou tape "annuler" pour garder sans nom.`,
+    
+    ALERT_NAME_TOO_LONG: `⚠️ Nom trop long (max 50 caractères).
+    
+    Essaie avec un nom plus court.`,
+    
+    ALERT_NAME_SET: (name) => `✅ Alerte renommée : <b>${name}</b>`,
+    
+    ALERT_NAME_CANCELLED: `↩️ Opération annulée.`,
   
 
     PREMIUM_EXPIRING_SOON: (daysLeft) => `⏰ Ton Premium expire dans ${daysLeft} jour${daysLeft > 1 ? 's' : ''}
@@ -1731,42 +1762,72 @@ Digite um número entre 1 e 10.
 
 Exemplos: 2.5, 3, 5`,
 
-  ALERT_VIEW_DETAILS: (alert, currentRate, avg30d, alertThreshold, locale) => {
+  ALERT_VIEW_DETAILS: (alert, currentRate, refValue, calculatedThreshold, locale) => {
+    const typeLabels = {
+      absolute: '🎯 Absoluto',
+      relative: '📊 Relativo'
+    };
+    
+    const refLabels = {
+      current: 'Taxa atual',
+      avg7d: 'Média 7 dias',
+      avg30d: 'Média 30 dias',
+      avg90d: 'Média 90 dias'
+    };
+    
     const pairText = alert.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
-    const presetEmoji = {
-      conservative: '🛡️',
-      balanced: '⚖️',
-      aggressive: '🎯',
-      custom: '✏️'
-    }[alert.preset] || '🔔';
     
-    const cooldownText = formatCooldown(alert.cooldown_minutes || 60, 'pt');
+    let text = `🔔 <b>Detalhes do alerta</b>\n\n`;
     
-    let text = `${presetEmoji} <b>Alerta ${pairText}</b>\n\n`;
-    text += `Limite: +${alert.threshold_percent}% vs média 30d\n`;
-    text += `⏰ Cooldown: ${cooldownText}\n\n`;
-    text += `<b>Estado atual:</b>\n`;
-    text += `• Taxa atual: ${formatRate(currentRate, locale)}\n`;
-    
-    if (avg30d && alertThreshold) {
-      text += `• Média 30d: ${formatRate(avg30d, locale)}\n`;
-      text += `• Limite alerta: ${formatRate(alertThreshold, locale)}\n`;
-      
-      const distance = ((alertThreshold - currentRate) / currentRate * 100);
-      if (distance > 0) {
-        text += `\n📊 Ainda falta ${formatAmount(distance, 1, locale)}% para disparar`;
-      } else {
-        text += `\n✅ Limite atingido! Aguardando cooldown (max 1x/24h)`;
-      }
+    if (alert.name) {
+      text += `<b>Nome:</b> ${alert.name}\n\n`;
     }
     
-    if (alert.last_triggered_at) {
-      const lastDate = new Date(alert.last_triggered_at);
-      text += `\n\n🔔 Último alerta: ${lastDate.toLocaleDateString(locale)}`;
+    text += `<b>Par:</b> ${pairText}\n`;
+    text += `<b>Tipo:</b> ${typeLabels[alert.threshold_type]}\n`;
+    
+    if (alert.threshold_type === 'relative') {
+      text += `<b>Limite:</b> +${formatAmount(alert.threshold_value, 1, locale)}% vs ${refLabels[alert.reference_type]}\n`;
+    } else {
+      text += `<b>Limite:</b> ≥ ${formatRate(alert.threshold_value, locale)}\n`;
+    }
+    
+    text += `<b>Cooldown:</b> ${formatCooldown(alert.cooldown_minutes)}\n\n`;
+    
+    text += `<b>Estado atual:</b>\n`;
+    text += `• Taxa: ${formatRate(currentRate, locale)}\n`;
+    
+    if (alert.threshold_type === 'relative' && refValue) {
+      text += `• ${refLabels[alert.reference_type]}: ${formatRate(refValue, locale)}\n`;
+    }
+    
+    text += `• Limite do alerta: ${formatRate(calculatedThreshold, locale)}\n\n`;
+    
+    if (currentRate >= calculatedThreshold) {
+      text += `🎯 <b>Limite atingido!</b> Você deve ser notificado em breve.`;
+    } else {
+      const gap = ((calculatedThreshold - currentRate) / currentRate * 100);
+      text += `⏳ Ainda falta ${formatAmount(gap, 1, locale)}% para ativação.`;
     }
     
     return text;
   },
+  
+  ALERT_NAME_PROMPT: `✏️ <b>Nomear alerta</b>
+  
+  Digite um nome para este alerta (máx 50 caracteres):
+  
+  <i>Exemplo: "Transferência agosto", "Férias Brasil", etc.</i>
+  
+  Ou digite "cancelar" para manter sem nome.`,
+  
+  ALERT_NAME_TOO_LONG: `⚠️ Nome muito longo (máx 50 caracteres).
+  
+  Tente um nome mais curto.`,
+  
+  ALERT_NAME_SET: (name) => `✅ Alerta renomeado: <b>${name}</b>`,
+  
+  ALERT_NAME_CANCELLED: `↩️ Operação cancelada.`,
 
 
 
@@ -2641,42 +2702,72 @@ Enter a number between 1 and 10.
 
 Examples: 2.5, 3, 5`,
 
-  ALERT_VIEW_DETAILS: (alert, currentRate, avg30d, alertThreshold, locale) => {
+  ALERT_VIEW_DETAILS: (alert, currentRate, refValue, calculatedThreshold, locale) => {
+    const typeLabels = {
+      absolute: '🎯 Absolute',
+      relative: '📊 Relative'
+    };
+    
+    const refLabels = {
+      current: 'Current rate',
+      avg7d: '7-day avg',
+      avg30d: '30-day avg',
+      avg90d: '90-day avg'
+    };
+    
     const pairText = alert.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
-    const presetEmoji = {
-      conservative: '🛡️',
-      balanced: '⚖️',
-      aggressive: '🎯',
-      custom: '✏️'
-    }[alert.preset] || '🔔';
     
-    const cooldownText = formatCooldown(alert.cooldown_minutes || 60, 'en');
+    let text = `🔔 <b>Alert details</b>\n\n`;
     
-    let text = `${presetEmoji} <b>Alert ${pairText}</b>\n\n`;
-    text += `Threshold: +${alert.threshold_percent}% vs 30d average\n`;
-    text += `⏰ Cooldown: ${cooldownText}\n\n`;
-    text += `<b>Current state:</b>\n`;
-    text += `• Current rate: ${formatRate(currentRate, locale)}\n`;
-    
-    if (avg30d && alertThreshold) {
-      text += `• 30d average: ${formatRate(avg30d, locale)}\n`;
-      text += `• Alert threshold: ${formatRate(alertThreshold, locale)}\n`;
-      
-      const distance = ((alertThreshold - currentRate) / currentRate * 100);
-      if (distance > 0) {
-        text += `\n📊 Still ${formatAmount(distance, 1, locale)}% to trigger`;
-      } else {
-        text += `\n✅ Threshold reached! Waiting for cooldown (max 1x/24h)`;
-      }
+    if (alert.name) {
+      text += `<b>Name:</b> ${alert.name}\n\n`;
     }
     
-    if (alert.last_triggered_at) {
-      const lastDate = new Date(alert.last_triggered_at);
-      text += `\n\n🔔 Last alert: ${lastDate.toLocaleDateString(locale)}`;
+    text += `<b>Pair:</b> ${pairText}\n`;
+    text += `<b>Type:</b> ${typeLabels[alert.threshold_type]}\n`;
+    
+    if (alert.threshold_type === 'relative') {
+      text += `<b>Threshold:</b> +${formatAmount(alert.threshold_value, 1, locale)}% vs ${refLabels[alert.reference_type]}\n`;
+    } else {
+      text += `<b>Threshold:</b> ≥ ${formatRate(alert.threshold_value, locale)}\n`;
+    }
+    
+    text += `<b>Cooldown:</b> ${formatCooldown(alert.cooldown_minutes)}\n\n`;
+    
+    text += `<b>Current state:</b>\n`;
+    text += `• Rate: ${formatRate(currentRate, locale)}\n`;
+    
+    if (alert.threshold_type === 'relative' && refValue) {
+      text += `• ${refLabels[alert.reference_type]}: ${formatRate(refValue, locale)}\n`;
+    }
+    
+    text += `• Alert threshold: ${formatRate(calculatedThreshold, locale)}\n\n`;
+    
+    if (currentRate >= calculatedThreshold) {
+      text += `🎯 <b>Threshold reached!</b> You should be notified soon.`;
+    } else {
+      const gap = ((calculatedThreshold - currentRate) / currentRate * 100);
+      text += `⏳ ${formatAmount(gap, 1, locale)}% more to trigger.`;
     }
     
     return text;
   },
+  
+  ALERT_NAME_PROMPT: `✏️ <b>Name alert</b>
+  
+  Enter a name for this alert (max 50 characters):
+  
+  <i>Example: "August transfer", "Brazil vacation", etc.</i>
+  
+  Or type "cancel" to keep unnamed.`,
+  
+  ALERT_NAME_TOO_LONG: `⚠️ Name too long (max 50 characters).
+  
+  Try a shorter name.`,
+  
+  ALERT_NAME_SET: (name) => `✅ Alert renamed: <b>${name}</b>`,
+  
+  ALERT_NAME_CANCELLED: `↩️ Operation cancelled.`,
 
 
 
