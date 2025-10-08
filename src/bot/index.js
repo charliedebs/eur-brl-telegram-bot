@@ -280,6 +280,43 @@ bot.action(/^action:proof_sources/, async (ctx) => {
   await ctx.answerCbQuery();
 });
 
+
+// ==========================================
+// HANDLERS FAQ (Section 4)
+// ==========================================
+
+// Handler : Menu FAQ
+bot.action('action:faq_menu', async (ctx) => {
+  const msg = getMsg(ctx);
+  const kb = buildKeyboards(msg, 'faq_menu', { 
+    route: ctx.session?.lastRoute || 'eurbrl', 
+    amount: ctx.session?.lastAmount || 1000 
+  });
+  
+  await ctx.editMessageText(msg.FAQ_MENU, { parse_mode: 'HTML', ...kb });
+  await ctx.answerCbQuery();
+});
+
+// Handler : Pourquoi on-chain
+bot.action('action:faq_why_onchain', async (ctx) => {
+  const msg = getMsg(ctx);
+  const kb = buildKeyboards(msg, 'faq_why_onchain');
+  
+  await ctx.editMessageText(msg.FAQ_WHY_ONCHAIN, { parse_mode: 'HTML', ...kb });
+  await ctx.answerCbQuery();
+});
+
+// Handler : Formulaire question
+bot.action('action:faq_send_question', async (ctx) => {
+  const msg = getMsg(ctx);
+  const kb = buildKeyboards(msg, 'faq_send_question');
+  
+  ctx.session.awaitingFaqQuestion = true;
+  
+  await ctx.editMessageText(msg.FAQ_SEND_QUESTION, { parse_mode: 'HTML', ...kb });
+  await ctx.answerCbQuery();
+});
+
 bot.action('action:exchanges_eu', async (ctx) => {
   const msg = getMsg(ctx);
   const kb = buildKeyboards(msg, 'exchanges_eu');
@@ -893,6 +930,27 @@ if (ctx.session?.awaitingAlertName) {
   const kb = buildKeyboards(msg, 'alerts_list', { alerts: userAlerts });
   
   return ctx.reply(msg.ALERTS_LIST(userAlerts, locale), { parse_mode: 'HTML', ...kb });
+}
+
+// PRIORITÉ 3: Question FAQ
+if (ctx.session?.awaitingFaqQuestion) {
+  const question = ctx.message.text.trim();
+  const userId = ctx.from.id;
+  const username = ctx.from.username || 'unknown';
+  const userLang = ctx.state.lang;
+  
+  // Log la question dans la console (ou DB si tu veux)
+  console.log('[FAQ-QUESTION] User:', userId, username);
+  console.log('[FAQ-QUESTION] Lang:', userLang);
+  console.log('[FAQ-QUESTION] Question:', question);
+  
+  // TODO: Envoyer notification à toi (admin)
+  // Exemple: await bot.telegram.sendMessage(ADMIN_TELEGRAM_ID, `❓ Question de @${username}:\n\n${question}`);
+  
+  delete ctx.session.awaitingFaqQuestion;
+  
+  const msg = getMsg(ctx);
+  return ctx.reply(msg.FAQ_QUESTION_RECEIVED, { parse_mode: 'HTML' });
 }
 
     // PRIORITÉ 3: NLU

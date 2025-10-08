@@ -223,32 +223,73 @@ buildOffChain: ({ route, amount, bestBank, others, locale, onchainAmount }) => {
 
 
 
-  ONCHAIN_INTRO: `🚀 Route On-Chain
+// ============================================
+// MESSAGES SECTION 4 - FRANÇAIS
+// À ajouter/remplacer dans l'objet `fr` de messages.js
+// ============================================
 
-C'est la méthode que nous utilisons nous-mêmes — et la raison pour laquelle ce bot existe. Nous la recommandons parce qu'elle élimine le superflu : moins d'intermédiaires, moins de frais, plus de transparence.
+// ⚠️ ONCHAIN_INTRO simplifié
+ONCHAIN_INTRO: `🚀 ROUTE ON-CHAIN
 
-🔄 Étapes simples :
-1️⃣ Europe → échange tes EUR → USDC (stablecoin)
-2️⃣ Blockchain → envoie tes USDC (rapide, peu coûteux)
-3️⃣ Brésil → retransforme tes USDC en BRL, reçus par Pix
+🔄 Comment ça marche :
+1️⃣ Europe → Change tes EUR en USDC
+2️⃣ Blockchain → Envoie tes USDC
+3️⃣ Brésil → Convertis USDC en BRL (Pix)
 
-ℹ️ Ce qu'il te faut :
-• un compte exchange 🇪🇺 en Europe
-• un compte exchange 🇧🇷 au Brésil
+✅ Ce qu'il te faut :
+• 🇪🇺 Exchange acceptant dépôts EUR à bas frais (SEPA)
+• 🇧🇷 Exchange acceptant retraits BRL à bas frais (Pix)
 
-💡 Les transferts classiques peuvent coûter entre 2,5 % et 6 %, voire plus — alors que via la blockchain, tu peux limiter ça à 0-1 % (on te met quelques sources pour te le prouver !).`,
+💡 On a des recommandations !
 
-  SOURCES_PROOF: `📊 Preuves & sources (2025)
+💡 <b>Fun fact :</b> Les frais on-chain (~0,5-1%) sont 5 à 10 fois moins chers que les transferts classiques (2,5-6%) !`,
 
-💡 Pourquoi on dit que la blockchain est souvent bien moins chère ?
+// ⚠️ NOUVEAU : Menu FAQ
+FAQ_MENU: `🤔 UN DOUTE ?
 
-• 💱 Cryptocurrency-based remittance statistics 2025 : les services traditionnels appliquent en moyenne 6,5 % de frais, alors que les transferts crypto (stablecoins, etc.) peuvent coûter aussi peu que 1 %.
+Choisis un sujet ou pose ta question :`,
 
-• 📈 Global Remittance Prices – World Bank : en mars 2025, le coût moyen des transferts par voies traditionnelles est de 6,49 % du montant envoyé.
+// ⚠️ NOUVEAU : Pourquoi on-chain
+FAQ_WHY_ONCHAIN: `💡 POURQUOI ON-CHAIN ?
 
-• 🔍 CFA Institute — "Blockchain in FX and Remittances" (2025) : des investisseurs institutionnels utilisent déjà les stablecoins pour réduire les temps de règlement, diminuer les coûts, et gérer les risques sur les transferts cross-border.
+🌍 <b>La blockchain élimine les intermédiaires</b>
 
-• 📊 McKinsey – "The stable door opens : tokenized cash / stablecoins" (2025) : le volume des envois transfrontaliers utilisant des stablecoins a augmenté rapidement, et les stablecoins sont de plus en plus envisagés comme infrastructure de paiement moderne.`,
+Transfert classique :
+Ta banque → Banque correspondante → Banque bénéficiaire
+💸 Chaque intermédiaire prend sa commission (2,5-6% total)
+
+Transfert on-chain :
+Toi → Blockchain → Destinataire
+💸 Frais fixes minimes (~0,5-1% total)
+
+📊 <b>Les preuves :</b>
+
+• <b>Cryptocurrency-based remittance statistics 2025</b>
+Les services traditionnels facturent en moyenne 6,5% en frais, contre ~1% pour les stablecoins.
+
+• <b>World Bank (mars 2025)</b>
+Coût moyen des transferts traditionnels : 6,49% du montant.
+
+• <b>CFA Institute (2025)</b>
+Les investisseurs institutionnels utilisent déjà les stablecoins pour réduire les coûts et temps de règlement.
+
+• <b>McKinsey (2025)</b>
+Le volume des transferts transfrontaliers via stablecoins a explosé : infrastructure de paiement moderne.
+
+✅ Légal, sûr, et utilisé par de nombreuses institutions.`,
+
+// ⚠️ NOUVEAU : Formulaire question
+FAQ_SEND_QUESTION: `📧 POSE TA QUESTION
+
+Envoie-moi ta question et je la transmettrai à l'équipe.
+
+Tu recevras une réponse dans les 24-48h.
+
+<i>Pour annuler, clique sur "Retour"</i>`,
+
+FAQ_QUESTION_RECEIVED: `✅ QUESTION REÇUE
+
+Merci ! On te répond dans les 24-48h.`,
 
   EXCHANGES_EU: `🇪🇺 Exchanges en Europe
 
@@ -1196,32 +1237,62 @@ buildOffChain: ({ route, amount, bestBank, others, locale, onchainAmount }) => {
   return `${title}\n\n${providersList}${footer}`;
 },
 
-  ONCHAIN_INTRO: `🚀 Rota On-Chain
+ONCHAIN_INTRO: `🚀 ROTA ON-CHAIN
 
-É o método que nós mesmos usamos — e a razão pela qual este bot existe. Recomendamos porque elimina o supérfluo: menos intermediários, menos taxas, mais transparência.
+🔄 Como funciona :
+1️⃣ Europa → Troca seus EUR em USDC
+2️⃣ Blockchain → Envia seus USDC
+3️⃣ Brasil → Converte USDC em BRL (Pix)
 
-🔄 Etapas simples:
-1️⃣ Europa → troca seus EUR → USDC (stablecoin)
-2️⃣ Blockchain → envia seus USDC (rápido, baixo custo)
-3️⃣ Brasil → converte seus USDC em BRL, recebe por Pix
+✅ O que você precisa :
+• 🇪🇺 Conta exchange na Europa
+• 🇧🇷 Conta exchange no Brasil
 
-ℹ️ O que você precisa:
-• uma conta exchange 🇪🇺 na Europa
-• uma conta exchange 🇧🇷 no Brasil
+💡 <b>Fun fact :</b> As taxas on-chain (~0,5-1%) são 5 a 10 vezes mais baratas que transferências clássicas (2,5-6%)!`,
 
-💡 As transferências tradicionais podem custar entre 2,5% e 6%, ou mais — enquanto via blockchain, você pode limitar isso a 0-1% (temos fontes para provar!).`,
+FAQ_MENU: `🤔 ALGUMA DÚVIDA ?
 
-  SOURCES_PROOF: `📊 Provas & fontes (2025)
+Escolha um assunto ou faça sua pergunta :`,
 
-💡 Por que dizemos que blockchain costuma ser bem mais barato?
+FAQ_WHY_ONCHAIN: `💡 POR QUE ON-CHAIN ?
 
-• 💱 Cryptocurrency-based remittance statistics 2025: serviços tradicionais aplicam em média 6,5% de taxas, enquanto transferências crypto (stablecoins, etc.) podem custar apenas 1%.
+🌍 <b>A blockchain elimina os intermediários</b>
 
-• 📈 Global Remittance Prices – World Bank: em março de 2025, o custo médio das transferências por vias tradicionais é de 6,49% do valor enviado.
+Transferência clássica :
+Seu banco → Banco correspondente → Banco beneficiário
+💸 Cada intermediário cobra sua comissão (2,5-6% total)
 
-• 🔍 CFA Institute — "Blockchain in FX and Remittances" (2025): investidores institucionais já usam stablecoins para reduzir tempos de liquidação, diminuir custos e gerenciar riscos em transferências cross-border.
+Transferência on-chain :
+Você → Blockchain → Destinatário
+💸 Taxas fixas mínimas (~0,5-1% total)
 
-• 📊 McKinsey – "The stable door opens: tokenized cash / stablecoins" (2025): o volume de envios transfronteiriços usando stablecoins aumentou rapidamente, e stablecoins são cada vez mais vistos como infraestrutura de pagamento moderna.`,
+📊 <b>As provas :</b>
+
+• <b>Cryptocurrency-based remittance statistics 2025</b>
+Serviços tradicionais cobram em média 6,5% em taxas, contra ~1% para stablecoins.
+
+• <b>World Bank (março 2025)</b>
+Custo médio das transferências tradicionais : 6,49% do valor.
+
+• <b>CFA Institute (2025)</b>
+Investidores institucionais já usam stablecoins para reduzir custos e tempo de liquidação.
+
+• <b>McKinsey (2025)</b>
+O volume de transferências transfronteiriças via stablecoins explodiu : infraestrutura de pagamento moderna.
+
+✅ Legal, seguro, e usado por muitas instituições.`,
+
+FAQ_SEND_QUESTION: `📧 FAÇA SUA PERGUNTA
+
+Envie sua pergunta e eu a transmitirei à equipe.
+
+Você receberá uma resposta em 24-48h.
+
+<i>Para cancelar, clique em "Voltar"</i>`,
+
+FAQ_QUESTION_RECEIVED: `✅ PERGUNTA RECEBIDA
+
+Obrigado ! Respondemos em 24-48h.`,
 
   EXCHANGES_EU: `🇪🇺 Exchanges na Europa
 
@@ -2164,32 +2235,62 @@ buildOffChain: ({ route, amount, bestBank, others, locale, onchainAmount }) => {
   return `${title}\n\n${providersList}${footer}`;
 },
 
-  ONCHAIN_INTRO: `🚀 On-Chain Route
+ONCHAIN_INTRO: `🚀 ON-CHAIN ROUTE
 
-This is the method we use ourselves — and the reason this bot exists. We recommend it because it cuts out the unnecessary: fewer intermediaries, lower fees, more transparency.
+🔄 How it works :
+1️⃣ Europe → Exchange your EUR to USDC
+2️⃣ Blockchain → Send your USDC
+3️⃣ Brazil → Convert USDC to BRL (Pix)
 
-🔄 Simple steps:
-1️⃣ Europe → exchange your EUR → USDC (stablecoin)
-2️⃣ Blockchain → send your USDC (fast, low cost)
-3️⃣ Brazil → convert your USDC to BRL, receive via Pix
+✅ What you need :
+• 🇪🇺 Exchange account in Europe
+• 🇧🇷 Exchange account in Brazil
 
-ℹ️ What you need:
-• an 🇪🇺 exchange account in Europe
-• a 🇧🇷 exchange account in Brazil
+💡 <b>Fun fact :</b> On-chain fees (~0.5-1%) are 5 to 10 times cheaper than traditional transfers (2.5-6%)!`,
 
-💡 Traditional transfers can cost between 2.5% and 6%, or more — while via blockchain, you can limit it to 0-1% (we have sources to prove it!).`,
+FAQ_MENU: `🤔 ANY DOUBTS ?
 
-  SOURCES_PROOF: `📊 Proof & sources (2025)
+Choose a topic or ask your question :`,
 
-💡 Why do we say blockchain is often much cheaper?
+FAQ_WHY_ONCHAIN: `💡 WHY ON-CHAIN ?
 
-• 💱 Cryptocurrency-based remittance statistics 2025: traditional services apply an average of 6.5% in fees, while crypto transfers (stablecoins, etc.) can cost as little as 1%.
+🌍 <b>Blockchain eliminates intermediaries</b>
 
-• 📈 Global Remittance Prices – World Bank: in March 2025, the average cost of transfers via traditional routes is 6.49% of the amount sent.
+Traditional transfer :
+Your bank → Correspondent bank → Beneficiary bank
+💸 Each intermediary takes its commission (2.5-6% total)
 
-• 🔍 CFA Institute — "Blockchain in FX and Remittances" (2025): institutional investors already use stablecoins to reduce settlement times, lower costs, and manage risks on cross-border transfers.
+On-chain transfer :
+You → Blockchain → Recipient
+💸 Minimal fixed fees (~0.5-1% total)
 
-• 📊 McKinsey – "The stable door opens: tokenized cash / stablecoins" (2025): the volume of cross-border remittances using stablecoins has increased rapidly, and stablecoins are increasingly seen as modern payment infrastructure.`,
+📊 <b>The proof :</b>
+
+• <b>Cryptocurrency-based remittance statistics 2025</b>
+Traditional services charge an average of 6.5% in fees, versus ~1% for stablecoins.
+
+• <b>World Bank (March 2025)</b>
+Average cost of traditional transfers : 6.49% of amount.
+
+• <b>CFA Institute (2025)</b>
+Institutional investors already use stablecoins to reduce costs and settlement times.
+
+• <b>McKinsey (2025)</b>
+Cross-border transfer volume via stablecoins has exploded : modern payment infrastructure.
+
+✅ Legal, secure, and used by many institutions.`,
+
+FAQ_SEND_QUESTION: `📧 ASK YOUR QUESTION
+
+Send me your question and I'll forward it to the team.
+
+You'll receive an answer within 24-48h.
+
+<i>To cancel, click "Back"</i>`,
+
+FAQ_QUESTION_RECEIVED: `✅ QUESTION RECEIVED
+
+Thank you ! We'll answer within 24-48h.`,
 
   EXCHANGES_EU: `🇪🇺 Exchanges in Europe
 

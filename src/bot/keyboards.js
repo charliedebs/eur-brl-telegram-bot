@@ -91,16 +91,53 @@ export function buildKeyboards(msg, type, options = {}) {
     }
     
     // Écran 4 : Route on-chain
-    case 'onchain_intro':
-      return Markup.inlineKeyboard([
-        [Markup.button.callback(msg.btn.createEU, 'action:exchanges_eu')],
-        [Markup.button.callback(msg.btn.createBR, 'action:exchanges_br')],
-        [Markup.button.callback(msg.btn.startGuide, `action:start_guide:${route}:${amount}`)],
-        [Markup.button.callback(msg.btn.whatIsUSDC, 'action:what_usdc')],
-        [Markup.button.callback(msg.btn.whatIsExchange, 'action:what_exchange')],
-        [Markup.button.callback(msg.btn.proofSources, 'action:proof_sources')],
-        [Markup.button.callback(msg.btn.back, `action:back_comparison:${route}:${amount}`)],
-      ]);
+// ⚠️ CASE MODIFIÉ : onchain_intro
+case 'onchain_intro':
+  return Markup.inlineKeyboard([
+    [Markup.button.callback('🚀 Étape 1 : EUR → USDC', `action:start_guide:${route}:${amount}`)],
+    [Markup.button.callback('🤔 Un doute ?', 'action:faq_menu')],
+    [Markup.button.callback(msg.btn.createEU, 'action:exchanges_eu')],
+    [Markup.button.callback(msg.btn.createBR, 'action:exchanges_br')],
+    [Markup.button.callback(msg.btn.back, `action:back_comparison:${route}:${amount}`)],
+  ]);
+
+// ⚠️ NOUVEAU CASE : faq_menu
+case 'faq_menu':
+  return Markup.inlineKeyboard([
+    [Markup.button.callback('🪙 Qu\'est-ce que l\'USDC ?', 'action:what_usdc')],
+    [Markup.button.callback('🏦 Qu\'est-ce qu\'un exchange ?', 'action:what_exchange')],
+    [Markup.button.callback('💡 Pourquoi on-chain ?', 'action:faq_why_onchain')],
+    [Markup.button.callback('📧 Poser une question', 'action:faq_send_question')],
+    [Markup.button.callback(msg.btn.back, `action:onchain_intro:${route}:${amount}`)],
+  ]);
+
+// ⚠️ NOUVEAU CASE : faq_why_onchain
+case 'faq_why_onchain':
+  return Markup.inlineKeyboard([
+    [Markup.button.callback(msg.btn.back, 'action:faq_menu')],
+  ]);
+
+// ⚠️ NOUVEAU CASE : faq_send_question
+case 'faq_send_question':
+  return Markup.inlineKeyboard([
+    [Markup.button.callback(msg.btn.back, 'action:faq_menu')],
+  ]);
+
+// ⚠️ CASE MODIFIÉ : what_usdc
+case 'what_usdc':
+  return Markup.inlineKeyboard([
+    [Markup.button.callback(msg.btn.whatIsExchange, 'action:what_exchange')],
+    [Markup.button.callback('💡 Pourquoi on-chain ?', 'action:faq_why_onchain')],
+    [Markup.button.callback(msg.btn.back, 'action:faq_menu')],
+  ]);
+
+// ⚠️ CASE MODIFIÉ : what_exchange
+case 'what_exchange':
+  return Markup.inlineKeyboard([
+    [Markup.button.callback(msg.btn.whatIsUSDC, 'action:what_usdc')],
+    [Markup.button.callback('💡 Pourquoi on-chain ?', 'action:faq_why_onchain')],
+    [Markup.button.callback(msg.btn.back, 'action:faq_menu')],
+  ]);
     
     // Écran 4bis : Preuves & sources
     case 'proof_sources':
@@ -136,19 +173,7 @@ export function buildKeyboards(msg, type, options = {}) {
         [Markup.button.callback(msg.btn.startGuide, `action:start_guide:${route}:${amount}`)],
         [Markup.button.callback(msg.btn.back, `action:onchain_intro:${route}:${amount}`)],
       ]);
-    
-    // Écrans pédagogiques
-    case 'what_usdc':
-      return Markup.inlineKeyboard([
-        [Markup.button.callback(msg.btn.whatIsExchange, 'action:what_exchange')],
-        [Markup.button.callback(msg.btn.back, `action:onchain_intro:${route}:${amount}`)],
-      ]);
-    
-    case 'what_exchange':
-      return Markup.inlineKeyboard([
-        [Markup.button.callback(msg.btn.whatIsUSDC, 'action:what_usdc')],
-        [Markup.button.callback(msg.btn.back, `action:onchain_intro:${route}:${amount}`)],
-      ]);
+  
     
     // Écran 7 : Transition
     case 'guide_transition':
