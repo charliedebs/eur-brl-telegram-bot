@@ -37,7 +37,16 @@ export function buildKeyboards(msg, type, options = {}) {
         [Markup.button.callback('🇪🇺 EUR → 🇧🇷 BRL', `route:eurbrl:${amount}`)],
         [Markup.button.callback('🇧🇷 BRL → 🇪🇺 EUR', `route:brleur:${amount}`)],
       ]);
-    
+  
+    // Écran 1ter : Clarification sens
+      case 'amount_or_target':
+        const routeForTarget = options.route || 'eurbrl';
+        return Markup.inlineKeyboard([
+          [Markup.button.callback('💰 J\'envoie ce montant', `route:send:${routeForTarget}`)],
+          [Markup.button.callback('🎯 Je veux recevoir un montant précis', `route:target:${routeForTarget}`)],
+          [Markup.button.callback(msg.btn.back, 'action:back_main')]
+        ]);
+
     // Écran 2 : Carte comparaison
     case 'comparison':
         return Markup.inlineKeyboard([
@@ -152,11 +161,8 @@ case 'what_exchange':
     // Écran 5 : Exchanges Europe
     case 'exchanges_eu':
       return Markup.inlineKeyboard([
-        [Markup.button.url(msg.btn.openKraken, LINKS.KRAKEN)],
-        [Markup.button.url(msg.btn.openBinanceEU, LINKS.BINANCE_EU)],
-        [Markup.button.url(msg.btn.openBitvavo, LINKS.BITVAVO)],
-        [Markup.button.url(msg.btn.openBitstamp, LINKS.BITSTAMP)],
-        [Markup.button.url(msg.btn.openCoinbase, LINKS.COINBASE)],
+        [Markup.button.url('⭐ Ouvrir Kraken', LINKS.KRAKEN)],
+        [Markup.button.url('Ouvrir Bitstamp', LINKS.BITSTAMP)],
         [Markup.button.callback(msg.btn.createBR, 'action:exchanges_br')],
         [Markup.button.callback(msg.btn.startGuide, `action:start_guide:${route}:${amount}`)],
         [Markup.button.callback(msg.btn.back, `action:onchain_intro:${route}:${amount}`)],
@@ -403,15 +409,12 @@ case 'what_exchange':
       const buttons = [];
       
       alerts.forEach((alert) => {
-        // Label du bouton
         let label;
         
         if (alert.name) {
-          // Si nom défini : "💼 Nom - EUR→BRL"
           const pairText = alert.pair === 'eurbrl' ? 'EUR→BRL' : 'BRL→EUR';
           label = `${alert.name} - ${pairText}`;
         } else {
-          // Sinon : "EUR→BRL : critères"
           const pairText = alert.pair === 'eurbrl' ? 'EUR→BRL' : 'BRL→EUR';
           
           let criteria;
@@ -430,7 +433,6 @@ case 'what_exchange':
           label = `${pairText}: ${criteria}`;
         }
         
-        // Tronquer si trop long (limite Telegram = 64 chars)
         if (label.length > 60) {
           label = label.substring(0, 57) + '...';
         }
@@ -461,6 +463,7 @@ case 'what_exchange':
       return Markup.inlineKeyboard([
         [Markup.button.callback('🚀 Comparer maintenant', `route:${alertPair}:${alertAmount}`)],
         [Markup.button.callback('⚙️ Modifier mon alerte', `alert:view:${alertId}`)],
+        [Markup.button.callback('🗑️ Supprimer cette alerte', `alert:delete:${alertId}`)],
         [Markup.button.callback('🔔 Mes alertes', 'alert:list')]
       ]);
     

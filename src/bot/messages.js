@@ -37,20 +37,28 @@ Service gratuit, financé par des liens de parrainage.`,
   
   askRoute: (amount, locale) => `Tu veux faire quoi avec ${formatAmount(amount, 0, locale)} ?`,
   
-  buildComparison: ({ route, amount, rates, onchain, bestBank, others, delta, locale }) => {
-    // ⚠️ NOUVEAU : Détection week-end
+  buildComparison: ({ route, amount, rates, onchain, bestBank, others, delta, locale, isTargetMode = false }) => {
     const now = new Date();
-    const dayOfWeek = now.getDay(); // 0 = dimanche, 6 = samedi
+    const dayOfWeek = now.getDay();
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
     
-    // ⚠️ NOUVEAU : Titre avec montant
-    const title = route === 'eurbrl' 
-      ? `💱 ${formatAmount(amount, 0, locale)} EUR → BRL`
-      : `💱 ${formatAmount(amount, 0, locale)} BRL → EUR`;
+    // 🔥 TITRE adapté selon mode
+    let title;
+    if (isTargetMode) {
+      // Mode target : "Pour recevoir X€, il faut ~Y BRL"
+      if (route === 'eurbrl') {
+        title = `💱 Pour recevoir ${formatAmount(amount, 0, locale)} BRL\nIl faut ~${formatAmount(onchain.in, 0, locale)} EUR`;
+      } else {
+        title = `💱 Pour recevoir ${formatAmount(amount, 0, locale)} EUR\nIl faut ~${formatAmount(onchain.in, 0, locale)} BRL`;
+      }
+    } else {
+      // Mode classique : "X EUR → BRL"
+      title = route === 'eurbrl' 
+        ? `💱 ${formatAmount(amount, 0, locale)} EUR → BRL`
+        : `💱 ${formatAmount(amount, 0, locale)} BRL → EUR`;
+    }
     
-    // ⚠️ NOUVEAU : Timestamp avec timezone + warning week-end
     const timeStr = now.toLocaleTimeString(locale, {hour: '2-digit', minute: '2-digit'});
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const tzAbbr = new Date().toLocaleTimeString('en-US', {timeZoneName: 'short'}).split(' ')[2];
     
     let ref = `📊 Réf. ${formatRate(rates.cross, locale)} • ${timeStr} ${tzAbbr}`;
@@ -58,28 +66,61 @@ Service gratuit, financé par des liens de parrainage.`,
       ref += `\n⚠️ Week-end : taux figé jusqu'à lundi`;
     }
     
-    const onchainLine = route === 'eurbrl'
-      ? `🌍 On-chain\n€${formatAmount(amount, 0, locale)} → R$${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`
-      : `🌍 On-chain\nR$${formatAmount(amount, 0, locale)} → €${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`;
+    // 🔥 LIGNES adaptées selon mode
+    let onchainLine, bankLine;
     
-    let bankLine;
-    if (!bestBank) {
-      bankLine = `🏦 Meilleur off-chain\n⚠️ Taux indisponible`;
+    if (isTargetMode) {
+      // Afficher montants SOURCE nécessaires
+      if (route === 'eurbrl') {
+        onchainLine = `🌍 On-chain\n~${formatAmount(onchain.in, 0, locale)} EUR → ${formatAmount(amount, 2, locale)} BRL (${formatRate(onchain.rate, locale)})`;
+        
+        if (!bestBank) {
+          bankLine = `🏦 Meilleur off-chain\n⚠️ Taux indisponible`;
+        } else {
+          bankLine = `🏦 ${bestBank.provider}\n~${formatAmount(bestBank.in, 0, locale)} EUR → ${formatAmount(amount, 2, locale)} BRL (${formatRate(bestBank.rate, locale)})`;
+        }
+      } else {
+        onchainLine = `🌍 On-chain\n~${formatAmount(onchain.in, 0, locale)} BRL → ${formatAmount(amount, 2, locale)} EUR (${formatRate(onchain.rate, locale)})`;
+        
+        if (!bestBank) {
+          bankLine = `🏦 Meilleur off-chain\n⚠️ Taux indisponible`;
+        } else {
+          bankLine = `🏦 ${bestBank.provider}\n~${formatAmount(bestBank.in, 0, locale)} BRL → ${formatAmount(amount, 2, locale)} EUR (${formatRate(bestBank.rate, locale)})`;
+        }
+      }
     } else {
-      bankLine = route === 'eurbrl'
-        ? `🏦 ${bestBank.provider}\n€${formatAmount(amount, 0, locale)} → R$${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`
-        : `🏦 ${bestBank.provider}\nR$${formatAmount(amount, 0, locale)} → €${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`;
+      // Mode classique : montants OUT
+      if (route === 'eurbrl') {
+        onchainLine = `🌍 On-chain\n€${formatAmount(amount, 0, locale)} → R$${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`;
+      } else {
+        onchainLine = `🌍 On-chain\nR$${formatAmount(amount, 0, locale)} → €${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`;
+      }
+      
+      if (!bestBank) {
+        bankLine = `🏦 Meilleur off-chain\n⚠️ Taux indisponible`;
+      } else {
+        if (route === 'eurbrl') {
+          bankLine = `🏦 ${bestBank.provider}\n€${formatAmount(amount, 0, locale)} → R$${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`;
+        } else {
+          bankLine = `🏦 ${bestBank.provider}\nR$${formatAmount(amount, 0, locale)} → €${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`;
+        }
+      }
     }
     
-    // ⚠️ NOUVEAU : Format "Autres" amélioré (max 3)
     let othersText = '';
     if (others.length > 0) {
       const topOthers = others.slice(0, 3);
-      const formattedOthers = topOthers.map(p => 
-        route === 'eurbrl'
-          ? `• ${p.provider} : R$${formatAmount(p.out, 0, locale)}`
-          : `• ${p.provider} : €${formatAmount(p.out, 2, locale)}`
-      ).join('\n');
+      const formattedOthers = topOthers.map(p => {
+        if (isTargetMode) {
+          return route === 'eurbrl'
+            ? `• ${p.provider} : ~${formatAmount(p.in, 0, locale)} EUR`
+            : `• ${p.provider} : ~${formatAmount(p.in, 0, locale)} BRL`;
+        } else {
+          return route === 'eurbrl'
+            ? `• ${p.provider} : R$${formatAmount(p.out, 0, locale)}`
+            : `• ${p.provider} : €${formatAmount(p.out, 2, locale)}`;
+        }
+      }).join('\n');
       
       const count = others.length;
       othersText = `\n\nAutres (${count}) :\n${formattedOthers}`;
@@ -91,8 +132,18 @@ Service gratuit, financé par des liens de parrainage.`,
     
     let deltaText = '';
     if (delta !== null && bestBank) {
-      const sign = delta >= 0 ? '+' : '−';
-      deltaText = `\n\n✅ ${sign}${formatAmount(Math.abs(delta), 1, locale)}% on-chain`;
+      if (isTargetMode) {
+        // En mode target, delta négatif = on-chain demande MOINS (meilleur)
+        const sign = delta <= 0 ? '−' : '+';
+        const absValue = Math.abs(delta);
+        deltaText = delta <= 0 
+          ? `\n\n✅ ${sign}${formatAmount(absValue, 1, locale)}% on-chain (moins cher)`
+          : `\n\n⚠️ ${sign}${formatAmount(absValue, 1, locale)}% on-chain (plus cher)`;
+      } else {
+        // Mode classique
+        const sign = delta >= 0 ? '+' : '−';
+        deltaText = `\n\n✅ ${sign}${formatAmount(Math.abs(delta), 1, locale)}% on-chain`;
+      }
     }
     
     return `${title}\n\n${ref}\n\n${onchainLine}\n\n${bankLine}${othersText}${deltaText}`;
@@ -293,19 +344,18 @@ Merci ! On te répond dans les 24-48h.`,
 
   EXCHANGES_EU: `🇪🇺 Exchanges en Europe
 
-Notre préférence :
-• Kraken — SEPA simple/gratuit, sérieux, USDC dispo. (👋 C'est aussi ce qu'on utilise nous)
+Nos recommandations :
+• Kraken — Virement gratuit, sérieux, USDC dispo 👋 (On utilise)
+• Bitstamp — Vétéran UE, sérieux, virements supportés
 
-Autres solutions :
-• Binance (UE) — très liquide, frais ~0,10%
-  ⚠️ Si tu choisis Binance côté 🇪🇺, il faudra un autre exchange côté 🇧🇷
-• Bitvavo — SEPA gratuit, UX simple, frais bas
-• Bitstamp — vétéran UE, sérieux
-• Coinbase Advanced — simple mais frais plus élevés
+À vérifier : SEPA ok (même avec résidence BR) • USDC dispo • frais raisonnables • réputation
 
-À vérifier : SEPA ok • USDC dispo • frais raisonnables • réputation
+⚠️ Certains exchanges (ex: Binance) n'acceptent que dépôt EUR par carte avec >2% de frais si résidence BR.`,
 
-Nos liens de parrainage financent le service (gratuits pour toi, parfois bonus).`,
+  // NOUVEAU : Tâche 7
+  COMPARE_TARGET_INTRO: `💡 Tu veux recevoir un montant précis ?
+
+Entre le montant que tu veux recevoir (ex: 500)`,
 
   EXCHANGES_BR: `🇧🇷 Exchanges au Brésil
 
@@ -1060,14 +1110,23 @@ Serviço gratuito, financiado por links de indicação.`,
   
   askRoute: (amount, locale) => `O que você quer fazer com ${formatAmount(amount, 0, locale)}?`,
   
-  buildComparison: ({ route, amount, rates, onchain, bestBank, others, delta, locale }) => {
+  buildComparison: ({ route, amount, rates, onchain, bestBank, others, delta, locale, isTargetMode = false }) => {
     const now = new Date();
     const dayOfWeek = now.getDay();
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
     
-    const title = route === 'eurbrl' 
-      ? `💱 ${formatAmount(amount, 0, locale)} EUR → BRL`
-      : `💱 ${formatAmount(amount, 0, locale)} BRL → EUR`;
+    let title;
+    if (isTargetMode) {
+      if (route === 'eurbrl') {
+        title = `💱 Para receber ${formatAmount(amount, 0, locale)} BRL\nPrecisa ~${formatAmount(onchain.in, 0, locale)} EUR`;
+      } else {
+        title = `💱 Para receber ${formatAmount(amount, 0, locale)} EUR\nPrecisa ~${formatAmount(onchain.in, 0, locale)} BRL`;
+      }
+    } else {
+      title = route === 'eurbrl' 
+        ? `💱 ${formatAmount(amount, 0, locale)} EUR → BRL`
+        : `💱 ${formatAmount(amount, 0, locale)} BRL → EUR`;
+    }
     
     const timeStr = now.toLocaleTimeString(locale, {hour: '2-digit', minute: '2-digit'});
     const tzAbbr = new Date().toLocaleTimeString('en-US', {timeZoneName: 'short'}).split(' ')[2];
@@ -1077,27 +1136,58 @@ Serviço gratuito, financiado por links de indicação.`,
       ref += `\n⚠️ Fim de semana: taxa congelada até segunda`;
     }
     
-    const onchainLine = route === 'eurbrl'
-      ? `🌍 On-chain\n€${formatAmount(amount, 0, locale)} → R$${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`
-      : `🌍 On-chain\nR$${formatAmount(amount, 0, locale)} → €${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`;
+    let onchainLine, bankLine;
     
-    let bankLine;
-    if (!bestBank) {
-      bankLine = `🏦 Melhor off-chain\n⚠️ Taxa indisponível`;
+    if (isTargetMode) {
+      if (route === 'eurbrl') {
+        onchainLine = `🌍 On-chain\n~${formatAmount(onchain.in, 0, locale)} EUR → ${formatAmount(amount, 2, locale)} BRL (${formatRate(onchain.rate, locale)})`;
+        
+        if (!bestBank) {
+          bankLine = `🏦 Melhor off-chain\n⚠️ Taxa indisponível`;
+        } else {
+          bankLine = `🏦 ${bestBank.provider}\n~${formatAmount(bestBank.in, 0, locale)} EUR → ${formatAmount(amount, 2, locale)} BRL (${formatRate(bestBank.rate, locale)})`;
+        }
+      } else {
+        onchainLine = `🌍 On-chain\n~${formatAmount(onchain.in, 0, locale)} BRL → ${formatAmount(amount, 2, locale)} EUR (${formatRate(onchain.rate, locale)})`;
+        
+        if (!bestBank) {
+          bankLine = `🏦 Melhor off-chain\n⚠️ Taxa indisponível`;
+        } else {
+          bankLine = `🏦 ${bestBank.provider}\n~${formatAmount(bestBank.in, 0, locale)} BRL → ${formatAmount(amount, 2, locale)} EUR (${formatRate(bestBank.rate, locale)})`;
+        }
+      }
     } else {
-      bankLine = route === 'eurbrl'
-        ? `🏦 ${bestBank.provider}\n€${formatAmount(amount, 0, locale)} → R$${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`
-        : `🏦 ${bestBank.provider}\nR$${formatAmount(amount, 0, locale)} → €${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`;
+      if (route === 'eurbrl') {
+        onchainLine = `🌍 On-chain\n€${formatAmount(amount, 0, locale)} → R$${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`;
+      } else {
+        onchainLine = `🌍 On-chain\nR$${formatAmount(amount, 0, locale)} → €${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`;
+      }
+      
+      if (!bestBank) {
+        bankLine = `🏦 Melhor off-chain\n⚠️ Taxa indisponível`;
+      } else {
+        if (route === 'eurbrl') {
+          bankLine = `🏦 ${bestBank.provider}\n€${formatAmount(amount, 0, locale)} → R$${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`;
+        } else {
+          bankLine = `🏦 ${bestBank.provider}\nR$${formatAmount(amount, 0, locale)} → €${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`;
+        }
+      }
     }
     
     let othersText = '';
     if (others.length > 0) {
       const topOthers = others.slice(0, 3);
-      const formattedOthers = topOthers.map(p => 
-        route === 'eurbrl'
-          ? `• ${p.provider} : R$${formatAmount(p.out, 0, locale)}`
-          : `• ${p.provider} : €${formatAmount(p.out, 2, locale)}`
-      ).join('\n');
+      const formattedOthers = topOthers.map(p => {
+        if (isTargetMode) {
+          return route === 'eurbrl'
+            ? `• ${p.provider} : ~${formatAmount(p.in, 0, locale)} EUR`
+            : `• ${p.provider} : ~${formatAmount(p.in, 0, locale)} BRL`;
+        } else {
+          return route === 'eurbrl'
+            ? `• ${p.provider} : R$${formatAmount(p.out, 0, locale)}`
+            : `• ${p.provider} : €${formatAmount(p.out, 2, locale)}`;
+        }
+      }).join('\n');
       
       const count = others.length;
       othersText = `\n\nOutros (${count}) :\n${formattedOthers}`;
@@ -1109,8 +1199,16 @@ Serviço gratuito, financiado por links de indicação.`,
     
     let deltaText = '';
     if (delta !== null && bestBank) {
-      const sign = delta >= 0 ? '+' : '−';
-      deltaText = `\n\n✅ ${sign}${formatAmount(Math.abs(delta), 1, locale)}% on-chain`;
+      if (isTargetMode) {
+        const sign = delta <= 0 ? '−' : '+';
+        const absValue = Math.abs(delta);
+        deltaText = delta <= 0 
+          ? `\n\n✅ ${sign}${formatAmount(absValue, 1, locale)}% on-chain (mais barato)`
+          : `\n\n⚠️ ${sign}${formatAmount(absValue, 1, locale)}% on-chain (mais caro)`;
+      } else {
+        const sign = delta >= 0 ? '+' : '−';
+        deltaText = `\n\n✅ ${sign}${formatAmount(Math.abs(delta), 1, locale)}% on-chain`;
+      }
     }
     
     return `${title}\n\n${ref}\n\n${onchainLine}\n\n${bankLine}${othersText}${deltaText}`;
@@ -1294,21 +1392,19 @@ FAQ_QUESTION_RECEIVED: `✅ PERGUNTA RECEBIDA
 
 Obrigado ! Respondemos em 24-48h.`,
 
-  EXCHANGES_EU: `🇪🇺 Exchanges na Europa
+EXCHANGES_EU: `🇪🇺 Exchanges na Europa
 
-Nossa preferência:
-• Kraken — SEPA simples/gratuito, sério, USDC disponível. (👋 É o que usamos também)
+Nossas recomendações:
+• Kraken — Transferência gratuita, sério, USDC disponível (👋 Usamos)
+• Bitstamp — Veterano UE, sério, transferências suportadas
 
-Outras soluções:
-• Binance (UE) — muito líquido, taxas ~0,10%
-  ⚠️ Se escolher Binance lado 🇪🇺, precisará de outro exchange lado 🇧🇷
-• Bitvavo — SEPA gratuito, UX simples, taxas baixas
-• Bitstamp — veterano UE, sério
-• Coinbase Advanced — simples mas taxas mais altas
+Verificar: Transferências EUR aceitas com residência brasileira • USDC disponível • taxas razoáveis • reputação
+⚠️ Alguns exchanges (ex: Binance) só aceitam depósito EUR por cartão com >2% de taxas se residência BR.`,
 
-Verificar: SEPA ok • USDC disponível • taxas razoáveis • reputação
+  // NOVO : Tarefa 7
+  COMPARE_TARGET_INTRO: `💡 Você quer receber um valor específico?
 
-Nossos links de indicação financiam o serviço (gratuitos para você, às vezes bônus).`,
+Digite o valor que você quer receber (ex: 500)`,
 
   EXCHANGES_BR: `🇧🇷 Exchanges no Brasil
 
@@ -2058,14 +2154,23 @@ Free service, funded by referral links.`,
   
   askRoute: (amount, locale) => `What do you want to do with ${formatAmount(amount, 0, locale)}?`,
   
-  buildComparison: ({ route, amount, rates, onchain, bestBank, others, delta, locale }) => {
+  buildComparison: ({ route, amount, rates, onchain, bestBank, others, delta, locale, isTargetMode = false }) => {
     const now = new Date();
     const dayOfWeek = now.getDay();
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
     
-    const title = route === 'eurbrl' 
-      ? `💱 ${formatAmount(amount, 0, locale)} EUR → BRL`
-      : `💱 ${formatAmount(amount, 0, locale)} BRL → EUR`;
+    let title;
+    if (isTargetMode) {
+      if (route === 'eurbrl') {
+        title = `💱 To receive ${formatAmount(amount, 0, locale)} BRL\nYou need ~${formatAmount(onchain.in, 0, locale)} EUR`;
+      } else {
+        title = `💱 To receive ${formatAmount(amount, 0, locale)} EUR\nYou need ~${formatAmount(onchain.in, 0, locale)} BRL`;
+      }
+    } else {
+      title = route === 'eurbrl' 
+        ? `💱 ${formatAmount(amount, 0, locale)} EUR → BRL`
+        : `💱 ${formatAmount(amount, 0, locale)} BRL → EUR`;
+    }
     
     const timeStr = now.toLocaleTimeString(locale, {hour: '2-digit', minute: '2-digit'});
     const tzAbbr = new Date().toLocaleTimeString('en-US', {timeZoneName: 'short'}).split(' ')[2];
@@ -2075,27 +2180,58 @@ Free service, funded by referral links.`,
       ref += `\n⚠️ Weekend: rate frozen until Monday`;
     }
     
-    const onchainLine = route === 'eurbrl'
-      ? `🌍 On-chain\n€${formatAmount(amount, 0, locale)} → R$${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`
-      : `🌍 On-chain\nR$${formatAmount(amount, 0, locale)} → €${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`;
+    let onchainLine, bankLine;
     
-    let bankLine;
-    if (!bestBank) {
-      bankLine = `🏦 Best off-chain\n⚠️ Rate unavailable`;
+    if (isTargetMode) {
+      if (route === 'eurbrl') {
+        onchainLine = `🌍 On-chain\n~${formatAmount(onchain.in, 0, locale)} EUR → ${formatAmount(amount, 2, locale)} BRL (${formatRate(onchain.rate, locale)})`;
+        
+        if (!bestBank) {
+          bankLine = `🏦 Best off-chain\n⚠️ Rate unavailable`;
+        } else {
+          bankLine = `🏦 ${bestBank.provider}\n~${formatAmount(bestBank.in, 0, locale)} EUR → ${formatAmount(amount, 2, locale)} BRL (${formatRate(bestBank.rate, locale)})`;
+        }
+      } else {
+        onchainLine = `🌍 On-chain\n~${formatAmount(onchain.in, 0, locale)} BRL → ${formatAmount(amount, 2, locale)} EUR (${formatRate(onchain.rate, locale)})`;
+        
+        if (!bestBank) {
+          bankLine = `🏦 Best off-chain\n⚠️ Rate unavailable`;
+        } else {
+          bankLine = `🏦 ${bestBank.provider}\n~${formatAmount(bestBank.in, 0, locale)} BRL → ${formatAmount(amount, 2, locale)} EUR (${formatRate(bestBank.rate, locale)})`;
+        }
+      }
     } else {
-      bankLine = route === 'eurbrl'
-        ? `🏦 ${bestBank.provider}\n€${formatAmount(amount, 0, locale)} → R$${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`
-        : `🏦 ${bestBank.provider}\nR$${formatAmount(amount, 0, locale)} → €${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`;
+      if (route === 'eurbrl') {
+        onchainLine = `🌍 On-chain\n€${formatAmount(amount, 0, locale)} → R$${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`;
+      } else {
+        onchainLine = `🌍 On-chain\nR$${formatAmount(amount, 0, locale)} → €${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`;
+      }
+      
+      if (!bestBank) {
+        bankLine = `🏦 Best off-chain\n⚠️ Rate unavailable`;
+      } else {
+        if (route === 'eurbrl') {
+          bankLine = `🏦 ${bestBank.provider}\n€${formatAmount(amount, 0, locale)} → R$${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`;
+        } else {
+          bankLine = `🏦 ${bestBank.provider}\nR$${formatAmount(amount, 0, locale)} → €${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`;
+        }
+      }
     }
     
     let othersText = '';
     if (others.length > 0) {
       const topOthers = others.slice(0, 3);
-      const formattedOthers = topOthers.map(p => 
-        route === 'eurbrl'
-          ? `• ${p.provider} : R$${formatAmount(p.out, 0, locale)}`
-          : `• ${p.provider} : €${formatAmount(p.out, 2, locale)}`
-      ).join('\n');
+      const formattedOthers = topOthers.map(p => {
+        if (isTargetMode) {
+          return route === 'eurbrl'
+            ? `• ${p.provider} : ~${formatAmount(p.in, 0, locale)} EUR`
+            : `• ${p.provider} : ~${formatAmount(p.in, 0, locale)} BRL`;
+        } else {
+          return route === 'eurbrl'
+            ? `• ${p.provider} : R$${formatAmount(p.out, 0, locale)}`
+            : `• ${p.provider} : €${formatAmount(p.out, 2, locale)}`;
+        }
+      }).join('\n');
       
       const count = others.length;
       othersText = `\n\nOthers (${count}) :\n${formattedOthers}`;
@@ -2107,8 +2243,16 @@ Free service, funded by referral links.`,
     
     let deltaText = '';
     if (delta !== null && bestBank) {
-      const sign = delta >= 0 ? '+' : '−';
-      deltaText = `\n\n✅ ${sign}${formatAmount(Math.abs(delta), 1, locale)}% on-chain`;
+      if (isTargetMode) {
+        const sign = delta <= 0 ? '−' : '+';
+        const absValue = Math.abs(delta);
+        deltaText = delta <= 0 
+          ? `\n\n✅ ${sign}${formatAmount(absValue, 1, locale)}% on-chain (cheaper)`
+          : `\n\n⚠️ ${sign}${formatAmount(absValue, 1, locale)}% on-chain (more expensive)`;
+      } else {
+        const sign = delta >= 0 ? '+' : '−';
+        deltaText = `\n\n✅ ${sign}${formatAmount(Math.abs(delta), 1, locale)}% on-chain`;
+      }
     }
     
     return `${title}\n\n${ref}\n\n${onchainLine}\n\n${bankLine}${othersText}${deltaText}`;
@@ -2292,21 +2436,19 @@ FAQ_QUESTION_RECEIVED: `✅ QUESTION RECEIVED
 
 Thank you ! We'll answer within 24-48h.`,
 
-  EXCHANGES_EU: `🇪🇺 Exchanges in Europe
+EXCHANGES_EU: `🇪🇺 Exchanges in Europe
 
-Our preference:
-• Kraken — simple/free SEPA, serious, USDC available. (👋 It's what we use too)
+Our recommendations:
+• Kraken — Free transfer, serious, USDC available (👋 We use)
+• Bitstamp — EU veteran, serious, EUR transfers supported
 
-Other solutions:
-• Binance (EU) — very liquid, fees ~0.10%
-  ⚠️ If you choose Binance 🇪🇺 side, you'll need another exchange 🇧🇷 side
-• Bitvavo — free SEPA, simple UX, low fees
-• Bitstamp — EU veteran, serious
-• Coinbase Advanced — simple but higher fees
+Check: EUR transfers accepted (even with Brazilian residency) • USDC available • reasonable fees • reputation
+⚠️ Some exchanges (e.g. Binance) only accept EUR deposit by card with >2% fees if BR residency.`,
 
-Check: SEPA ok • USDC available • reasonable fees • reputation
+  // NEW: Task 7
+  COMPARE_TARGET_INTRO: `💡 Do you want to receive a specific amount?
 
-Our referral links fund the service (free for you, sometimes bonuses).`,
+Enter the amount you want to receive (e.g. 500)`,
 
   EXCHANGES_BR: `🇧🇷 Exchanges in Brazil
 

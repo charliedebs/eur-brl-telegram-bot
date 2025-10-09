@@ -290,6 +290,74 @@ export function calculateOnChain(route, amount, rates) {
     : calculateBRLtoEUR(amount, rates);
 }
 
+export function calculateOnChainReverse(route, targetAmount, rates) {
+  // Calcul inversé : partir du montant cible pour trouver le montant source nécessaire
+  
+  if (route === 'eurbrl') {
+    // Je veux recevoir X BRL, combien d'EUR faut-il envoyer ?
+    
+    const brlTarget = targetAmount;
+    
+    // Étape 4 inverse : Avant Pix (retrait)
+    const brlBeforePix = brlTarget + FEES.WITHDRAW_BRL_FIXED;
+    
+    // Étape 3 inverse : Avant vente USDC
+    const brlBeforeTrade = brlBeforePix / (1 - FEES.TRADE_BR);
+    const usdcInBrazil = brlBeforeTrade / rates.usdcBRL;
+    
+    // Étape 2 inverse : Avant transfert blockchain
+    const usdcInEurope = usdcInBrazil + FEES.NETWORK_USDC_FIXED;
+    
+    // Étape 1 inverse : Avant achat USDC en Europe
+    const eurNeeded = (usdcInEurope * rates.usdcEUR) / (1 - FEES.TRADE_EU);
+    
+    const effectiveRate = brlTarget / eurNeeded;
+    
+    return {
+      in: eurNeeded,          // EUR à envoyer
+      out: targetAmount,      // BRL à recevoir
+      rate: effectiveRate,
+      breakdown: {
+        eurNeeded,
+        usdcBought: usdcInEurope,
+        usdcAfterNetwork: usdcInBrazil,
+        brlAfterTrade: brlBeforePix,
+        brlNet: brlTarget
+      }
+    };
+    
+  } else {
+    // brleur : Je veux recevoir X EUR, combien de BRL faut-il envoyer ?
+    
+    const eurTarget = targetAmount;
+    
+    // Étape 3 inverse : Avant vente USDC en Europe
+    const eurBeforeTrade = eurTarget / (1 - FEES.TRADE_EU);
+    const usdcInEurope = eurBeforeTrade / rates.usdcEUR;
+    
+    // Étape 2 inverse : Avant transfert blockchain
+    const usdcInBrazil = usdcInEurope + FEES.NETWORK_USDC_FIXED;
+    
+    // Étape 1 inverse : Avant achat USDC au Brésil
+    const brlNeeded = (usdcInBrazil * rates.usdcBRL) / (1 - FEES.TRADE_BR);
+    
+    const effectiveRate = eurTarget / brlNeeded;
+    
+    return {
+      in: brlNeeded,          // BRL à envoyer
+      out: targetAmount,      // EUR à recevoir
+      rate: effectiveRate,
+      breakdown: {
+        brlNeeded,
+        usdcBought: usdcInBrazil,
+        usdcAfterNetwork: usdcInEurope,
+        eurAfterTrade: eurTarget,
+        eurNet: eurTarget
+      }
+    };
+  }
+}
+
 // ==========================================
 // FORMAT HELPERS
 // ==========================================

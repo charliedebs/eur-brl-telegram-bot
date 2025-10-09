@@ -2,7 +2,7 @@ import { Telegraf, Markup, session } from 'telegraf';
 import { messages } from './messages.js';
 import { buildKeyboards } from './keyboards.js';
 import { updateNLUFeedback } from '../services/nlu-logger.js';
-import { getRates, calculateOnChain, getLocale, formatAmount, formatRate } from '../services/rates.js';
+import { getRates, calculateOnChain, getLocale, formatAmount, formatRate, calculateOnChainReverse } from '../services/rates.js';
 import { getWiseComparison } from '../services/wise.js';
 import { AlertsService } from '../services/alerts.js';
 import { DatabaseService } from '../services/database.js';
@@ -107,18 +107,40 @@ bot.action('action:back_main', async (ctx) => {
   await ctx.answerCbQuery();
 });
 
+bot.action(/^route:(send|target):(eurbrl|brleur)$/, async (ctx) => {
+  const mode = ctx.match[1]; // 'send' | 'target'
+  const route = ctx.match[2];
+  const msg = getMsg(ctx);
+  const locale = getLocale(ctx.state.lang);
+  
+  if (mode === 'send') {
+    // Mode classique : "J'envoie X"
+    ctx.session.awaitingAmount = route;
+    ctx.session.targetMode = false;
+    await ctx.editMessageText(msg.askAmount || `✏️ Entre un montant à envoyer (ex. 1000)`, { parse_mode: 'HTML' });
+  } else {
+    // Mode target : "Je veux recevoir X"
+    ctx.session.awaitingAmount = route;
+    ctx.session.targetMode = true;
+    await ctx.editMessageText(msg.COMPARE_TARGET_INTRO || `💡 Entre le montant que tu veux recevoir`, { parse_mode: 'HTML' });
+  }
+  
+  await ctx.answerCbQuery();
+});
+
 bot.action(/^route:(eurbrl|brleur):(\d+)$/, async (ctx) => {
   const route = ctx.match[1];
   const amount = parseFloat(ctx.match[2]);
 
   ctx.session.lastRoute = route;
   ctx.session.lastAmount = amount;
+  ctx.session.targetMode = false; // Mode classique par défaut
 
-  await showComparison(ctx, route, amount);
+  await showComparison(ctx, route, amount, false);
   await ctx.answerCbQuery();
 });
 
-async function showComparison(ctx, route, amount) {
+async function showComparison(ctx, route, amount, isTargetMode = false) {
   const msg = getMsg(ctx);
   const locale = getLocale(ctx.state.lang);
   
@@ -132,24 +154,43 @@ async function showComparison(ctx, route, amount) {
     return;
   }
   
-  const onchain = calculateOnChain(route, amount, rates);
+  let onchain, bestBank, others;
   
-  const bestBank = wiseData?.providers?.[0] || null;
-  const others = wiseData?.providers?.slice(1) || [];
+  if (isTargetMode) {
+    // Mode inversé : calculer montant source nécessaire
+    onchain = calculateOnChainReverse(route, amount, rates);
+    // Pour Wise : on passe amountToReceive en target
+    const wiseDataReverse = await getWiseComparisonReverse(route, amount);
+    bestBank = wiseDataReverse?.providers?.[0] || null;
+    others = wiseDataReverse?.providers?.slice(1) || [];
+  } else {
+    // Mode classique
+    onchain = calculateOnChain(route, amount, rates);
+    bestBank = wiseData?.providers?.[0] || null;
+    others = wiseData?.providers?.slice(1) || [];
+  }
   
   let delta = null;
   let winner = 'on-chain';
   
   if (bestBank) {
-    delta = ((onchain.out - bestBank.out) / bestBank.out) * 100;
-    winner = delta >= 0 ? 'on-chain' : bestBank.provider;
+    if (isTargetMode) {
+      // Comparer montants source (celui qui demande le moins de source = meilleur)
+      delta = ((bestBank.in - onchain.in) / bestBank.in) * 100;
+      winner = delta <= 0 ? 'on-chain' : bestBank.provider;
+    } else {
+      // Mode classique
+      delta = ((onchain.out - bestBank.out) / bestBank.out) * 100;
+      winner = delta >= 0 ? 'on-chain' : bestBank.provider;
+    }
   }
 
   ctx.session.lastComparison = {
     route,
     amount,
-    onchain: onchain.out,
-    bestBank: bestBank ? bestBank.out : null,
+    isTargetMode,
+    onchain: isTargetMode ? onchain.in : onchain.out,
+    bestBank: bestBank ? (isTargetMode ? bestBank.in : bestBank.out) : null,
     winner
   };
 
@@ -162,7 +203,8 @@ async function showComparison(ctx, route, amount) {
     others,
     delta,
     winner,
-    locale
+    locale,
+    isTargetMode
   });
   
   const kb = buildKeyboards(msg, 'comparison', { route, amount, locale });
@@ -556,14 +598,33 @@ bot.action(/^alert:ref:(current|avg7d|avg30d|avg90d):(eurbrl|brleur)$/, async (c
   const msg = getMsg(ctx);
   const locale = getLocale(ctx.state.lang);
   
-  // Récupérer valeur de référence
   const rates = await getRates();
   const currentRate = pair === 'eurbrl' ? rates.cross : 1 / rates.cross;
   
   let refValue;
+  
+  // 🔥 TÂCHE 5.1 : Si "current", figer comme absolu
   if (refType === 'current') {
-    refValue = currentRate;
-  } else if (refType === 'avg7d') {
+    // On fige le taux actuel → devient un seuil absolu déguisé
+    ctx.session.alertDraft = { 
+      pair, 
+      refType: 'current',
+      refValue: currentRate,
+      isFrozenCurrent: true  // Flag pour savoir qu'on convertit en absolu
+    };
+    
+    const kb = buildKeyboards(msg, 'alert_choose_percent', { pair, refType });
+    
+    await ctx.editMessageText(
+      msg.ALERT_CHOOSE_PERCENT(pair, refType, currentRate, locale),
+      { parse_mode: 'HTML', ...kb }
+    );
+    await ctx.answerCbQuery();
+    return;
+  }
+  
+  // Autres références : comportement normal
+  if (refType === 'avg7d') {
     refValue = await db.getAverage(pair, 7) || currentRate;
   } else if (refType === 'avg30d') {
     refValue = await db.getAverage30Days(pair) || currentRate;
@@ -571,7 +632,6 @@ bot.action(/^alert:ref:(current|avg7d|avg30d|avg90d):(eurbrl|brleur)$/, async (c
     refValue = await db.getAverage(pair, 90) || currentRate;
   }
   
-  // Stocker dans session pour après
   ctx.session.alertDraft = { pair, refType, refValue };
   
   const kb = buildKeyboards(msg, 'alert_choose_percent', { pair, refType });
@@ -644,8 +704,6 @@ bot.action(/^alert:cd2:(\d+):(.+)$/, async (ctx) => {
   const msg = getMsg(ctx);
   const locale = getLocale(ctx.state.lang);
   
-  // Decoder shortcode : type-value-ref-pair
-  // Ex: "rel-3-avg30d-eurbrl" ou "abs-6.3-null-brleur"
   const parts = shortcode.split('-');
   
   if (parts.length < 4) {
@@ -654,13 +712,31 @@ bot.action(/^alert:cd2:(\d+):(.+)$/, async (ctx) => {
     return ctx.reply('❌ Erreur de décodage. Réessaie.');
   }
   
-  const alertData = {
+  let alertData = {
     threshold_type: parts[0] === 'rel' ? 'relative' : 'absolute',
     threshold_value: parseFloat(parts[1]),
     reference_type: parts[2] === 'null' ? null : parts[2],
     pair: parts[3],
     cooldown_minutes: cooldown
   };
+  
+  // 🔥 TÂCHE 5.1 : Si reference_type = 'current' ET relatif, convertir en absolu
+  if (alertData.threshold_type === 'relative' && alertData.reference_type === 'current') {
+    const rates = await getRates();
+    const currentRate = alertData.pair === 'eurbrl' ? rates.cross : 1 / rates.cross;
+    const absoluteThreshold = currentRate * (1 + alertData.threshold_value / 100);
+    
+    // Convertir en absolu
+    alertData = {
+      threshold_type: 'absolute',
+      threshold_value: absoluteThreshold,
+      reference_type: null,
+      pair: alertData.pair,
+      cooldown_minutes: cooldown
+    };
+    
+    console.log(`[ALERT] Converted 'current' relative to absolute: ${absoluteThreshold.toFixed(4)}`);
+  }
   
   // Créer l'alerte
   const user = await db.getUser(ctx.from.id);
@@ -682,10 +758,7 @@ bot.action(/^alert:cd2:(\d+):(.+)$/, async (ctx) => {
     calculatedThreshold = alertData.threshold_value;
     refValue = null;
   } else {
-    // Relative
-    if (alertData.reference_type === 'current') {
-      refValue = currentRate;
-    } else if (alertData.reference_type === 'avg7d') {
+    if (alertData.reference_type === 'avg7d') {
       refValue = await db.getAverage(alertData.pair, 7);
     } else if (alertData.reference_type === 'avg30d') {
       refValue = await db.getAverage30Days(alertData.pair);
@@ -699,7 +772,13 @@ bot.action(/^alert:cd2:(\d+):(.+)$/, async (ctx) => {
   await ctx.answerCbQuery('✅ Alerte créée !');
   
   const text = msg.ALERT_CREATED_FULL_V2(alert, currentRate, refValue, calculatedThreshold, locale);
-  const kb = buildKeyboards(msg, 'alerts_list', { alerts: [alert] });
+  
+  // 🔥 TÂCHE 5.3 : Nouveau keyboard avec [Mes alertes]
+  const kb = Markup.inlineKeyboard([
+    [Markup.button.callback('📋 Mes alertes', 'alert:list')],
+    [Markup.button.callback('➕ Créer une autre alerte', 'alert:choose_pair')],
+    [Markup.button.callback(msg.btn.back, 'action:back_main')]
+  ]);
   
   await ctx.editMessageText(text, { parse_mode: 'HTML', ...kb });
 });
@@ -828,8 +907,10 @@ bot.on('text', async (ctx) => {
     if (ctx.session?.awaitingAmount) {
       const amount = parseFloat(text.replace(/[^\d.]/g, ''));
       if (amount && isFinite(amount)) {
-        await showComparison(ctx, ctx.session.awaitingAmount, amount);
+        const isTargetMode = ctx.session.targetMode || false;
+        await showComparison(ctx, ctx.session.awaitingAmount, amount, isTargetMode);
         delete ctx.session.awaitingAmount;
+        delete ctx.session.targetMode;
       } else {
         await ctx.reply("⚠️ Montant invalide. Entre un nombre (ex. 1000)");
       }

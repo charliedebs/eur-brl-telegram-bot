@@ -34,3 +34,12 @@ Ensuite, dire qu'on recommande fortement wise, qui hors promotions offre génér
 - relatives contre taux actuel ne fait pas de sens, car taux actuel évolue, donc alerte jamais touchée. Doit être contre taux actuel au moment de la création de l'alarme. 
 - Lorsqu'une alerte programmée est envoyée, mettre option de supprimer l'alerte.
 - Lorsque Alerte créée, possibilité de retourner à "Mes alertes"
+
+6. Exchanges en Europe.
+- Uniquement Bitstamp en autres solutions. 
+- Critères , SEPA ok (même avec résidence BR)
+- Virer les liens autres que Kraken et Bitstamp, avec étoile pour Kraken car lien affilié. On dit, "Nos recommandations (car cochent les critères pour permettre le transfert)
+
+7. Option compare:
+- Il faut pouvoir demander une somme finale: J'ai bessoin de 500€, et ça calcule combien il faudrait de R$. Titre "€ --> X BRL" Texte adapté.
+

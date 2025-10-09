@@ -99,4 +99,60 @@ export async function getWiseComparison(route, amount) {
     // ❌ PAS DE FALLBACK - on retourne null
     return null;
   }
+ 
+}
+
+/**
+ * Version inversée : calculer montant source nécessaire pour recevoir targetAmount
+ * @param {string} route - 'eurbrl' | 'brleur'
+ * @param {number} targetAmount - Montant qu'on veut RECEVOIR
+ * @returns {object} { providers: [{ provider, in: source_needed, out: target, rate }] }
+ */
+export async function getWiseComparisonReverse(route, targetAmount) {
+  try {
+    const [sourceCurrency, targetCurrency] = route === 'eurbrl' 
+      ? ['EUR', 'BRL'] 
+      : ['BRL', 'EUR'];
+    
+    // Wise API v4 avec targetAmount (receiveAmount)
+    const url = `https://api.wise.com/v4/public/comparisons/?sourceCurrency=${sourceCurrency}&targetCurrency=${targetCurrency}&receiveAmount=${targetAmount}`;
+    
+    const response = await fetch(url, {
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'Mozilla/5.0'
+      }
+    });
+    
+    if (!response.ok) {
+      console.error('[WISE-REVERSE] API error:', response.status);
+      return null;
+    }
+    
+    const data = await response.json();
+    
+    if (!data.providers || data.providers.length === 0) {
+      console.warn('[WISE-REVERSE] No providers found');
+      return null;
+    }
+    
+    const providers = data.providers
+      .filter(p => p.sendAmount && p.receiveAmount)
+      .map(p => ({
+        provider: p.name || 'Unknown',
+        in: parseFloat(p.sendAmount),      // Montant SOURCE à envoyer
+        out: parseFloat(p.receiveAmount),  // Montant CIBLE reçu (= targetAmount normalement)
+        rate: parseFloat(p.sendAmount) / parseFloat(p.receiveAmount),
+        fees: p.fee ? parseFloat(p.fee) : 0
+      }))
+      .sort((a, b) => a.in - b.in); // Trier par montant source ASC (moins = mieux)
+    
+    console.log(`[WISE-REVERSE] ${route}: ${providers.length} providers for target ${targetAmount} ${targetCurrency}`);
+    
+    return { providers };
+    
+  } catch (error) {
+    console.error('[WISE-REVERSE] Error:', error);
+    return null;
+  }
 }
