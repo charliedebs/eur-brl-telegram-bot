@@ -3,7 +3,7 @@ import { messages } from './messages.js';
 import { buildKeyboards } from './keyboards.js';
 import { updateNLUFeedback } from '../services/nlu-logger.js';
 import { getRates, calculateOnChain, getLocale, formatAmount, formatRate, calculateOnChainReverse } from '../services/rates.js';
-import { getWiseComparison } from '../services/wise.js';
+import { getWiseComparison, getWiseComparisonReverse } from '../services/wise.js';
 import { AlertsService } from '../services/alerts.js';
 import { DatabaseService } from '../services/database.js';
 import { parseUserIntent } from '../core/nlu.js';
