@@ -25,7 +25,7 @@ const fr = {
 
 🌐 Choisis ta langue · Escolha o idioma · Choose your language`,
 
-  ABOUT_TEXT: `💡 À propos
+ABOUT_TEXT: `💡 À propos
 
 Ce bot compare les taux EUR↔BRL et te guide pour des transferts on-chain (via blockchain).
 
@@ -33,7 +33,13 @@ Les taux on-chain sont souvent meilleurs que les plateformes traditionnelles. C'
 
 Service gratuit, financé par des liens de parrainage.`,
 
+  ERROR_RATES_UNAVAILABLE: `⚠️ Taux crypto indisponibles. Réessaie dans un instant.`,
+  ERROR_INVALID_AMOUNT: `⚠️ Montant invalide. Entre un nombre (ex. 1000)`,
+  ERROR_UPDATE_FAILED: `❌ Erreur lors de la mise à jour.`,
+
   promptAmt: `💬 Envoie un montant ou choisis :`,
+  
+  askAmount: `✏️ Entre un montant (ex. 1000)`,
   
   askRoute: (amount, locale) => `Tu veux faire quoi avec ${formatAmount(amount, 0, locale)} ?`,
   
@@ -1026,6 +1032,7 @@ Crée ta première alerte pour être notifié automatiquement !`;
     contOn: '🚀 Convertir on-chain',
     stayOff: '🏦 Convertir off-chain',
     calcdetails: '🔍 Détails du calcul',
+    swapMode: '🔄 Inverser (recevoir plutôt)',
     change: '✏️ Changer montant',
     back: '⬅️ Retour',
     sources: '📊 Sources des données',
@@ -1087,9 +1094,10 @@ Crée ta première alerte pour être notifié automatiquement !`;
     chooseCooldown1week: '📆 1 semaine',
     deleteAlert: '🗑️ Supprimer',
     viewAlert: '👁️ Voir détails',
-    youSend:   "💰 J'envoie ce montant",
-    youTarget: "🎯 Je veux recevoir un montant précis",
     whyOnchain: "💡 Pourquoi on-chain ?",
+    faqDoubt: "🤔 Un doute ?",
+    skipToStep2: "⏭️ Passer à l'étape 2",
+    skipToStep3: "⏭️ Passer à l'étape 3",
   }
 };
 
@@ -1110,7 +1118,13 @@ As taxas on-chain costumam ser melhores que as plataformas tradicionais. É lega
 
 Serviço gratuito, financiado por links de indicação.`,
 
-  promptAmt: `💬 Envie um valor ou escolha:`,
+ERROR_RATES_UNAVAILABLE: `⚠️ Taxas crypto indisponíveis. Tente novamente em instantes.`,
+ERROR_INVALID_AMOUNT: `⚠️ Valor inválido. Digite um número (ex. 1000)`,
+ERROR_UPDATE_FAILED: `❌ Erro ao atualizar.`,
+
+promptAmt: `💬 Envie um valor ou escolha:`,
+
+  askAmount: `✏️ Digite um valor (ex. 1000)`,
   
   askRoute: (amount, locale) => `O que você quer fazer com ${formatAmount(amount, 0, locale)}?`,
   
@@ -2074,6 +2088,7 @@ Exemplos: 2.5, 3, 5`,
     contOn: '🚀 Converter on-chain',
     stayOff: '🏦 Converter off-chain',
     calcdetails: '🔍 Detalhes do cálculo',
+    swapMode: '🔄 Inverter (receber ao invés)',
     change: '✏️ Alterar valor',
     back: '⬅️ Voltar',
     sources: '📊 Fontes dos dados',
@@ -2134,8 +2149,9 @@ Exemplos: 2.5, 3, 5`,
     chooseCooldown1week: '📆 1 semana',
     deleteAlert: '🗑️ Apagar',
     viewAlert: '👁️ Ver detalhes',
-    youSend:   "💰 Quero enviar este valor",
-    youTarget: "🎯 Quero receber um valor exato",
+    faqDoubt: "🤔 Alguma dúvida?",
+    skipToStep2: "⏭️ Pular para etapa 2",
+    skipToStep3: "⏭️ Pular para etapa 3",
     whyOnchain: "💡 Por que on-chain?",
     askQuestion: '💬 Fazer uma pergunta',
 
@@ -2159,7 +2175,13 @@ On-chain rates are often better than traditional platforms. It's legal, secure, 
 
 Free service, funded by referral links.`,
 
-  promptAmt: `💬 Send an amount or choose:`,
+ERROR_RATES_UNAVAILABLE: `⚠️ Crypto rates unavailable. Try again in a moment.`,
+  ERROR_INVALID_AMOUNT: `⚠️ Invalid amount. Enter a number (e.g. 1000)`,
+  ERROR_UPDATE_FAILED: `❌ Update failed.`,
+
+promptAmt: `💬 Send an amount or choose:`,
+
+  askAmount: `✏️ Enter an amount (e.g. 1000)`,
   
   askRoute: (amount, locale) => `What do you want to do with ${formatAmount(amount, 0, locale)}?`,
   
@@ -3120,6 +3142,7 @@ Examples: 2.5, 3, 5`,
     contOn: '🚀 Convert on-chain',
     stayOff: '🏦 Convert off-chain',
     calcdetails: '🔍 Calculation details',
+    swapMode: '🔄 Swap (receive instead)',
     change: '✏️ Change amount',
     back: '⬅️ Back',
     sources: '📊 Data sources',
@@ -3180,8 +3203,9 @@ Examples: 2.5, 3, 5`,
     chooseCooldown1week: '📆 1 week',
     deleteAlert: '🗑️ Delete',
     viewAlert: '👁️ View details',
-    youSend:   "💰 I send this amount",
-    youTarget: "🎯 I want to receive an exact amount",
+    faqDoubt: "🤔 Any doubts?",
+    skipToStep2: "⏭️ Skip to step 2",
+    skipToStep3: "⏭️ Skip to step 3",
     whyOnchain: "💡 Why on-chain?",
     askQuestion: '💬 Ask a question',
   },

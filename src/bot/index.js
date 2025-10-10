@@ -107,26 +107,6 @@ bot.action('action:back_main', async (ctx) => {
   await ctx.answerCbQuery();
 });
 
-bot.action(/^route:(send|target):(eurbrl|brleur)$/, async (ctx) => {
-  const mode = ctx.match[1]; // 'send' | 'target'
-  const route = ctx.match[2];
-  const msg = getMsg(ctx);
-  const locale = getLocale(ctx.state.lang);
-  
-  if (mode === 'send') {
-    // Mode classique : "J'envoie X"
-    ctx.session.awaitingAmount = route;
-    ctx.session.targetMode = false;
-    await ctx.editMessageText(msg.askAmount || `✏️ Entre un montant à envoyer (ex. 1000)`, { parse_mode: 'HTML' });
-  } else {
-    // Mode target : "Je veux recevoir X"
-    ctx.session.awaitingAmount = route;
-    ctx.session.targetMode = true;
-    await ctx.editMessageText(msg.COMPARE_TARGET_INTRO || `💡 Entre le montant que tu veux recevoir`, { parse_mode: 'HTML' });
-  }
-  
-  await ctx.answerCbQuery();
-});
 
 bot.action(/^route:(eurbrl|brleur):(\d+)$/, async (ctx) => {
   const route = ctx.match[1];
@@ -134,8 +114,8 @@ bot.action(/^route:(eurbrl|brleur):(\d+)$/, async (ctx) => {
 
   ctx.session.lastRoute = route;
   ctx.session.lastAmount = amount;
-  ctx.session.targetMode = false; // Mode classique par défaut
 
+  // Par défaut : mode "send" (classique)
   await showComparison(ctx, route, amount, false);
   await ctx.answerCbQuery();
 });
@@ -143,6 +123,11 @@ bot.action(/^route:(eurbrl|brleur):(\d+)$/, async (ctx) => {
 async function showComparison(ctx, route, amount, isTargetMode = false) {
   const msg = getMsg(ctx);
   const locale = getLocale(ctx.state.lang);
+  
+  // Sauvegarder dans session
+  ctx.session.lastRoute = route;
+  ctx.session.lastAmount = amount;
+  ctx.session.lastIsTargetMode = isTargetMode;
   
   const [rates, wiseData] = await Promise.all([
     getRates(),
@@ -487,6 +472,16 @@ bot.action(/^action:change_amount:(.+)$/, async (ctx) => {
   
   ctx.session.awaitingAmount = route;
   await ctx.reply("✏️ Entre un montant (ex. 1000)");
+  await ctx.answerCbQuery();
+});
+
+bot.action(/^action:swap_mode:(.+):(\d+)$/, async (ctx) => {
+  const route = ctx.match[1];
+  const amount = parseFloat(ctx.match[2]);
+  
+  // Inverser le mode : si on était en mode "send", passer en "target" et vice-versa
+  const currentMode = ctx.session.lastIsTargetMode || false;
+  await showComparison(ctx, route, amount, !currentMode);
   await ctx.answerCbQuery();
 });
 
@@ -1070,25 +1065,30 @@ if (ctx.session?.awaitingFaqQuestion) {
         const greetingKb = buildKeyboards(greetingMsg, 'lang_select');
         return ctx.reply(greetingMsg.INTRO_TEXT, { parse_mode: 'HTML', ...greetingKb });
         
-      case 'compare':
-        if (intent.entities.language && intent.entities.language !== ctx.state.lang) {
-          const isFirstMessage = ctx.session.messageHistory.length <= 1;
-          const isHighConfidence = intent.confidence >= 0.85;
-          
-          if (isFirstMessage || isHighConfidence) {
-            await db.updateUser(ctx.from.id, { language: intent.entities.language });
-            ctx.state.lang = intent.entities.language;
+        case 'compare':
+          if (intent.entities.language && intent.entities.language !== ctx.state.lang) {
+            const isFirstMessage = ctx.session.messageHistory.length <= 1;
+            const isHighConfidence = intent.confidence >= 0.85;
+            
+            if (isFirstMessage || isHighConfidence) {
+              await db.updateUser(ctx.from.id, { language: intent.entities.language });
+              ctx.state.lang = intent.entities.language;
+            }
           }
-        }
-        
-        const currentMsg = getMsg(ctx);
-        const currentLocale = getLocale(ctx.state.lang);
-        
-        if (intent.entities.amount && intent.entities.route) {
-          ctx.session.lastRoute = intent.entities.route;
-          ctx.session.lastAmount = intent.entities.amount;
-          return showComparison(ctx, intent.entities.route, intent.entities.amount);
-        }
+          
+          const currentMsg = getMsg(ctx);
+          const currentLocale = getLocale(ctx.state.lang);
+          
+          // Détecter si c'est un mode "target" (recevoir plutôt qu'envoyer)
+          const textLower = text.toLowerCase();
+          const targetKeywords = ['recevoir', 'receber', 'receive', 'receiving', 'obter', 'obtenir', 'get'];
+          const isTargetMode = targetKeywords.some(keyword => textLower.includes(keyword));
+          
+          if (intent.entities.amount && intent.entities.route) {
+            ctx.session.lastRoute = intent.entities.route;
+            ctx.session.lastAmount = intent.entities.amount;
+            return showComparison(ctx, intent.entities.route, intent.entities.amount, isTargetMode);
+          }
         
         if (intent.entities.amount && !intent.entities.route) {
           if (intent.confidence < 0.7) {
