@@ -91,18 +91,18 @@ Service gratuit, financé par des liens de parrainage.`,
     } else {
       // Mode classique : montants OUT
       if (route === 'eurbrl') {
-        onchainLine = `🌍 On-chain\n€${formatAmount(amount, 0, locale)} → R$${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`;
+        onchainLine = `🌍 On-chain\n€${formatAmount(amount, 0, locale)} → R$ ${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`;
       } else {
-        onchainLine = `🌍 On-chain\nR$${formatAmount(amount, 0, locale)} → €${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`;
+        onchainLine = `🌍 On-chain\nR$ ${formatAmount(amount, 0, locale)} → €${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`;
       }
       
       if (!bestBank) {
         bankLine = `🏦 Meilleur off-chain\n⚠️ Taux indisponible`;
       } else {
         if (route === 'eurbrl') {
-          bankLine = `🏦 ${bestBank.provider}\n€${formatAmount(amount, 0, locale)} → R$${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`;
+          bankLine = `🏦 ${bestBank.provider}\n€${formatAmount(amount, 0, locale)} → R$ ${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`;
         } else {
-          bankLine = `🏦 ${bestBank.provider}\nR$${formatAmount(amount, 0, locale)} → €${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`;
+          bankLine = `🏦 ${bestBank.provider}\nR$ ${formatAmount(amount, 0, locale)} → €${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`;
         }
       }
     }
@@ -117,7 +117,7 @@ Service gratuit, financé par des liens de parrainage.`,
             : `• ${p.provider} : ~${formatAmount(p.in, 0, locale)} BRL`;
         } else {
           return route === 'eurbrl'
-            ? `• ${p.provider} : R$${formatAmount(p.out, 0, locale)}`
+            ? `• ${p.provider} : R$ ${formatAmount(p.out, 0, locale)}`
             : `• ${p.provider} : €${formatAmount(p.out, 2, locale)}`;
         }
       }).join('\n');
@@ -172,13 +172,13 @@ Service gratuit, financé par des liens de parrainage.`,
 3️⃣ <b>Vente USDC au Brésil</b>
    🪙 USDC à vendre : ${formatAmount(usdcAfterNetwork, 2, locale)} USDC
    💱 Taux USDC/BRL : ${formatRate(rates.usdcBRL, locale)}
-   📉 Frais trading (~0,1-0,2%) : −R$${formatAmount(usdcAfterNetwork * rates.usdcBRL * 0.001, 2, locale)}
-   💰 BRL obtenus : R$${formatAmount(brlAfterTrade, 2, locale)}
+   📉 Frais trading (~0,1-0,2%) : −R$ ${formatAmount(usdcAfterNetwork * rates.usdcBRL * 0.001, 2, locale)}
+   💰 BRL obtenus : R$ ${formatAmount(brlAfterTrade, 2, locale)}
 
 4️⃣ <b>Retrait Pix</b>
-   📉 Frais Pix (~R$3,50) : −R$${formatAmount(3.5, 2, locale)}
+   📉 Frais Pix (~R$3,50) : −R$ ${formatAmount(3.5, 2, locale)}
    
-✅ <b>Total reçu : R$${formatAmount(brlNet, 2, locale)}</b>
+✅ <b>Total reçu : R$ ${formatAmount(brlNet, 2, locale)}</b>
 📊 <b>Taux effectif : ${formatRate(onchain.rate, locale)}</b>
 
 💡 Les frais réels peuvent varier légèrement selon ta plateforme et ton volume de trading.`;
@@ -191,9 +191,9 @@ Service gratuit, financé par des liens de parrainage.`,
 📊 BRL → EUR via USDC
 
 1️⃣ <b>Achat USDC au Brésil</b>
-   💰 Montant : R$${formatAmount(amount, 2, locale)}
+   💰 Montant : R$ ${formatAmount(amount, 2, locale)}
    💱 Taux BRL/USDC : ${formatRate(1/rates.usdcBRL, locale)}
-   📉 Frais trading (~0,1-0,2%) : −R$${formatAmount(amount * 0.001, 2, locale)}
+   📉 Frais trading (~0,1-0,2%) : −R$ ${formatAmount(amount * 0.001, 2, locale)}
    🪙 USDC obtenus : ${formatAmount(usdcFromBRL, 2, locale)} USDC
 
 2️⃣ <b>Transfert blockchain</b>
@@ -244,7 +244,7 @@ buildOffChain: ({ route, amount, bestBank, others, locale, onchainAmount }) => {
   // ⚠️ NOUVEAU : Format sans frais, juste taux effectif
   const providersList = displayProviders.map((p, i) => {
     if (route === 'eurbrl') {
-      return `<b>${i + 1}. ${p.provider}</b>\n💰 Tu reçois : R$${formatAmount(p.out, 2, locale)}\n📊 Taux effectif : ${formatRate(p.rate, locale)}`;
+      return `<b>${i + 1}. ${p.provider}</b>\n💰 Tu reçois : R$ ${formatAmount(p.out, 2, locale)}\n📊 Taux effectif : ${formatRate(p.rate, locale)}`;
     } else {
       return `<b>${i + 1}. ${p.provider}</b>\n💰 Tu reçois : €${formatAmount(p.out, 2, locale)}\n📊 Taux effectif : ${formatRate(p.rate, locale)}`;
     }
@@ -535,7 +535,7 @@ Estimation : tu recevras ~${formatAmount(usdcAmount - 1, 2, locale)} USDC côté
 
 👉 Pour la plupart des gens, "ordre au marché" = le plus simple et rapide.
 
-Estimation de ton solde : ~R$${formatAmount(brlAmount, 2, locale)}
+Estimation de ton solde : ~R$ ${formatAmount(brlAmount, 2, locale)}
 *⚠️ Estimation proche du réel (frais ~0,10–0,20%).*`,
 
   STEP_3_3: (brlNet, locale) => `3️⃣ Retirer ton argent en R$
@@ -551,7 +551,7 @@ Estimation de ton solde : ~R$${formatAmount(brlAmount, 2, locale)}
 👉 Généralement, les frais sont très bas (ex. Binance ~R$3,50 par retrait Pix).
 Ça devrait être gratuit honnêtement… mais bon 😅
 
-Estimation de ton solde reçu : ~R$${formatAmount(brlNet, 2, locale)} nets
+Estimation de ton solde reçu : ~R$ ${formatAmount(brlNet, 2, locale)} nets
 *⚠️ Allez, on ne devrait pas être trop loin de la réalité ;)*`,
 
   WHY_NOT_EXACT: `🤔 Pourquoi on ne peut pas te donner le montant exact ?
@@ -1022,7 +1022,7 @@ Crée ta première alerte pour être notifié automatiquement !`;
     langEN: '🇬🇧 English',
     about: 'ℹ️ À propos',
     eurbrl: (amt, locale) => `🇪🇺 EUR → 🇧🇷 BRL (Pix) · €${formatAmount(amt, 0, locale)}`,
-    brleur: (amt, locale) => `🇧🇷 BRL → 🇪🇺 EUR (SEPA) · R$${formatAmount(amt, 0, locale)}`,
+    brleur: (amt, locale) => `🇧🇷 BRL → 🇪🇺 EUR (SEPA) · R$ ${formatAmount(amt, 0, locale)}`,
     contOn: '🚀 Convertir on-chain',
     stayOff: '🏦 Convertir off-chain',
     calcdetails: '🔍 Détails du calcul',
@@ -1065,6 +1065,7 @@ Crée ta première alerte pour être notifié automatiquement !`;
     setAlert: '⏰ Activer mon alerte',
     premium: '🚀 Découvrir Premium',
     giveFeedback: '💬 Donner une suggestion',
+    askQuestion: '💬 Poser une question',
     seePremium: '💎 Voir Premium',
     subscribe3m: '📱 15 R$ - 3 mois',
     subscribe6m: '📱 27 R$ - 6 mois',
@@ -1086,6 +1087,9 @@ Crée ta première alerte pour être notifié automatiquement !`;
     chooseCooldown1week: '📆 1 semaine',
     deleteAlert: '🗑️ Supprimer',
     viewAlert: '👁️ Voir détails',
+    youSend:   "💰 J'envoie ce montant",
+    youTarget: "🎯 Je veux recevoir un montant précis",
+    whyOnchain: "💡 Pourquoi on-chain ?",
   }
 };
 
@@ -1158,19 +1162,19 @@ Serviço gratuito, financiado por links de indicação.`,
       }
     } else {
       if (route === 'eurbrl') {
-        onchainLine = `🌍 On-chain\n€${formatAmount(amount, 0, locale)} → R$${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`;
+        onchainLine = `🌍 On-chain\n€${formatAmount(amount, 0, locale)} → R$ ${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`;
       } else {
-        onchainLine = `🌍 On-chain\nR$${formatAmount(amount, 0, locale)} → €${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`;
+        onchainLine = `🌍 On-chain\nR$ ${formatAmount(amount, 0, locale)} → €${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`;
       }
       
       if (!bestBank) {
         bankLine = `🏦 Melhor off-chain\n⚠️ Taxa indisponível`;
       } else {
         if (route === 'eurbrl') {
-          bankLine = `🏦 ${bestBank.provider}\n€${formatAmount(amount, 0, locale)} → R$${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`;
+          bankLine = `🏦 ${bestBank.provider}\n€${formatAmount(amount, 0, locale)} → R$ ${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`;
         } else {
-          bankLine = `🏦 ${bestBank.provider}\nR$${formatAmount(amount, 0, locale)} → €${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`;
-        }
+          bankLine = `🏦 ${bestBank.provider}\nR$ ${formatAmount(amount, 0, locale)} → €${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`;
+        } 
       }
     }
     
@@ -1184,7 +1188,7 @@ Serviço gratuito, financiado por links de indicação.`,
             : `• ${p.provider} : ~${formatAmount(p.in, 0, locale)} BRL`;
         } else {
           return route === 'eurbrl'
-            ? `• ${p.provider} : R$${formatAmount(p.out, 0, locale)}`
+            ? `• ${p.provider} : R$ ${formatAmount(p.out, 0, locale)}`
             : `• ${p.provider} : €${formatAmount(p.out, 2, locale)}`;
         }
       }).join('\n');
@@ -1308,7 +1312,7 @@ buildOffChain: ({ route, amount, bestBank, others, locale, onchainAmount }) => {
   
   const providersList = displayProviders.map((p, i) => {
     if (route === 'eurbrl') {
-      return `<b>${i + 1}. ${p.provider}</b>\n💰 Você recebe : R$${formatAmount(p.out, 2, locale)}\n📊 Taxa efetiva : ${formatRate(p.rate, locale)}`;
+      return `<b>${i + 1}. ${p.provider}</b>\n💰 Você recebe : R$ ${formatAmount(p.out, 2, locale)}\n📊 Taxa efetiva : ${formatRate(p.rate, locale)}`;
     } else {
       return `<b>${i + 1}. ${p.provider}</b>\n💰 Você recebe : €${formatAmount(p.out, 2, locale)}\n📊 Taxa efetiva : ${formatRate(p.rate, locale)}`;
     }
@@ -2130,6 +2134,11 @@ Exemplos: 2.5, 3, 5`,
     chooseCooldown1week: '📆 1 semana',
     deleteAlert: '🗑️ Apagar',
     viewAlert: '👁️ Ver detalhes',
+    youSend:   "💰 Quero enviar este valor",
+    youTarget: "🎯 Quero receber um valor exato",
+    whyOnchain: "💡 Por que on-chain?",
+    askQuestion: '💬 Fazer uma pergunta',
+
   },
 };
 
@@ -2202,18 +2211,18 @@ Free service, funded by referral links.`,
       }
     } else {
       if (route === 'eurbrl') {
-        onchainLine = `🌍 On-chain\n€${formatAmount(amount, 0, locale)} → R$${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`;
+        onchainLine = `🌍 On-chain\n€${formatAmount(amount, 0, locale)} → R$ ${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`;
       } else {
-        onchainLine = `🌍 On-chain\nR$${formatAmount(amount, 0, locale)} → €${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`;
+        onchainLine = `🌍 On-chain\nR$ ${formatAmount(amount, 0, locale)} → €${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`;
       }
       
       if (!bestBank) {
         bankLine = `🏦 Best off-chain\n⚠️ Rate unavailable`;
       } else {
         if (route === 'eurbrl') {
-          bankLine = `🏦 ${bestBank.provider}\n€${formatAmount(amount, 0, locale)} → R$${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`;
+          bankLine = `🏦 ${bestBank.provider}\n€${formatAmount(amount, 0, locale)} → R$ ${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`;
         } else {
-          bankLine = `🏦 ${bestBank.provider}\nR$${formatAmount(amount, 0, locale)} → €${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`;
+          bankLine = `🏦 ${bestBank.provider}\nR$ ${formatAmount(amount, 0, locale)} → €${formatAmount(bestBank.out, 2, locale)} (${formatRate(bestBank.rate, locale)})`;
         }
       }
     }
@@ -2228,7 +2237,7 @@ Free service, funded by referral links.`,
             : `• ${p.provider} : ~${formatAmount(p.in, 0, locale)} BRL`;
         } else {
           return route === 'eurbrl'
-            ? `• ${p.provider} : R$${formatAmount(p.out, 0, locale)}`
+            ? `• ${p.provider} : R$ ${formatAmount(p.out, 0, locale)}`
             : `• ${p.provider} : €${formatAmount(p.out, 2, locale)}`;
         }
       }).join('\n');
@@ -2352,7 +2361,7 @@ buildOffChain: ({ route, amount, bestBank, others, locale, onchainAmount }) => {
   
   const providersList = displayProviders.map((p, i) => {
     if (route === 'eurbrl') {
-      return `<b>${i + 1}. ${p.provider}</b>\n💰 You receive : R$${formatAmount(p.out, 2, locale)}\n📊 Effective rate : ${formatRate(p.rate, locale)}`;
+      return `<b>${i + 1}. ${p.provider}</b>\n💰 You receive : R$ ${formatAmount(p.out, 2, locale)}\n📊 Effective rate : ${formatRate(p.rate, locale)}`;
     } else {
       return `<b>${i + 1}. ${p.provider}</b>\n💰 You receive : €${formatAmount(p.out, 2, locale)}\n📊 Effective rate : ${formatRate(p.rate, locale)}`;
     }
@@ -3159,7 +3168,7 @@ Examples: 2.5, 3, 5`,
     myAlerts: '🔔 My alerts',
     conservative: '🛡️ Conservative',
     balanced: '⚖️ Balanced',
-    aggressive: '🎯 Oportunistic',
+    aggressive: '🎯 Opportunistic',
     custom: '✏️ Custom',
     disableAlert: '🔕 Disable',
     editAlert: '✏️ Edit',
@@ -3171,6 +3180,10 @@ Examples: 2.5, 3, 5`,
     chooseCooldown1week: '📆 1 week',
     deleteAlert: '🗑️ Delete',
     viewAlert: '👁️ View details',
+    youSend:   "💰 I send this amount",
+    youTarget: "🎯 I want to receive an exact amount",
+    whyOnchain: "💡 Why on-chain?",
+    askQuestion: '💬 Ask a question',
   },
 };
 

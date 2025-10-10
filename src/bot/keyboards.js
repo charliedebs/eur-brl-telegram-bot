@@ -42,8 +42,8 @@ export function buildKeyboards(msg, type, options = {}) {
       case 'amount_or_target':
         const routeForTarget = options.route || 'eurbrl';
         return Markup.inlineKeyboard([
-          [Markup.button.callback('💰 J\'envoie ce montant', `route:send:${routeForTarget}`)],
-          [Markup.button.callback('🎯 Je veux recevoir un montant précis', `route:target:${routeForTarget}`)],
+          [Markup.button.callback(msg.btn.youSend,  `route:send:${routeForTarget}`)],
+          [Markup.button.callback(msg.btn.youTarget, `route:target:${routeForTarget}`)],
           [Markup.button.callback(msg.btn.back, 'action:back_main')]
         ]);
 
@@ -56,12 +56,6 @@ export function buildKeyboards(msg, type, options = {}) {
           [Markup.button.callback(msg.btn.change, `action:change_amount:${route}`)],
           [Markup.button.callback(msg.btn.sources, 'action:sources')],
           [Markup.button.callback(msg.btn.myAlerts, 'alert:list')],
-
-          // 👇 NOUVEAUX BOUTONS FEEDBACK
-          [
-            Markup.button.callback('👍', 'feedback:correct'),
-            Markup.button.callback('👎 Pas ça', 'feedback:wrong')
-          ]
         ]);
     
     // Écran 2bis : Sources
@@ -113,10 +107,10 @@ case 'onchain_intro':
 // ⚠️ NOUVEAU CASE : faq_menu
 case 'faq_menu':
   return Markup.inlineKeyboard([
-    [Markup.button.callback('🪙 Qu\'est-ce que l\'USDC ?', 'action:what_usdc')],
-    [Markup.button.callback('🏦 Qu\'est-ce qu\'un exchange ?', 'action:what_exchange')],
-    [Markup.button.callback('💡 Pourquoi on-chain ?', 'action:faq_why_onchain')],
-    [Markup.button.callback('📧 Poser une question', 'action:faq_send_question')],
+    [Markup.button.callback(msg.btn.whatIsUSDC, 'action:what_usdc')],
+    [Markup.button.callback(msg.btn.whatIsExchange, 'action:what_exchange')],
+    [Markup.button.callback(msg.btn.whyOnchain, 'action:faq_why_onchain')],
+    [Markup.button.callback(msg.btn.askQuestion, 'action:faq_send_question')],
     [Markup.button.callback(msg.btn.back, `action:onchain_intro:${route}:${amount}`)],
   ]);
 
@@ -302,6 +296,7 @@ case 'what_exchange':
       [Markup.button.callback(msg.btn.subscribe3m, 'premium:subscribe:3')],
       [Markup.button.callback(msg.btn.subscribe6m, 'premium:subscribe:6')],
       [Markup.button.callback(msg.btn.subscribe12m, 'premium:subscribe:12')],
+      [Markup.button.callback(msg.btn.back, 'premium:pricing')]
     ]);
 
    // 👇 NOUVEAUX CASES ALERTES
