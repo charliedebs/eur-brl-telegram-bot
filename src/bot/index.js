@@ -61,20 +61,274 @@ bot.command('premium', async (ctx) => {
   await ctx.reply(msg.PREMIUM_PRICING, { parse_mode: 'HTML', ...kb });
 });
 
-bot.command('alerts', async (ctx) => {
+// ==================== /rate [amount] ====================
+bot.command('rate', async (ctx) => {
   const msg = getMsg(ctx);
+  const locale = getLocale(ctx.state.lang);
+  
+  // Parse amount (default 1000)
+  const args = ctx.message.text.split(' ').slice(1).join(' ').trim();
+  const amount = args ? parseFloat(args.replace(/[^\d.]/g, '')) : 1000;
+  
+  if (!amount || !isFinite(amount)) {
+    return ctx.reply(msg.ERROR_INVALID_AMOUNT);
+  }
+  
+  const [rates, wiseData] = await Promise.all([
+    getRates(),
+    getWiseComparison('eurbrl', amount)
+  ]);
+  
+  if (!rates) {
+    return ctx.reply(msg.ERROR_RATES_UNAVAILABLE);
+  }
+  
+  const onchain = calculateOnChain('eurbrl', amount, rates);
+  const bestBank = wiseData?.providers?.[0] || null;
+  
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString(locale, {hour: '2-digit', minute: '2-digit'});
+  const tzAbbr = new Date().toLocaleTimeString('en-US', {timeZoneName: 'short'}).split(' ')[2];
+  
+  const crossInverse = 1 / rates.cross;
+  
+  let text = `💱 <b>EUR ↔ BRL</b>
+
+EUR → BRL : ${formatRate(rates.cross, locale)}
+BRL → EUR : ${formatRate(crossInverse, locale)}
+
+🌍 <b>On-chain</b>
+€${formatAmount(amount, 0, locale)} → R$ ${formatAmount(onchain.out, 0, locale)}`;
+
+  if (bestBank) {
+    text += `
+
+🏦 <b>Wise</b>
+€${formatAmount(amount, 0, locale)} → R$ ${formatAmount(bestBank.out, 0, locale)}`;
+  }
+  
+  text += `
+
+⏰ ${timeStr} ${tzAbbr}`;
+  
+  const kb = Markup.inlineKeyboard([
+    [
+      Markup.button.callback(msg.btn.change, `action:change_amount:eurbrl`),
+      Markup.button.callback(msg.btn.createAlert, 'alert:choose_pair')
+    ]
+  ]);
+  
+  await ctx.reply(text, { parse_mode: 'HTML', ...kb });
+});
+
+// ==================== /alert [params] ====================
+
+// Helper function: Parse alert parameters
+function parseAlertParams(args) {
+  if (!args) return null;
+  
+  // Pattern 1: "6.30" → Absolu EUR→BRL
+  const absoluteMatch = args.match(/^(\d+(?:[.,]\d+)?)$/);
+  if (absoluteMatch) {
+    return { 
+      pair: 'eurbrl', 
+      type: 'absolute', 
+      value: parseFloat(absoluteMatch[1].replace(',', '.'))
+    };
+  }
+  
+  // Pattern 2: "+3%" ou "3%" → Relatif EUR→BRL
+  const relativeMatch = args.match(/^\+?(\d+(?:[.,]\d+)?)%?$/);
+  if (relativeMatch) {
+    return { 
+      pair: 'eurbrl', 
+      type: 'relative', 
+      value: parseFloat(relativeMatch[1].replace(',', '.')),
+      refType: 'avg30d'
+    };
+  }
+  
+  // Pattern 3: "brl 0.165" → Absolu BRL→EUR
+  const brlAbsoluteMatch = args.match(/^brl\s+(\d+(?:[.,]\d+)?)$/i);
+  if (brlAbsoluteMatch) {
+    return { 
+      pair: 'brleur', 
+      type: 'absolute', 
+      value: parseFloat(brlAbsoluteMatch[1].replace(',', '.'))
+    };
+  }
+  
+  // Pattern 4: "brl +5%" → Relatif BRL→EUR
+  const brlRelativeMatch = args.match(/^brl\s+\+?(\d+(?:[.,]\d+)?)%?$/i);
+  if (brlRelativeMatch) {
+    return { 
+      pair: 'brleur', 
+      type: 'relative', 
+      value: parseFloat(brlRelativeMatch[1].replace(',', '.')),
+      refType: 'avg30d'
+    };
+  }
+  
+  return null;
+}
+
+bot.command('alert', async (ctx) => {
+  const msg = getMsg(ctx);
+  const locale = getLocale(ctx.state.lang);
   
   const isPremium = await db.isPremium(ctx.from.id);
+  
   if (!isPremium) {
     const kb = buildKeyboards(msg, 'not_premium');
     return ctx.reply(msg.NOT_PREMIUM, { parse_mode: 'HTML', ...kb });
   }
   
-  const userAlerts = await db.getUserAlerts(ctx.from.id);
+  const args = ctx.message.text.split(' ').slice(1).join(' ').trim();
+  
+  // Pas de paramètre → redirige vers flow complet
+  if (!args) {
+    if (ctx.chat.type === 'private') {
+      // Lance flow création
+      const kb = buildKeyboards(msg, 'alert_choose_pair');
+      return ctx.reply(msg.ALERT_CHOOSE_PAIR, { parse_mode: 'HTML', ...kb });
+    } else {
+      // Dans groupe → deep link vers privé
+      const deepLinkUrl = `https://t.me/${ctx.botInfo.username}?start=alert`;
+      const kb = Markup.inlineKeyboard([
+        [Markup.button.url(msg.btn.createAlert, deepLinkUrl)]
+      ]);
+      
+      return ctx.reply(
+        msg.ALERT_DEEPLINK_GROUP,
+        { parse_mode: 'HTML', ...kb }
+      );
+    }
+  }
+  
+  // Avec paramètre → parse et crée
+  const parsed = parseAlertParams(args);
+  
+  if (!parsed) {
+    return ctx.reply(msg.ALERT_INVALID_SYNTAX);
+  }
+  
+  // Créer l'alerte
+  const user = await db.getUser(ctx.from.id);
+  
+  const alertData = {
+    pair: parsed.pair,
+    threshold_type: parsed.type,
+    threshold_value: parsed.value,
+    reference_type: parsed.refType || null,
+    cooldown_minutes: 60 // Default 1h
+  };
+  
+  const alert = await db.createAlert(user.id, alertData);
+  
+  if (!alert) {
+    return ctx.reply(msg.ERROR_UPDATE_FAILED);
+  }
+  
+  // Calculer infos pour affichage
+  const rates = await getRates();
+  const currentRate = parsed.pair === 'eurbrl' ? rates.cross : 1 / rates.cross;
+  
+  let refValue = null;
+  let calculatedThreshold;
+  
+  if (parsed.type === 'absolute') {
+    calculatedThreshold = parsed.value;
+  } else {
+    refValue = await db.getAverage30Days(parsed.pair);
+    calculatedThreshold = refValue * (1 + parsed.value / 100);
+  }
+  
+  // Message de confirmation
+  const confirmMsg = msg.ALERT_CREATED_QUICK(alert, currentRate, refValue, calculatedThreshold, locale);
+  
+  // En privé
+  if (ctx.chat.type === 'private') {
+    const kb = Markup.inlineKeyboard([
+      [Markup.button.callback(msg.btn.myAlerts, 'alert:list')],
+      [Markup.button.callback('➕ ' + msg.btn.createAlert, 'alert:choose_pair')]
+    ]);
+    
+    return ctx.reply(confirmMsg, { parse_mode: 'HTML', ...kb });
+  }
+  
+  // Dans groupe : message public + privé
+  const username = ctx.from.username ? `@${ctx.from.username}` : ctx.from.first_name;
+  await ctx.reply(`✅ ${username} alert created (check private chat)`);
+  
+  const kb = Markup.inlineKeyboard([
+    [Markup.button.callback(msg.btn.myAlerts, 'alert:list')],
+    [Markup.button.callback('➕ ' + msg.btn.createAlert, 'alert:choose_pair')]
+  ]);
+  
+  try {
+    await ctx.telegram.sendMessage(ctx.from.id, confirmMsg, { parse_mode: 'HTML', ...kb });
+  } catch (error) {
+    console.error('[ALERT] Cannot send private message:', error);
+    // User n'a pas démarré le bot en privé
+    await ctx.reply(
+      `⚠️ ${username} I couldn't send you a private message. Please start a chat with me first: https://t.me/${ctx.botInfo.username}`
+    );
+  }
+});
+
+// ==================== /alerts (liste) ====================
+// Note: Remplace la commande /alerts existante dans ton code
+bot.command('alerts', async (ctx) => {
+  const msg = getMsg(ctx);
   const locale = getLocale(ctx.state.lang);
   
+  const isPremium = await db.isPremium(ctx.from.id);
+  
+  if (!isPremium) {
+    const kb = buildKeyboards(msg, 'not_premium');
+    return ctx.reply(msg.NOT_PREMIUM_ALERTS, { parse_mode: 'HTML', ...kb });
+  }
+  
+  const userAlerts = await db.getUserAlerts(ctx.from.id);
+  
+  // Dans groupe : affichage public simplifié
+  if (ctx.chat.type !== 'private') {
+    const username = ctx.from.username ? `@${ctx.from.username}` : ctx.from.first_name;
+    
+    if (userAlerts.length === 0) {
+      return ctx.reply(`🔔 ${username} has no active alerts\n\n💡 Use /alert to create one!`);
+    }
+    
+    let text = `🔔 <b>${username}'s alerts</b>\n\n`;
+    
+    userAlerts.forEach((alert, index) => {
+      const pairText = alert.pair === 'eurbrl' ? 'EUR→BRL' : 'BRL→EUR';
+      
+      let threshold;
+      if (alert.threshold_type === 'absolute') {
+        threshold = `≥ ${formatRate(alert.threshold_value, locale)}`;
+      } else {
+        threshold = `+${formatAmount(alert.threshold_value, 1, locale)}%`;
+      }
+      
+      text += `${index + 1}. ${pairText} ${threshold}\n`;
+    });
+    
+    text += `\n💡 Use /alert to create yours!`;
+    
+    return ctx.reply(text, { parse_mode: 'HTML' });
+  }
+  
+  // En privé : affichage complet avec gestion
   const kb = buildKeyboards(msg, 'alerts_list', { alerts: userAlerts });
   await ctx.reply(msg.ALERTS_LIST(userAlerts, locale), { parse_mode: 'HTML', ...kb });
+});
+
+// ==================== /sources ====================
+bot.command('sources', async (ctx) => {
+  const msg = getMsg(ctx);
+  const kb = buildKeyboards(msg, 'sources');
+  await ctx.reply(msg.SOURCES_TEXT, { parse_mode: 'HTML', ...kb });
 });
 
 // ==================== BASIC CALLBACKS ====================

@@ -1021,6 +1021,150 @@ Crée ta première alerte pour être notifié automatiquement !`;
   
   Prix : à partir de 5 R$/mois`,
 
+  ALERT_DEEPLINK_GROUP: `🔔 Pour créer une alerte, clique ici pour continuer en privé :`,
+
+ALERT_INVALID_SYNTAX: `❌ Format invalide
+
+<b>Exemples :</b>
+/alert 6.30        → Alerte EUR→BRL ≥ 6.30
+/alert +3%         → Alerte EUR→BRL +3% vs moy. 30j
+/alert brl 0.165   → Alerte BRL→EUR ≥ 0.165
+/alert brl +5%     → Alerte BRL→EUR +5% vs moy. 30j`,
+
+ALERT_CREATED_QUICK: (alert, currentRate, refValue, calculatedThreshold, locale) => {
+  const pairText = alert.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+  
+  let text = `✅ <b>Alerte créée</b>
+
+${pairText}`;
+
+  if (alert.threshold_type === 'absolute') {
+    text += ` ≥ ${formatRate(alert.threshold_value, locale)}`;
+  } else {
+    text += ` +${formatAmount(alert.threshold_value, 1, locale)}% vs moy. 30j`;
+  }
+  
+  text += `\n⏰ Cooldown : 1h
+
+<b>État actuel :</b>
+• Taux : ${formatRate(currentRate, locale)}`;
+
+  if (refValue) {
+    text += `\n• Moy. 30j : ${formatRate(refValue, locale)}`;
+  }
+  
+  text += `\n• Seuil : ${formatRate(calculatedThreshold, locale)}`;
+  
+  return text;
+},
+
+NOT_PREMIUM_ALERTS: `🔒 Aucune alerte active
+
+Les utilisateurs Premium peuvent créer des alertes illimitées.
+
+💎 Avec Premium :
+• Alertes personnalisées
+• Multi-paires
+• Analyses avancées
+
+Prix : à partir de 5 R$/mois`,
+
+
+ALERT_DEEPLINK_GROUP: `🔔 Para criar um alerta, clique aqui para continuar em privado:`,
+
+ALERT_INVALID_SYNTAX: `❌ Formato inválido
+
+<b>Exemplos :</b>
+/alert 6.30        → Alerta EUR→BRL ≥ 6.30
+/alert +3%         → Alerta EUR→BRL +3% vs média 30d
+/alert brl 0.165   → Alerta BRL→EUR ≥ 0.165
+/alert brl +5%     → Alerta BRL→EUR +5% vs média 30d`,
+
+ALERT_CREATED_QUICK: (alert, currentRate, refValue, calculatedThreshold, locale) => {
+  const pairText = alert.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+  
+  let text = `✅ <b>Alerta criado</b>
+
+${pairText}`;
+
+  if (alert.threshold_type === 'absolute') {
+    text += ` ≥ ${formatRate(alert.threshold_value, locale)}`;
+  } else {
+    text += ` +${formatAmount(alert.threshold_value, 1, locale)}% vs média 30d`;
+  }
+  
+  text += `\n⏰ Cooldown : 1h
+
+<b>Estado atual :</b>
+• Taxa : ${formatRate(currentRate, locale)}`;
+
+  if (refValue) {
+    text += `\n• Média 30d : ${formatRate(refValue, locale)}`;
+  }
+  
+  text += `\n• Limite : ${formatRate(calculatedThreshold, locale)}`;
+  
+  return text;
+},
+
+NOT_PREMIUM_ALERTS: `🔒 Nenhum alerta ativo
+
+Usuários Premium podem criar alertas ilimitados.
+
+💎 Com Premium :
+• Alertas personalizados
+• Multi-pares
+• Análises avançadas
+
+Preço : a partir de 5 R$/mês`,
+
+ALERT_DEEPLINK_GROUP: `🔔 To create an alert, click here to continue in private:`,
+
+ALERT_INVALID_SYNTAX: `❌ Invalid format
+
+<b>Examples:</b>
+/alert 6.30        → Alert EUR→BRL ≥ 6.30
+/alert +3%         → Alert EUR→BRL +3% vs 30d avg
+/alert brl 0.165   → Alert BRL→EUR ≥ 0.165
+/alert brl +5%     → Alert BRL→EUR +5% vs 30d avg`,
+
+ALERT_CREATED_QUICK: (alert, currentRate, refValue, calculatedThreshold, locale) => {
+  const pairText = alert.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+  
+  let text = `✅ <b>Alert created</b>
+
+${pairText}`;
+
+  if (alert.threshold_type === 'absolute') {
+    text += ` ≥ ${formatRate(alert.threshold_value, locale)}`;
+  } else {
+    text += ` +${formatAmount(alert.threshold_value, 1, locale)}% vs 30d avg`;
+  }
+  
+  text += `\n⏰ Cooldown: 1h
+
+<b>Current state:</b>
+• Rate: ${formatRate(currentRate, locale)}`;
+
+  if (refValue) {
+    text += `\n• 30d avg: ${formatRate(refValue, locale)}`;
+  }
+  
+  text += `\n• Threshold: ${formatRate(calculatedThreshold, locale)}`;
+  
+  return text;
+},
+
+NOT_PREMIUM_ALERTS: `🔒 No active alerts
+
+Premium users can create unlimited alerts.
+
+💎 With Premium:
+• Custom alerts
+• Multi-pairs
+• Advanced analytics
+
+Price: from 5 R$/month`,
 
   btn: {
     langFR: '🇫🇷 Français',
