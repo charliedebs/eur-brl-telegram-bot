@@ -61,6 +61,19 @@ bot.command('premium', async (ctx) => {
   await ctx.reply(msg.PREMIUM_PRICING, { parse_mode: 'HTML', ...kb });
 });
 
+// Commande /lang (et alias /language)
+bot.command(['lang', 'language'], async (ctx) => {
+  const msg = messages.en; // On utilise EN par défaut pour le message de choix
+  
+  const text = `🌐 <b>Choose your language</b>
+Escolha o idioma
+Choisis ta langue`;
+  
+  const kb = buildKeyboards(msg, 'lang_select');
+  
+  await ctx.reply(text, { parse_mode: 'HTML', ...kb });
+});
+
 // ==================== /rate [amount] ====================
 bot.command('rate', async (ctx) => {
   const msg = getMsg(ctx);
