@@ -69,13 +69,13 @@ export function buildKeyboards(msg, type, options = {}) {
       // Ajouter Wise si disponible
       if (wiseProvider) {
         const wiseLink = PROVIDER_LINKS['Wise'] || '#';
-        buttons.push([Markup.button.url('⭐ Ouvrir Wise', wiseLink)]);
+        buttons.push([Markup.button.url(msg.btn.openWise, wiseLink)]);
       }
       
       // Ajouter Remitly si disponible
       if (remitlyProvider) {
         const remitlyLink = PROVIDER_LINKS['Remitly'] || '#';
-        buttons.push([Markup.button.url('⭐ Ouvrir Remitly', remitlyLink)]);
+        buttons.push([Markup.button.url(msg.btn.openRemitly, remitlyLink)]);
       }
       
       // Boutons navigation
@@ -147,8 +147,8 @@ case 'what_exchange':
     // Écran 5 : Exchanges Europe
     case 'exchanges_eu':
       return Markup.inlineKeyboard([
-        [Markup.button.url('⭐ Ouvrir Kraken', LINKS.KRAKEN)],
-        [Markup.button.url('Ouvrir Bitstamp', LINKS.BITSTAMP)],
+        [Markup.button.url(msg.btn.openKraken, LINKS.KRAKEN)],
+        [Markup.button.url(msg.btn.openBitstamp, LINKS.BITSTAMP)],
         [Markup.button.callback(msg.btn.createBR, 'action:exchanges_br')],
         [Markup.button.callback(msg.btn.startGuide, `action:start_guide:${route}:${amount}`)],
         [Markup.button.callback(msg.btn.back, `action:onchain_intro:${route}:${amount}`)],
@@ -178,7 +178,7 @@ case 'what_exchange':
     case 'step_1_1':
       return Markup.inlineKeyboard([
         [Markup.button.callback(msg.btn.step1Done, `guide:step:1.2:${route}:${amount}`)],
-        [Markup.button.url('🔗 Kraken', LINKS.KRAKEN)],
+        [Markup.button.url(msg.btn.openKraken, LINKS.KRAKEN)],
         [Markup.button.callback(msg.btn.skipToStep2, `guide:step:2.1:${route}:${amount}`)],
         [Markup.button.callback(msg.btn.back, `action:start_guide:${route}:${amount}`)],
       ]);
@@ -207,7 +207,7 @@ case 'what_exchange':
       case 'step_2_1':
         return Markup.inlineKeyboard([
           [Markup.button.callback(msg.btn.step2Done, `guide:step:2.2:${route}:${amount}`)],
-          [Markup.button.url('🔗 Binance BR', LINKS.BINANCE_BR)],
+          [Markup.button.url(msg.btn.openBinanceBR, LINKS.BINANCE_BR)],
           [Markup.button.callback(msg.btn.skipToStep3, `guide:step:3.1:${route}:${amount}`)],
           [Markup.button.callback(msg.btn.back, `guide:step:1.4:${route}:${amount}`)],
         ]);
@@ -329,42 +329,49 @@ case 'what_exchange':
       case 'alert_choose_type': {
         const { pair } = options;
         return Markup.inlineKeyboard([
-          [Markup.button.callback('📊 Relatif (+X%)', `alert:type:relative:${pair}`)],
-          [Markup.button.callback('🎯 Absolu (valeur fixe)', `alert:type:absolute:${pair}`)],
+          [Markup.button.callback(msg.btn.relativeAlert, `alert:type:relative:${pair}`)],
+          [Markup.button.callback(msg.btn.absoluteAlert, `alert:type:absolute:${pair}`)],
           [Markup.button.callback(msg.btn.back, 'alert:choose_pair')]
         ]);
       }
       
       case 'alert_choose_reference': {
-        const { pair, currentRate, avg7d, avg30d, avg90d, locale } = options;
+        const { pair, currentRate, avg7d, avg30d, avg90d, locale, msg } = options;
+        // NOTE: si 'msg' n'est pas passé dans options, récupère-le comme d'habitude:
+        // const msg = getMsg(locale) ou messages[locale]
+      
         return Markup.inlineKeyboard([
           [Markup.button.callback(
-            `💵 Taux actuel (${formatRate(currentRate, locale)})`,
+            msg.btn.refCurrent(currentRate, locale),
             `alert:ref:current:${pair}`
           )],
           [Markup.button.callback(
-            `📈 Moyenne 7j (${formatRate(avg7d, locale)})`,
+            msg.btn.refAvg7d(avg7d, locale),
             `alert:ref:avg7d:${pair}`
           )],
           [Markup.button.callback(
-            `📊 Moyenne 30j (${formatRate(avg30d, locale)}) ⭐`,
+            msg.btn.refAvg30d(avg30d, locale),
             `alert:ref:avg30d:${pair}`
           )],
           [Markup.button.callback(
-            `📉 Moyenne 90j (${formatRate(avg90d, locale)})`,
+            msg.btn.refAvg90d(avg90d, locale),
             `alert:ref:avg90d:${pair}`
           )],
-          [Markup.button.callback(msg.btn.back, `alert:create:${pair}`)]
+          [Markup.button.callback(
+            msg.btn.back,
+            `alert:type:relative:${pair}`
+          )],
         ]);
       }
+      
       
       case 'alert_choose_percent': {
         const { pair, refType } = options;
         return Markup.inlineKeyboard([
-          [Markup.button.callback('🛡️ +2% (Conservateur)', `alert:percent:2:${refType}:${pair}`)],
-          [Markup.button.callback('⚖️ +3% (Équilibré) ⭐', `alert:percent:3:${refType}:${pair}`)],
-          [Markup.button.callback('🎯 +5% (Opportuniste)', `alert:percent:5:${refType}:${pair}`)],
-          [Markup.button.callback('✏️ Personnalisé', `alert:percent:custom:${refType}:${pair}`)],
+          [Markup.button.callback(msg.btn.conservative, `alert:percent:2:${refType}:${pair}`)],
+          [Markup.button.callback(msg.btn.balanced, `alert:percent:3:${refType}:${pair}`)],
+          [Markup.button.callback(msg.btn.aggressive, `alert:percent:5:${refType}:${pair}`)],
+          [Markup.button.callback(msg.btn.custom, `alert:percent:custom:${refType}:${pair}`)],
           [Markup.button.callback(msg.btn.back, `alert:type:relative:${pair}`)]
         ]);
       }
@@ -381,11 +388,11 @@ case 'what_exchange':
         ].join('-');
         
         return Markup.inlineKeyboard([
-          [Markup.button.callback('⚡ 15 minutes', `alert:cd2:15:${shortcode}`)],
-          [Markup.button.callback('⏱️ 1 heure ⭐', `alert:cd2:60:${shortcode}`)],
-          [Markup.button.callback('⏰ 6 heures', `alert:cd2:360:${shortcode}`)],
-          [Markup.button.callback('📅 24 heures', `alert:cd2:1440:${shortcode}`)],
-          [Markup.button.callback('📆 1 semaine', `alert:cd2:10080:${shortcode}`)],
+          [Markup.button.callback(msg.btn.chooseCooldown15, `alert:cd2:15:${shortcode}`)],
+          [Markup.button.callback(msg.btn.chooseCooldown1h, `alert:cd2:60:${shortcode}`)],
+          [Markup.button.callback(msg.btn.chooseCooldown6h, `alert:cd2:360:${shortcode}`)],
+          [Markup.button.callback(msg.btn.chooseCooldown24h, `alert:cd2:1440:${shortcode}`)],
+          [Markup.button.callback(msg.btn.chooseCooldown1week, `alert:cd2:10080:${shortcode}`)],
           [Markup.button.callback(msg.btn.back, `alert:create:${alertData.pair}`)]
         ]);
       }
@@ -427,7 +434,7 @@ case 'what_exchange':
         buttons.push([Markup.button.callback(label, `alert:view:${alert.id}`)]);
       });
       
-      buttons.push([Markup.button.callback('➕ Créer une alerte', 'alert:choose_pair')]);
+      buttons.push([Markup.button.callback(msg.btn.createAlert, 'alert:choose_pair')]);
       buttons.push([Markup.button.callback(msg.btn.back, 'action:back_main')]);
       
       return Markup.inlineKeyboard(buttons);
@@ -439,7 +446,7 @@ case 'what_exchange':
       const freeAlertAmount = options.amount || 1000;
       return Markup.inlineKeyboard([
         [Markup.button.callback('🚀 Comparer maintenant', `route:${freeAlertPair}:${freeAlertAmount}`)],
-        [Markup.button.callback('💎 Découvrir Premium', 'premium:pricing')]
+        [Markup.button.callback(msg.btn.seePremium, 'premium:pricing')]
       ]);
     
     // Alerte premium déclenchée (depuis broadcast)

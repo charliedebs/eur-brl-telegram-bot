@@ -264,11 +264,7 @@ Liens de parrainage : gratuits pour toi, financent le service.`,
     // ✅ Footer avec rappel on-chain + reformulation
     const footer = `
 
-💡 Plus cher que l'on-chain (tu reçois ~${offchainBest}${route === 'eurbrl' ? ' R$' : '€'} vs ~${onchainCompare} on-chain), mais certains préfèrent ces méthodes car elles sont plus user-friendly que le process on-chain.
-
-⭐ On recommande fortement Wise, qui (hors promotions) offre généralement le meilleur taux ainsi que la meilleure UX !
-
-💡 N'hésite pas à utiliser nos liens de parrainage lorsque disponibles (⭐), c'est ce qui nous permet de financer ce service.
+💡 Plus cher que l'on-chain (~${offchainBest}${route === 'eurbrl' ? ' R$' : '€'} vs ~${onchainCompare} on-chain)
 
 <i>*Données fournies par Wise Comparisons</i>`;
     
@@ -759,7 +755,7 @@ Crée ta première alerte pour être notifié automatiquement !`;
     text += `${index + 1}. ${emoji} ${pairText} : ${threshold}\n`;
   });
   
-  text += `\nYou'll be notified when these thresholds are reached.`;
+  text += `\nTu seras notifié dès que ces seuils seront atteints.`;
   
   return text;
 },
@@ -1062,101 +1058,12 @@ Les utilisateurs Premium peuvent créer des alertes illimitées.
 Prix : à partir de 5 R$/mois`,
 
 
-ALERT_DEEPLINK_GROUP: `🔔 Para criar um alerta, clique aqui para continuar em privado:`,
 
-ALERT_INVALID_SYNTAX: `❌ Formato inválido
 
-<b>Exemplos :</b>
-/alert 6.30        → Alerta EUR→BRL ≥ 6.30
-/alert +3%         → Alerta EUR→BRL +3% vs média 30d
-/alert brl 0.165   → Alerta BRL→EUR ≥ 0.165
-/alert brl +5%     → Alerta BRL→EUR +5% vs média 30d`,
 
-ALERT_CREATED_QUICK: (alert, currentRate, refValue, calculatedThreshold, locale) => {
-  const pairText = alert.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
-  
-  let text = `✅ <b>Alerta criado</b>
-
-${pairText}`;
-
-  if (alert.threshold_type === 'absolute') {
-    text += ` ≥ ${formatRate(alert.threshold_value, locale)}`;
-  } else {
-    text += ` +${formatAmount(alert.threshold_value, 1, locale)}% vs média 30d`;
-  }
-  
-  text += `\n⏰ Cooldown : 1h
-
-<b>Estado atual :</b>
-• Taxa : ${formatRate(currentRate, locale)}`;
-
-  if (refValue) {
-    text += `\n• Média 30d : ${formatRate(refValue, locale)}`;
-  }
-  
-  text += `\n• Limite : ${formatRate(calculatedThreshold, locale)}`;
-  
-  return text;
-},
-
-NOT_PREMIUM_ALERTS: `🔒 Nenhum alerta ativo
-
-Usuários Premium podem criar alertas ilimitados.
-
-💎 Com Premium :
-• Alertas personalizados
-• Multi-pares
-• Análises avançadas
-
-Preço : a partir de 5 R$/mês`,
-
-ALERT_DEEPLINK_GROUP: `🔔 To create an alert, click here to continue in private:`,
-
-ALERT_INVALID_SYNTAX: `❌ Invalid format
-
-<b>Examples:</b>
-/alert 6.30        → Alert EUR→BRL ≥ 6.30
-/alert +3%         → Alert EUR→BRL +3% vs 30d avg
-/alert brl 0.165   → Alert BRL→EUR ≥ 0.165
-/alert brl +5%     → Alert BRL→EUR +5% vs 30d avg`,
-
-ALERT_CREATED_QUICK: (alert, currentRate, refValue, calculatedThreshold, locale) => {
-  const pairText = alert.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
-  
-  let text = `✅ <b>Alert created</b>
-
-${pairText}`;
-
-  if (alert.threshold_type === 'absolute') {
-    text += ` ≥ ${formatRate(alert.threshold_value, locale)}`;
-  } else {
-    text += ` +${formatAmount(alert.threshold_value, 1, locale)}% vs 30d avg`;
-  }
-  
-  text += `\n⏰ Cooldown: 1h
-
-<b>Current state:</b>
-• Rate: ${formatRate(currentRate, locale)}`;
-
-  if (refValue) {
-    text += `\n• 30d avg: ${formatRate(refValue, locale)}`;
-  }
-  
-  text += `\n• Threshold: ${formatRate(calculatedThreshold, locale)}`;
-  
-  return text;
-},
-
-NOT_PREMIUM_ALERTS: `🔒 No active alerts
-
-Premium users can create unlimited alerts.
-
-💎 With Premium:
-• Custom alerts
-• Multi-pairs
-• Advanced analytics
-
-Price: from 5 R$/month`,
+CONVERT_ASK_AMOUNT: "💱 Quel montant veux-tu convertir?\n\nExemple: 253 ou 1500 brl",
+RATE_LABEL: "Taux", // ou "Taxa" (PT), "Rate" (EN)
+BETTER_BY: "meilleur de", // ou "melhor em" (PT), "better by" (EN)
 
 btn: {
   langFR: '🇫🇷 Français',
@@ -1169,8 +1076,8 @@ btn: {
   // ✅ Boutons renommés (Écran 3)
   contOn: '🚀 Convertir on-chain',
   stayOff: '🏦 Convertir off-chain',
-  calcdetails: '🔍 Détails du calcul',
-  swapMode: '🔄 Inverser (recevoir plutôt)',
+  calcdetails: '🔍 Détails du calcul on-chain',
+  swapMode: '🔄 Inverser',
   change: '✏️ Changer montant',
   
   back: '⬅️ Retour',
@@ -1236,12 +1143,20 @@ btn: {
   custom: '✏️ Personnalisé',
   disableAlert: '🔕 Désactiver',
   editAlert: '✏️ Modifier',
+  relativeAlert:'📊 Relatif (+X%)',
+  absoluteAlert:'🎯 Absolu (valeur fixe)',
+
+  refCurrent: (rate, locale) => `💵 Taux actuel (${formatRate(rate, locale)})`,
+refAvg7d:   (rate, locale) => `📈 Moyenne 7j (${formatRate(rate, locale)})`,
+refAvg30d:  (rate, locale) => `📊 Moyenne 30j (${formatRate(rate, locale)}) ⭐`,
+refAvg90d:  (rate, locale) => `📉 Moyenne 90j (${formatRate(rate, locale)})`,
+
   backToPricing: '⬅️ Retour aux tarifs',
   chooseCooldown15: '⚡ 15 minutes',
   chooseCooldown1h: '⏱️ 1 heure ⭐',
   chooseCooldown6h: '⏰ 6 heures',
-  chooseCooldown24h: '📅  24 heures',
-  chooseCooldown1week: '📆  1 semaine',
+  chooseCooldown24h: '📅 24 heures',
+  chooseCooldown1week: '📆 1 semaine',
   deleteAlert: '🗑️ Supprimer',
   viewAlert: '👁️ Voir détails',
 }
@@ -1491,11 +1406,7 @@ Links de indicação: gratuitos para você, financiam o serviço.`,
     
     const footer = `
 
-💡 Mais caro que on-chain (você recebe ~${offchainBest}${route === 'eurbrl' ? ' R$' : '€'} vs ~${onchainCompare} on-chain), mas alguns preferem esses métodos porque são mais user-friendly que o processo on-chain.
-
-⭐ Recomendamos fortemente Wise, que (fora promoções) oferece geralmente a melhor taxa e a melhor UX!
-
-💡 Não hesite em usar nossos links de indicação quando disponíveis (⭐), é isso que nos permite financiar este serviço.
+💡 Mais caro que on-chain (~${offchainBest}${route === 'eurbrl' ? ' R$' : '€'} vs ~${onchainCompare} on-chain)
 
 <i>*Dados fornecidos por Wise Comparisons</i>`;
     
@@ -2233,6 +2144,58 @@ Exemplos: 2.5, 3, 5`,
 
 
 
+  ALERT_DEEPLINK_GROUP: `🔔 Para criar um alerta, clique aqui para continuar em privado:`,
+
+ALERT_INVALID_SYNTAX: `❌ Formato inválido
+
+<b>Exemplos :</b>
+/alert 6.30        → Alerta EUR→BRL ≥ 6.30
+/alert +3%         → Alerta EUR→BRL +3% vs média 30d
+/alert brl 0.165   → Alerta BRL→EUR ≥ 0.165
+/alert brl +5%     → Alerta BRL→EUR +5% vs média 30d`,
+
+ALERT_CREATED_QUICK: (alert, currentRate, refValue, calculatedThreshold, locale) => {
+  const pairText = alert.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+  
+  let text = `✅ <b>Alerta criado</b>
+
+${pairText}`;
+
+  if (alert.threshold_type === 'absolute') {
+    text += ` ≥ ${formatRate(alert.threshold_value, locale)}`;
+  } else {
+    text += ` +${formatAmount(alert.threshold_value, 1, locale)}% vs média 30d`;
+  }
+  
+  text += `\n⏰ Cooldown : 1h
+
+<b>Estado atual :</b>
+• Taxa : ${formatRate(currentRate, locale)}`;
+
+  if (refValue) {
+    text += `\n• Média 30d : ${formatRate(refValue, locale)}`;
+  }
+  
+  text += `\n• Limite : ${formatRate(calculatedThreshold, locale)}`;
+  
+  return text;
+},
+
+NOT_PREMIUM_ALERTS: `🔒 Nenhum alerta ativo
+
+Usuários Premium podem criar alertas ilimitados.
+
+💎 Com Premium :
+• Alertas personalizados
+• Multi-pares
+• Análises avançadas
+
+Preço : a partir de 5 R$/mês`,
+
+
+CONVERT_ASK_AMOUNT: "💱 Que valor você quer converter?\n\nExemplo: 253 ou 1500 brl",
+RATE_LABEL: "Taxa", // ou "Taxa" (PT), "Rate" (EN)
+BETTER_BY: "melhor em", // ou "melhor em" (PT), "better by" (EN)
 
 
   btn: {
@@ -2246,8 +2209,8 @@ Exemplos: 2.5, 3, 5`,
     // ✅ Botões renomeados
     contOn: '🚀 Converter on-chain',
     stayOff: '🏦 Converter off-chain',
-    calcdetails: '🔍 Detalhes do cálculo',
-    swapMode: '🔄 Inverter (receber ao invés)',
+    calcdetails: '🔍 Detalhes do cálculo on-chain',
+    swapMode: '🔄 Inverter',
     change: '✏️ Alterar valor',
     
     back: '⬅️ Voltar',
@@ -2313,6 +2276,14 @@ Exemplos: 2.5, 3, 5`,
     custom: '✏️ Personalizado',
     disableAlert: '🔕 Desativar',
     editAlert: '✏️ Modificar',
+    relativeAlert:'📊 Relativa (+X%)',
+    absoluteAlert:'🎯 Absoluta (taxa fixa)',
+
+    refCurrent: (rate, locale) => `💵 Taxa atual (${formatRate(rate, locale)})`,
+refAvg7d:   (rate, locale) => `📈 Média 7d (${formatRate(rate, locale)})`,
+refAvg30d:  (rate, locale) => `📊 Média 30d (${formatRate(rate, locale)}) ⭐`,
+refAvg90d:  (rate, locale) => `📉 Média 90d (${formatRate(rate, locale)})`,
+
     backToPricing: '⬅️ Voltar aos preços',
     chooseCooldown15: '⚡ 15 minutos',
     chooseCooldown1h: '⏱️ 1 hora ⭐',
@@ -2568,11 +2539,7 @@ Referral links: free for you, fund the service.`,
     
     const footer = `
 
-💡 More expensive than on-chain (you receive ~${offchainBest}${route === 'eurbrl' ? ' R$' : '€'} vs ~${onchainCompare} on-chain), but some prefer these methods because they're more user-friendly than the on-chain process.
-
-⭐ We strongly recommend Wise, which (outside promotions) generally offers the best rate and the best UX!
-
-💡 Don't hesitate to use our referral links when available (⭐), that's what allows us to fund this service.
+💡 More expensive than on-chain (~${offchainBest}${route === 'eurbrl' ? ' R$' : '€'} vs ~${onchainCompare} on-chain)
 
 <i>*Data provided by Wise Comparisons</i>`;
     
@@ -3309,6 +3276,59 @@ Examples: 2.5, 3, 5`,
 
 
 
+  ALERT_DEEPLINK_GROUP: `🔔 To create an alert, click here to continue in private:`,
+
+  ALERT_INVALID_SYNTAX: `❌ Invalid format
+  
+  <b>Examples:</b>
+  /alert 6.30        → Alert EUR→BRL ≥ 6.30
+  /alert +3%         → Alert EUR→BRL +3% vs 30d avg
+  /alert brl 0.165   → Alert BRL→EUR ≥ 0.165
+  /alert brl +5%     → Alert BRL→EUR +5% vs 30d avg`,
+  
+  ALERT_CREATED_QUICK: (alert, currentRate, refValue, calculatedThreshold, locale) => {
+    const pairText = alert.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+    
+    let text = `✅ <b>Alert created</b>
+  
+  ${pairText}`;
+  
+    if (alert.threshold_type === 'absolute') {
+      text += ` ≥ ${formatRate(alert.threshold_value, locale)}`;
+    } else {
+      text += ` +${formatAmount(alert.threshold_value, 1, locale)}% vs 30d avg`;
+    }
+    
+    text += `\n⏰ Cooldown: 1h
+  
+  <b>Current state:</b>
+  • Rate: ${formatRate(currentRate, locale)}`;
+  
+    if (refValue) {
+      text += `\n• 30d avg: ${formatRate(refValue, locale)}`;
+    }
+    
+    text += `\n• Threshold: ${formatRate(calculatedThreshold, locale)}`;
+    
+    return text;
+  },
+  
+  NOT_PREMIUM_ALERTS: `🔒 No active alerts
+  
+  Premium users can create unlimited alerts.
+  
+  💎 With Premium:
+  • Custom alerts
+  • Multi-pairs
+  • Advanced analytics
+  
+  Price: from 5 R$/month`,
+
+
+  CONVERT_ASK_AMOUNT: "💱 What amount do you want to convert?\n\Example: 253 or 1500 brl",
+  RATE_LABEL: "Rate", // ou "Taxa" (PT), "Rate" (EN)
+  BETTER_BY: "better by", // ou "melhor em" (PT), "better by" (EN)
+
 
   btn: {
     langFR: '🇫🇷 Français',
@@ -3321,8 +3341,8 @@ Examples: 2.5, 3, 5`,
     // ✅ Renamed buttons
     contOn: '🚀 Convert on-chain',
     stayOff: '🏦 Convert off-chain',
-    calcdetails: '🔍 Calculation details',
-    swapMode: '🔄 Swap (receive instead)',
+    calcdetails: '🔍 On-chain calculation details',
+    swapMode: '🔄 Swap',
     change: '✏️ Change amount',
     
     back: '⬅️ Back',
@@ -3388,6 +3408,14 @@ Examples: 2.5, 3, 5`,
     custom: '✏️ Custom',
     disableAlert: '🔕 Disable',
     editAlert: '✏️ Edit',
+    relativeAlert:'📊 Relative (+X%)',
+    absoluteAlert:'🎯 Absolute (fixed rate)',
+
+    refCurrent: (rate, locale) => `💵 Current rate (${formatRate(rate, locale)})`,
+    refAvg7d:   (rate, locale) => `📈 7d average (${formatRate(rate, locale)})`,
+    refAvg30d:  (rate, locale) => `📊 30d average (${formatRate(rate, locale)}) ⭐`,
+    refAvg90d:  (rate, locale) => `📉 90d average (${formatRate(rate, locale)})`,
+
     backToPricing: '⬅️ Back to pricing',
     chooseCooldown15: '⚡ 15 minutes',
     chooseCooldown1h: '⏱️ 1 hour ⭐',

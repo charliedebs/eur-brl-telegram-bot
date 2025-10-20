@@ -1,5 +1,4 @@
 import { Telegraf, Markup, session } from 'telegraf';
-import { messages } from './messages.js';
 import { buildKeyboards } from './keyboards.js';
 import { updateNLUFeedback } from '../services/nlu-logger.js';
 import { getRates, calculateOnChain, getLocale, formatAmount, formatRate, calculateOnChainReverse } from '../services/rates.js';
@@ -7,6 +6,7 @@ import { getWiseComparison, getWiseComparisonReverse } from '../services/wise.js
 import { AlertsService } from '../services/alerts.js';
 import { DatabaseService } from '../services/database.js';
 import { parseUserIntent } from '../core/nlu.js';
+import { messages } from './messages/messages-loader.js';
 
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
 
@@ -74,6 +74,9 @@ Choisis ta langue`;
   await ctx.reply(text, { parse_mode: 'HTML', ...kb });
 });
 
+
+
+
 // ==================== /rate [amount] ====================
 bot.command('rate', async (ctx) => {
   const msg = getMsg(ctx);
@@ -133,6 +136,72 @@ BRL → EUR : ${formatRate(crossInverse, locale)}
   
   await ctx.reply(text, { parse_mode: 'HTML', ...kb });
 });
+
+
+// ==================== /convert [amount] [currency?] ====================
+
+bot.command('convert', async (ctx) => {
+  // Parse arguments avec langue optionnelle
+  const args = ctx.message.text.split(' ').slice(1).join(' ').trim().toLowerCase();
+  
+  if (!args) {
+    const msg = getMsg(ctx);
+    ctx.session.awaitingConvertAmount = true;
+    return ctx.reply(msg.CONVERT_ASK_AMOUNT || "💱 Quel montant veux-tu convertir?\n\nExemple: 253");
+  }
+  
+  // Pattern: "253" ou "253 eur" ou "253 fr" ou "253 brl pt"
+  const match = args.match(/^(\d+(?:[.,]\d+)?)\s*(eur|brl)?\s*(fr|pt|en)?$/);
+  
+  if (!match) {
+    const msg = getMsg(ctx);
+    return ctx.reply(msg.ERROR_INVALID_AMOUNT);
+  }
+  
+  const amount = parseFloat(match[1].replace(',', '.'));
+  const currency = match[2]; // peut être null
+  const forcedLang = match[3]; // peut être null
+  
+  if (!amount || !isFinite(amount)) {
+    const msg = getMsg(ctx);
+    return ctx.reply(msg.ERROR_INVALID_AMOUNT);
+  }
+  
+  // Appliquer langue forcée si présente
+  if (forcedLang && ['fr', 'pt', 'en'].includes(forcedLang)) {
+    if (forcedLang !== ctx.state.lang) {
+      await db.updateUser(ctx.from.id, { language: forcedLang });
+      ctx.state.lang = forcedLang;
+    }
+  }
+  
+  const msg = getMsg(ctx);
+  const locale = getLocale(ctx.state.lang);
+  
+  // Déterminer route
+  let route = null;
+  if (currency === 'eur') {
+    route = 'eurbrl';
+  } else if (currency === 'brl') {
+    route = 'brleur';
+  }
+  
+  // Si pas de route détectée → demande
+  if (!route) {
+    ctx.session.awaitingConvertRoute = amount;
+    const kb = buildKeyboards(msg, 'route_choice', { amount, locale });
+    return ctx.reply(
+      msg.askRoute(amount, locale),
+      { parse_mode: 'HTML', ...kb }
+    );
+  }
+  
+  // Route détectée → affiche conversion
+  ctx.session.lastRoute = route;
+  ctx.session.lastAmount = amount;
+  await showComparison(ctx, route, amount, false);
+});
+
 
 // ==================== /alert [params] ====================
 
@@ -1155,6 +1224,167 @@ bot.action('alert:list', async (ctx) => {
   await ctx.answerCbQuery();
 });
 
+
+// ==================== INLINE MODE ====================
+// Ajouter avant bot.on('text', ...)
+
+bot.on('inline_query', async (ctx) => {
+  const query = ctx.inlineQuery.query.trim().toLowerCase();
+  
+  if (!query) {
+    // Query vide → placeholder uniquement
+    return ctx.answerInlineQuery([], {
+      switch_pm_text: "💱 Convertir EUR ↔ BRL",
+      switch_pm_parameter: "inline_help",
+      cache_time: 1
+    });
+  }
+  
+  // Parse query avec langue optionnelle: "253" ou "253 eur" ou "1500 brl pt" ou "253 fr"
+  const match = query.match(/^(\d+(?:[.,]\d+)?)\s*(eur|brl)?\s*(fr|pt|en)?$/);
+  
+  if (!match) {
+    return ctx.answerInlineQuery([], {
+      switch_pm_text: "💱 Format: montant [eur/brl] [fr/pt/en]",
+      switch_pm_parameter: "inline_help",
+      cache_time: 1
+    });
+  }
+  
+  const amount = parseFloat(match[1].replace(',', '.'));
+  const currency = match[2]; // peut être null
+  const forcedLang = match[3]; // peut être null
+  
+  if (!amount || !isFinite(amount) || amount <= 0) {
+    return ctx.answerInlineQuery([], {
+      switch_pm_text: "💱 Entre un montant valide (ex: 253)",
+      switch_pm_parameter: "inline_help",
+      cache_time: 1
+    });
+  }
+  
+  // Déterminer route
+  let route = 'eurbrl'; // Défaut EUR→BRL
+  if (currency === 'brl') {
+    route = 'brleur';
+  }
+  
+  // Déterminer langue (hybrid)
+  let lang = forcedLang; // Priorité à la langue forcée
+  
+  if (!lang) {
+    // Tenter DB
+    try {
+      const user = await db.getUser(ctx.from.id);
+      if (user) {
+        lang = user.language;
+      }
+    } catch (error) {
+      console.log('[INLINE] User not in DB');
+    }
+  }
+  
+  if (!lang && ctx.from?.language_code) {
+    // Détection auto
+    const code = ctx.from.language_code;
+    lang = code.startsWith('fr') ? 'fr' : 
+           code.startsWith('pt') ? 'pt' : 'en';
+  }
+  
+  lang = lang || 'en'; // Fallback anglais
+  
+  try {
+    // Récupérer les taux
+    const [rates, wiseData] = await Promise.all([
+      getRates(),
+      getWiseComparison(route, amount)
+    ]);
+    
+    if (!rates) {
+      return ctx.answerInlineQuery([], {
+        switch_pm_text: "⚠️ Taux indisponibles",
+        switch_pm_parameter: "inline_error",
+        cache_time: 1
+      });
+    }
+    
+    const onchain = calculateOnChain(route, amount, rates);
+    const bestBank = wiseData?.providers?.[0] || null;
+    
+    const locale = getLocale(lang);
+    
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString(locale, {hour: '2-digit', minute: '2-digit'});
+    const tzAbbr = new Date().toLocaleTimeString('en-US', {timeZoneName: 'short'}).split(' ')[2];
+    
+    const crossRate = route === 'eurbrl' ? rates.cross : 1 / rates.cross;
+    const pairDisplay = route === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+    
+    // Messages multilingues pour inline
+    const msgs = messages[lang];
+    
+    // Formater le résultat
+    let resultText = `💱 <b>${pairDisplay}</b>\n\n`;
+    resultText += `📊 ${msgs.RATE_LABEL || 'Taux'}: ${formatRate(crossRate, locale)}\n\n`;
+    
+    if (route === 'eurbrl') {
+      resultText += `🌍 <b>On-chain</b>\n€${formatAmount(amount, 0, locale)} → R$ ${formatAmount(onchain.out, 0, locale)}\n\n`;
+      
+      if (bestBank) {
+        resultText += `🏦 <b>Wise</b>\n€${formatAmount(amount, 0, locale)} → R$ ${formatAmount(bestBank.out, 0, locale)}\n\n`;
+        
+        const delta = ((onchain.out - bestBank.out) / bestBank.out) * 100;
+        const deltaLabel = msgs.BETTER_BY || 'meilleur de';
+        if (delta >= 0) {
+          resultText += `💰 On-chain ${deltaLabel} ${formatAmount(Math.abs(delta), 1, locale)}%\n\n`;
+        } else {
+          resultText += `🏦 Wise ${deltaLabel} ${formatAmount(Math.abs(delta), 1, locale)}%\n\n`;
+        }
+      }
+    } else {
+      resultText += `🌍 <b>On-chain</b>\nR$ ${formatAmount(amount, 0, locale)} → €${formatAmount(onchain.out, 0, locale)}\n\n`;
+      
+      if (bestBank) {
+        resultText += `🏦 <b>Wise</b>\nR$ ${formatAmount(amount, 0, locale)} → €${formatAmount(bestBank.out, 0, locale)}\n\n`;
+        
+        const delta = ((onchain.out - bestBank.out) / bestBank.out) * 100;
+        const deltaLabel = msgs.BETTER_BY || 'meilleur de';
+        if (delta >= 0) {
+          resultText += `💰 On-chain ${deltaLabel} ${formatAmount(Math.abs(delta), 1, locale)}%\n\n`;
+        } else {
+          resultText += `🏦 Wise ${deltaLabel} ${formatAmount(Math.abs(delta), 1, locale)}%\n\n`;
+        }
+      }
+    }
+    
+    resultText += `⏰ ${timeStr} ${tzAbbr}`;
+    
+    // Créer le résultat inline
+    const result = {
+      type: 'article',
+      id: `convert_${route}_${amount}_${Date.now()}`,
+      title: `${route === 'eurbrl' ? '€' : 'R$'}${formatAmount(amount, 0, locale)} → ${route === 'eurbrl' ? 'BRL' : 'EUR'}`,
+      description: `On-chain: ${route === 'eurbrl' ? 'R$' : '€'}${formatAmount(onchain.out, 0, locale)}${bestBank ? ` • Wise: ${route === 'eurbrl' ? 'R$' : '€'}${formatAmount(bestBank.out, 0, locale)}` : ''}`,
+      input_message_content: {
+        message_text: resultText,
+        parse_mode: 'HTML'
+      }
+    };
+    
+    await ctx.answerInlineQuery([result], {
+      cache_time: 60, // Cache 1min (taux changent)
+      is_personal: false
+    });
+    
+  } catch (error) {
+    console.error('[INLINE] Error:', error);
+    return ctx.answerInlineQuery([], {
+      switch_pm_text: "❌ Erreur temporaire",
+      switch_pm_parameter: "inline_error",
+      cache_time: 1
+    });
+  }
+});
 // ==================== TEXT HANDLER WITH NLU ====================
 
 bot.on('text', async (ctx) => {
@@ -1294,6 +1524,30 @@ if (ctx.session?.awaitingFaqQuestion) {
   
   const msg = getMsg(ctx);
   return ctx.reply(msg.FAQ_QUESTION_RECEIVED, { parse_mode: 'HTML' });
+}
+
+
+// NOUVEAU: Montant pour /convert
+if (ctx.session?.awaitingConvertAmount) {
+  const amount = parseFloat(text.replace(/[^\d.]/g, ''));
+  if (amount && isFinite(amount)) {
+    delete ctx.session.awaitingConvertAmount;
+    ctx.session.awaitingConvertRoute = amount;
+    const kb = buildKeyboards(msg, 'route_choice', { amount, locale });
+    return ctx.reply(msg.askRoute(amount, locale), { parse_mode: 'HTML', ...kb });
+  } else {
+    return ctx.reply("⚠️ Montant invalide. Entre un nombre (ex. 1000)");
+  }
+}
+
+// NOUVEAU: Route pour /convert
+if (ctx.session?.awaitingConvertRoute) {
+  const amount = ctx.session.awaitingConvertRoute;
+  const routeDetected = text.toLowerCase().includes('brl') ? 'brleur' : 'eurbrl';
+  delete ctx.session.awaitingConvertRoute;
+  ctx.session.lastRoute = routeDetected;
+  ctx.session.lastAmount = amount;
+  return showComparison(ctx, routeDetected, amount, false);
 }
 
     // PRIORITÉ 3: NLU
