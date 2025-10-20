@@ -40,15 +40,15 @@ export function buildKeyboards(msg, type, options = {}) {
   
     // Écran 2 : Carte comparaison
     case 'comparison':
-      return Markup.inlineKeyboard([
-        [Markup.button.callback(msg.btn.contOn, `action:continue_onchain:${route}:${amount}`)],
-        [Markup.button.callback(msg.btn.calcdetails, `action:calc_details:${route}:${amount}`)],
-        [Markup.button.callback(msg.btn.stayOff, `action:stay_offchain:${route}:${amount}`)],
-        [Markup.button.callback(msg.btn.swapMode, `action:swap_mode:${route}:${amount}`)],
-        [Markup.button.callback(msg.btn.change, `action:change_amount:${route}`)],
-        [Markup.button.callback(msg.btn.sources, 'action:sources')],
-        [Markup.button.callback(msg.btn.myAlerts, 'alert:list')],
-      ]);
+        return Markup.inlineKeyboard([
+          [Markup.button.callback(msg.btn.contOn, `action:continue_onchain:${route}:${amount}`)],
+          [Markup.button.callback(msg.btn.calcdetails, `action:calc_details:${route}:${amount}`)],
+          [Markup.button.callback(msg.btn.stayOff, `action:stay_offchain:${route}:${amount}`)],
+          [Markup.button.callback(msg.btn.swapMode, `action:swap_mode:${route}:${amount}`)],
+          [Markup.button.callback(msg.btn.change, `action:change_amount:${route}`)],
+          [Markup.button.callback(msg.btn.sources, 'action:sources')],
+          [Markup.button.callback(msg.btn.myAlerts, 'alert:list')],
+        ]);
     
     // Écran 2bis : Sources
     case 'sources':
@@ -178,25 +178,25 @@ case 'what_exchange':
     case 'step_1_1':
       return Markup.inlineKeyboard([
         [Markup.button.callback(msg.btn.step1Done, `guide:step:1.2:${route}:${amount}`)],
-        [Markup.button.url('🔗 Kraken', LINKS.KRAKEN)],
+        [Markup.button.url('🔗 Ouvrir Kraken', LINKS.KRAKEN)],
         [Markup.button.callback(msg.btn.skipToStep2, `guide:step:2.1:${route}:${amount}`)],
         [Markup.button.callback(msg.btn.back, `action:start_guide:${route}:${amount}`)],
       ]);
     
-      case 'step_1_2':
-        return Markup.inlineKeyboard([
-          [Markup.button.callback(msg.btn.step1_2Done, `guide:step:1.3:${route}:${amount}`)],
-          [Markup.button.callback(msg.btn.skipToStep2, `guide:step:2.1:${route}:${amount}`)],
-          [Markup.button.callback(msg.btn.back, `guide:step:1.1:${route}:${amount}`)],
-        ]);
+    case 'step_1_2':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback(msg.btn.step1_2Done, `guide:step:1.3:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.skipToStep2, `guide:step:2.1:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.back, `guide:step:1.1:${route}:${amount}`)],
+      ]);
     
-        case 'step_1_3':
-          return Markup.inlineKeyboard([
-            [Markup.button.callback(msg.btn.step1_3Done, `guide:step:1.4:${route}:${amount}`)],
-            [Markup.button.callback(msg.btn.marketVsLimit, 'action:market_vs_limit')],
-            [Markup.button.callback(msg.btn.skipToStep2, `guide:step:2.1:${route}:${amount}`)],
-            [Markup.button.callback(msg.btn.back, `guide:step:1.2:${route}:${amount}`)],
-          ]);
+    case 'step_1_3':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback(msg.btn.step1_3Done, `guide:step:1.4:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.marketVsLimit, 'action:market_vs_limit')],
+        [Markup.button.callback(msg.btn.skipToStep2, `guide:step:2.1:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.back, `guide:step:1.2:${route}:${amount}`)],
+      ]);
     
     case 'step_1_4':
       return Markup.inlineKeyboard([
@@ -204,27 +204,27 @@ case 'what_exchange':
         [Markup.button.callback(msg.btn.back, `guide:step:1.3:${route}:${amount}`)],
       ]);
     
-      case 'step_2_1':
-        return Markup.inlineKeyboard([
-          [Markup.button.callback(msg.btn.step2Done, `guide:step:2.2:${route}:${amount}`)],
-          [Markup.button.url('🔗 Binance BR', LINKS.BINANCE_BR)],
-          [Markup.button.callback(msg.btn.skipToStep3, `guide:step:3.1:${route}:${amount}`)],
-          [Markup.button.callback(msg.btn.back, `guide:step:1.4:${route}:${amount}`)],
-        ]);
+    case 'step_2_1':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback(msg.btn.step2Done, `guide:step:2.2:${route}:${amount}`)],
+        [Markup.button.url('🔗 Ouvrir Binance BR', LINKS.BINANCE_BR)],
+        [Markup.button.callback(msg.btn.skipToStep3, `guide:step:3.1:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.back, `guide:step:1.4:${route}:${amount}`)],
+      ]);
     
-        case 'step_2_2':
-          return Markup.inlineKeyboard([
-            [Markup.button.callback(msg.btn.step2_2Done, `guide:step:2.3:${route}:${amount}`)],
-            [Markup.button.callback(msg.btn.skipToStep3, `guide:step:3.1:${route}:${amount}`)],
-            [Markup.button.callback(msg.btn.back, `guide:step:2.1:${route}:${amount}`)],
-          ]);
+    case 'step_2_2':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback(msg.btn.step2_2Done, `guide:step:2.3:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.skipToStep3, `guide:step:3.1:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.back, `guide:step:2.1:${route}:${amount}`)],
+      ]);
     
-          case 'step_2_3':
-            return Markup.inlineKeyboard([
-              [Markup.button.callback(msg.btn.step2_3Done, `guide:step:2.4:${route}:${amount}`)],
-              [Markup.button.callback(msg.btn.skipToStep3, `guide:step:3.1:${route}:${amount}`)],
-              [Markup.button.callback(msg.btn.back, `guide:step:2.2:${route}:${amount}`)],
-            ]);
+    case 'step_2_3':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback(msg.btn.step2_3Done, `guide:step:2.4:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.skipToStep3, `guide:step:3.1:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.back, `guide:step:2.2:${route}:${amount}`)],
+      ]);
     
     case 'step_2_4':
       return Markup.inlineKeyboard([

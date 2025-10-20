@@ -25,7 +25,7 @@ const fr = {
 
 🌐 Choisis ta langue · Escolha o idioma · Choose your language`,
 
-  ABOUT_TEXT: `💡 À propos
+ABOUT_TEXT: `💡 À propos
 
 Ce bot compare les taux EUR↔BRL et te guide pour des transferts on-chain (via blockchain).
 
@@ -37,27 +37,28 @@ Service gratuit, financé par des liens de parrainage.`,
   ERROR_INVALID_AMOUNT: `⚠️ Montant invalide. Entre un nombre (ex. 1000)`,
   ERROR_UPDATE_FAILED: `❌ Erreur lors de la mise à jour.`,
 
-  // ✅ ÉCRAN 2 : Changement "le" → "un"
   promptAmt: `💬 Envoie un montant ou choisis :`,
   
   askAmount: `✏️ Entre un montant (ex. 1000)`,
   
   askRoute: (amount, locale) => `Tu veux faire quoi avec ${formatAmount(amount, 0, locale)} ?`,
   
-  // ✅ ÉCRAN 3 : buildComparison (ref, delta, autres)
   buildComparison: ({ route, amount, rates, onchain, bestBank, others, delta, locale, isTargetMode = false }) => {
     const now = new Date();
     const dayOfWeek = now.getDay();
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
     
+    // 🔥 TITRE adapté selon mode
     let title;
     if (isTargetMode) {
+      // Mode target : "Pour recevoir X€, il faut ~Y BRL"
       if (route === 'eurbrl') {
         title = `💱 Pour recevoir ${formatAmount(amount, 0, locale)} BRL\nIl faut ~${formatAmount(onchain.in, 0, locale)} EUR`;
       } else {
         title = `💱 Pour recevoir ${formatAmount(amount, 0, locale)} EUR\nIl faut ~${formatAmount(onchain.in, 0, locale)} BRL`;
       }
     } else {
+      // Mode classique : "X EUR → BRL"
       title = route === 'eurbrl' 
         ? `💱 ${formatAmount(amount, 0, locale)} EUR → BRL`
         : `💱 ${formatAmount(amount, 0, locale)} BRL → EUR`;
@@ -66,15 +67,16 @@ Service gratuit, financé par des liens de parrainage.`,
     const timeStr = now.toLocaleTimeString(locale, {hour: '2-digit', minute: '2-digit'});
     const tzAbbr = new Date().toLocaleTimeString('en-US', {timeZoneName: 'short'}).split(' ')[2];
     
-    // ✅ Ligne référence modifiée
-    let ref = `📊 Taux de référence ${formatRate(rates.cross, locale)} • ${timeStr} ${tzAbbr}`;
+    let ref = `📊 Réf. ${formatRate(rates.cross, locale)} • ${timeStr} ${tzAbbr}`;
     if (isWeekend) {
       ref += `\n⚠️ Week-end : taux figé jusqu'à lundi`;
     }
     
+    // 🔥 LIGNES adaptées selon mode
     let onchainLine, bankLine;
     
     if (isTargetMode) {
+      // Afficher montants SOURCE nécessaires
       if (route === 'eurbrl') {
         onchainLine = `🌍 On-chain\n~${formatAmount(onchain.in, 0, locale)} EUR → ${formatAmount(amount, 2, locale)} BRL (${formatRate(onchain.rate, locale)})`;
         
@@ -93,6 +95,7 @@ Service gratuit, financé par des liens de parrainage.`,
         }
       }
     } else {
+      // Mode classique : montants OUT
       if (route === 'eurbrl') {
         onchainLine = `🌍 On-chain\n€${formatAmount(amount, 0, locale)} → R$ ${formatAmount(onchain.out, 2, locale)} (${formatRate(onchain.rate, locale)})`;
       } else {
@@ -110,7 +113,6 @@ Service gratuit, financé par des liens de parrainage.`,
       }
     }
     
-    // ✅ Section "Autres" : suppression compteur (X)
     let othersText = '';
     if (others.length > 0) {
       const topOthers = others.slice(0, 3);
@@ -127,34 +129,32 @@ Service gratuit, financé par des liens de parrainage.`,
       }).join('\n');
       
       const count = others.length;
-      // ✅ Suppression du (X) dans "Autres"
-      othersText = `\n\nAutres :\n${formattedOthers}`;
+      othersText = `\n\nAutres (${count}) :\n${formattedOthers}`;
       
-      // ✅ Footer sans <i>
       if (count > 3) {
-        othersText += `\n+ ${count - 3} autres disponibles`;
+        othersText += `\n<i>+ ${count - 3} autres disponibles</i>`;
       }
     }
     
-    // ✅ Delta modifié
     let deltaText = '';
     if (delta !== null && bestBank) {
       if (isTargetMode) {
+        // En mode target, delta négatif = on-chain demande MOINS (meilleur)
         const sign = delta <= 0 ? '−' : '+';
         const absValue = Math.abs(delta);
         deltaText = delta <= 0 
-          ? `\n\n✅ Tu économises environ ${sign}${formatAmount(absValue, 1, locale)}% on-chain`
+          ? `\n\n✅ ${sign}${formatAmount(absValue, 1, locale)}% on-chain (moins cher)`
           : `\n\n⚠️ ${sign}${formatAmount(absValue, 1, locale)}% on-chain (plus cher)`;
       } else {
+        // Mode classique
         const sign = delta >= 0 ? '+' : '−';
-        deltaText = `\n\n✅ Tu économises environ ${sign}${formatAmount(Math.abs(delta), 1, locale)}% on-chain`;
+        deltaText = `\n\n✅ ${sign}${formatAmount(Math.abs(delta), 1, locale)}% on-chain`;
       }
     }
     
     return `${title}\n\n${ref}\n\n${onchainLine}\n\n${bankLine}${othersText}${deltaText}`;
   },
 
-  // ✅ ÉCRAN 4 : buildCalcDetails (frais ~0,1%, Pix si applicable)
   buildCalcDetails: ({ route, amount, rates, onchain, locale }) => {
     const title = '🔍 Détails du calcul on-chain';
     
@@ -167,7 +167,7 @@ Service gratuit, financé par des liens de parrainage.`,
 
 1️⃣ <b>Achat USDC en Europe</b>
    💰 Montant : €${formatAmount(amount, 2, locale)}
-   📉 Frais trading (~0,1%) : −€${formatAmount(amount * 0.001, 2, locale)}
+   📉 Frais trading (~0,1-0,2%) : −€${formatAmount(amount * 0.001, 2, locale)}
    🪙 USDC obtenus : ${formatAmount(usdcAfterBuy, 2, locale)} USDC
 
 2️⃣ <b>Transfert blockchain</b>
@@ -178,11 +178,11 @@ Service gratuit, financé par des liens de parrainage.`,
 3️⃣ <b>Vente USDC au Brésil</b>
    🪙 USDC à vendre : ${formatAmount(usdcAfterNetwork, 2, locale)} USDC
    💱 Taux USDC/BRL : ${formatRate(rates.usdcBRL, locale)}
-   📉 Frais trading (~0,1%) : −R$ ${formatAmount(usdcAfterNetwork * rates.usdcBRL * 0.001, 2, locale)}
+   📉 Frais trading (~0,1-0,2%) : −R$ ${formatAmount(usdcAfterNetwork * rates.usdcBRL * 0.001, 2, locale)}
    💰 BRL obtenus : R$ ${formatAmount(brlAfterTrade, 2, locale)}
 
 4️⃣ <b>Retrait Pix</b>
-   📉 Frais Pix (si applicable) : −R$ ${formatAmount(3.5, 2, locale)}
+   📉 Frais Pix (~R$3,50) : −R$ ${formatAmount(3.5, 2, locale)}
    
 ✅ <b>Total reçu : R$ ${formatAmount(brlNet, 2, locale)}</b>
 📊 <b>Taux effectif : ${formatRate(onchain.rate, locale)}</b>
@@ -199,7 +199,7 @@ Service gratuit, financé par des liens de parrainage.`,
 1️⃣ <b>Achat USDC au Brésil</b>
    💰 Montant : R$ ${formatAmount(amount, 2, locale)}
    💱 Taux BRL/USDC : ${formatRate(1/rates.usdcBRL, locale)}
-   📉 Frais trading (~0,1%) : −R$ ${formatAmount(amount * 0.001, 2, locale)}
+   📉 Frais trading (~0,1-0,2%) : −R$ ${formatAmount(amount * 0.001, 2, locale)}
    🪙 USDC obtenus : ${formatAmount(usdcFromBRL, 2, locale)} USDC
 
 2️⃣ <b>Transfert blockchain</b>
@@ -209,8 +209,8 @@ Service gratuit, financé par des liens de parrainage.`,
 
 3️⃣ <b>Vente USDC en Europe</b>
    🪙 USDC à vendre : ${formatAmount(usdcAfterNetwork, 2, locale)} USDC
-   💱 Taux EUR/USDC : ${formatRate(rates.usdcEUR, locale)}
-   📉 Frais trading (~0,1%) : −€${formatAmount(usdcAfterNetwork * rates.usdcEUR * 0.001, 2, locale)}
+   💱 Taux USDC/EUR : ${formatRate(rates.usdcEUR, locale)}
+   📉 Frais trading (~0,1-0,2%) : −€${formatAmount(usdcAfterNetwork * rates.usdcEUR * 0.001, 2, locale)}
    
 ✅ <b>Total reçu : €${formatAmount(eurNet, 2, locale)}</b>
 📊 <b>Taux effectif : ${formatRate(onchain.rate, locale)}</b>
@@ -226,7 +226,7 @@ Taux de référence EUR/BRL : Yahoo Finance (taux de change officiel)
 Calcul on-chain : 
 • Taux crypto : CoinGecko (USDC/EUR, USDC/BRL)
 • Frais réels inclus :
-  - Trading ~0,1%
+  - Trading ~0,1-0,2%
   - Réseau Polygon ~1 USDC
   - Retrait Pix ~R$3,50
 
@@ -234,35 +234,38 @@ Taux off-chain : API Wise Comparisons (taux live des providers)
 
 Liens de parrainage : gratuits pour toi, financent le service.`,
 
-  // ✅ ÉCRAN 5 : buildOffChain (rappel on-chain, Wise, parrainage)
-  buildOffChain: ({ route, amount, bestBank, others, locale, onchainAmount }) => {
-    const title = '🏦 Off-chain';
-    
-    if (!bestBank) {
-      return `${title}\n\n⚠️ Taux indisponibles pour le moment.`;
+buildOffChain: ({ route, amount, bestBank, others, locale, onchainAmount }) => {
+  const title = '🏦 Off-chain';
+  
+  if (!bestBank) {
+    return `${title}\n\n⚠️ Taux indisponibles pour le moment.`;
+  }
+  
+  const priorityNames = ['Wise', 'Remitly'];
+  const allProviders = [bestBank, ...others];
+  
+  // ⚠️ CORRECTION : Afficher TOUS les providers dans le texte (pas de filtre)
+  const displayProviders = allProviders.sort((a, b) => b.out - a.out);
+  
+  // ⚠️ NOUVEAU : Format sans frais, juste taux effectif
+  const providersList = displayProviders.map((p, i) => {
+    if (route === 'eurbrl') {
+      return `<b>${i + 1}. ${p.provider}</b>\n💰 Tu reçois : R$ ${formatAmount(p.out, 2, locale)}\n📊 Taux effectif : ${formatRate(p.rate, locale)}`;
+    } else {
+      return `<b>${i + 1}. ${p.provider}</b>\n💰 Tu reçois : €${formatAmount(p.out, 2, locale)}\n📊 Taux effectif : ${formatRate(p.rate, locale)}`;
     }
-    
-    const allProviders = [bestBank, ...others];
-    const displayProviders = allProviders.sort((a, b) => b.out - a.out);
-    
-    const providersList = displayProviders.map((p, i) => {
-      if (route === 'eurbrl') {
-        return `<b>${i + 1}. ${p.provider}</b>\n💰 Tu reçois : R$ ${formatAmount(p.out, 2, locale)}\n📊 Taux effectif : ${formatRate(p.rate, locale)}`;
-      } else {
-        return `<b>${i + 1}. ${p.provider}</b>\n💰 Tu reçois : €${formatAmount(p.out, 2, locale)}\n📊 Taux effectif : ${formatRate(p.rate, locale)}`;
-      }
-    }).join('\n\n');
-    
-    const onchainCompare = onchainAmount 
-      ? `~${formatAmount(onchainAmount, 0, locale)}${route === 'eurbrl' ? ' R$' : '€'}`
-      : '—';
-    
-    const offchainBest = displayProviders[0]?.out 
-      ? formatAmount(displayProviders[0].out, 0, locale)
-      : '—';
-    
-    // ✅ Footer avec rappel on-chain + reformulation
-    const footer = `
+  }).join('\n\n');
+  
+  // ⚠️ NOUVEAU : Footer avec rappel on-chain + reformulation
+  const onchainCompare = onchainAmount 
+    ? `~${formatAmount(onchainAmount, 0, locale)}${route === 'eurbrl' ? ' R$' : '€'}`
+    : '—';
+  
+  const offchainBest = displayProviders[0]?.out 
+    ? formatAmount(displayProviders[0].out, 0, locale)
+    : '—';
+  
+  const footer = `
 
 💡 Plus cher que l'on-chain (tu reçois ~${offchainBest}${route === 'eurbrl' ? ' R$' : '€'} vs ~${onchainCompare} on-chain), mais certains préfèrent ces méthodes car elles sont plus user-friendly que le process on-chain.
 
@@ -271,33 +274,40 @@ Liens de parrainage : gratuits pour toi, financent le service.`,
 💡 N'hésite pas à utiliser nos liens de parrainage lorsque disponibles (⭐), c'est ce qui nous permet de financer ce service.
 
 <i>*Données fournies par Wise Comparisons</i>`;
-    
-    return `${title}\n\n${providersList}${footer}`;
-  },
+  
+  return `${title}\n\n${providersList}${footer}`;
+},
 
-  // ✅ ÉCRAN 6 : ONCHAIN_INTRO (modifié)
-  ONCHAIN_INTRO: `🚀 ROUTE ON-CHAIN
 
-📍 <b>Le processus en 3 étapes</b>
+
+// ============================================
+// MESSAGES SECTION 4 - FRANÇAIS
+// À ajouter/remplacer dans l'objet `fr` de messages.js
+// ============================================
+
+// ⚠️ ONCHAIN_INTRO simplifié
+ONCHAIN_INTRO: `🚀 ROUTE ON-CHAIN
+
+🔄 Comment ça marche :
 1️⃣ Europe → Change tes EUR en USDC
 2️⃣ Blockchain → Envoie tes USDC
 3️⃣ Brésil → Convertis USDC en BRL (Pix)
 
-✅ <b>Ce dont tu as besoin</b>
-• 🇪🇺 Exchange en Europe acceptant dépôt EUR (SEPA)
-• 🇧🇷 Exchange au Brésil acceptant retrait BRL (Pix)
+✅ Ce qu'il te faut :
+• 🇪🇺 Exchange acceptant dépôts EUR à bas frais (SEPA)
+• 🇧🇷 Exchange acceptant retraits BRL à bas frais (Pix)
 
 💡 On a des recommandations !
 
 💡 <b>Fun fact :</b> Les frais on-chain (~0,5-1%) sont 5 à 10 fois moins chers que les transferts classiques (2,5-6%) !`,
 
-  // ✅ ÉCRAN 7 : FAQ_MENU (nouveau)
-  FAQ_MENU: `🤔 UN DOUTE ?
+// ⚠️ NOUVEAU : Menu FAQ
+FAQ_MENU: `🤔 UN DOUTE ?
 
 Choisis un sujet ou pose ta question :`,
 
-  // ✅ ÉCRAN 8 : FAQ_WHY_ONCHAIN (nouveau)
-  FAQ_WHY_ONCHAIN: `💡 POURQUOI ON-CHAIN ?
+// ⚠️ NOUVEAU : Pourquoi on-chain
+FAQ_WHY_ONCHAIN: `💡 POURQUOI ON-CHAIN ?
 
 🌍 <b>La blockchain élimine les intermédiaires</b>
 
@@ -325,8 +335,8 @@ Le volume des transferts transfrontaliers via stablecoins a explosé : infrastru
 
 ✅ Légal, sûr, et utilisé par de nombreuses institutions.`,
 
-  // ✅ ÉCRAN 9 : FAQ_SEND_QUESTION (nouveau)
-  FAQ_SEND_QUESTION: `📧 POSE TA QUESTION
+// ⚠️ NOUVEAU : Formulaire question
+FAQ_SEND_QUESTION: `📧 POSE TA QUESTION
 
 Envoie-moi ta question et je la transmettrai à l'équipe.
 
@@ -334,55 +344,38 @@ Tu recevras une réponse dans les 24-48h.
 
 <i>Pour annuler, clique sur "Retour"</i>`,
 
-  FAQ_QUESTION_RECEIVED: `✅ QUESTION REÇUE
+FAQ_QUESTION_RECEIVED: `✅ QUESTION REÇUE
 
 Merci ! On te répond dans les 24-48h.`,
 
-  // ✅ ÉCRAN 10 : WHAT_IS_EXCHANGE (ajout phrase)
-  WHAT_IS_EXCHANGE: `🏦 C'est quoi un exchange ?
-
-Un exchange crypto, c'est comme un bureau de change digital.
-
-Tu peux :
-• Déposer de l'argent classique (EUR, BRL...)
-• Acheter/vendre des cryptos (USDC, Bitcoin...)
-• Les envoyer vers d'autres exchanges
-
-Les plus connus : Kraken, Binance, Coinbase, Bitso...
-
-Pour notre cas :
-• Exchange Europe = tu déposes EUR, tu achètes USDC
-• Exchange Brésil = tu reçois USDC, tu les vends en BRL, tu retires par Pix
-
-C'est réglementé et sûr (si tu choisis des plateformes reconnues).
-
-👉 On va te recommander nos préférés dans les prochains écrans.`,
-
-  // ✅ ÉCRAN 11 : EXCHANGES_EU (reformulé)
-  EXCHANGES_EU: `🇪🇺 Exchanges pour déposer/retirer EUR
+  EXCHANGES_EU: `🇪🇺 Exchanges en Europe
 
 Nos recommandations :
-• Kraken (👋 On utilise) — Virement gratuit, sérieux, USDC dispo
+• Kraken — Virement gratuit, sérieux, USDC dispo 👋 (On utilise)
 • Bitstamp — Vétéran UE, sérieux, virements supportés
 
 À vérifier : SEPA ok (même avec résidence BR) • USDC dispo • frais raisonnables • réputation
 
 ⚠️ Certains exchanges (ex: Binance) n'acceptent que dépôt EUR par carte avec >2% de frais si résidence BR.`,
 
-  // ✅ ÉCRAN 12 : EXCHANGES_BR (reformulé)
-  EXCHANGES_BR: `🇧🇷 Exchanges pour déposer/retirer BRL
+  // NOUVEAU : Tâche 7
+  COMPARE_TARGET_INTRO: `💡 Tu veux recevoir un montant précis ?
+
+Entre le montant que tu veux recevoir (ex: 500)`,
+
+  EXCHANGES_BR: `🇧🇷 Exchanges au Brésil
 
 Notre préférence :
-• Binance BR (👋 On utilise aussi) — Pix natif, liquidité énorme, frais bas
+• Binance BR — Pix natif, liquidité énorme, frais bas (~0,10%) + 3,50 BRL fixes par retrait Pix. (👋 C'est aussi ce qu'on utilise nous)
 
 Autres solutions :
 • Bitso — Pix gratuit et instantané, interface claire, régulé localement
 • Mercado Bitcoin — acteur local historique, Pix supporté
 • Foxbit — Pix 24/7, frais corrects
 
-À vérifier : Pix ok • USDC dispo • réputation
+À vérifier : Pix ok • USDC dispo • frais raisonnables • réputation
 
-Nos liens de parrainage financent ce service (gratuits pour toi, parfois bonus).
+Nos liens de parrainage financent le service (gratuits pour toi, parfois bonus).
 
 ⚠️ Rappel : un exchange sert à un côté. Il faut un 🇪🇺 (SEPA) + un 🇧🇷 (Pix).`,
 
@@ -405,6 +398,23 @@ C'est parfait pour transférer de l'argent sans risque de variation.
 
 Tu l'utilises comme "monnaie pivot" : EUR → USDC → BRL.`,
 
+  WHAT_IS_EXCHANGE: `🏦 C'est quoi un exchange ?
+
+Un exchange crypto, c'est comme un bureau de change digital.
+
+Tu peux :
+• Déposer de l'argent classique (EUR, BRL...)
+• Acheter/vendre des cryptos (USDC, Bitcoin...)
+• Les envoyer vers d'autres exchanges
+
+Les plus connus : Kraken, Binance, Coinbase, Bitso...
+
+Pour notre cas :
+• Exchange Europe = tu déposes EUR, tu achètes USDC
+• Exchange Brésil = tu reçois USDC, tu les vends en BRL, tu retires par Pix
+
+C'est réglementé et sûr (si tu choisis des plateformes reconnues).`,
+
   MARKET_VS_LIMIT: `📈 Market vs Limit
 
 <b>Market (au marché)</b> :
@@ -419,7 +429,6 @@ Tu l'utilises comme "monnaie pivot" : EUR → USDC → BRL.`,
 
 <i>Astuce : si tu veux « juste échanger », choisis Market.</i>`,
 
-  // ✅ ÉCRAN 13 : Validé tel quel
   GUIDE_TRANSITION: `✅ Tu as (ou tu vas avoir) :
 • Un compte 🇪🇺 pour déposer tes EUR (SEPA → USDC)
 • Un compte 🇧🇷 pour retirer tes BRL (USDC → Pix)
@@ -432,7 +441,6 @@ C'est plus qu'un simple transfert :
 
 🚀 Maintenant, on commence concrètement : première étape → déposer tes EUR sur ton compte 🇪🇺 et les convertir en USDC.`,
 
-  // Étapes du guide (inchangées sauf notes finales)
   STEP_1_1: (amount, locale) => `1️⃣ Déposer tes EUR sur ton compte exchange
 
 • Va dans la section "Dépôt / Deposit / Fiat".
@@ -534,7 +542,7 @@ Estimation : tu recevras ~${formatAmount(usdcAmount - 1, 2, locale)} USDC côté
 👉 Pour la plupart des gens, "ordre au marché" = le plus simple et rapide.
 
 Estimation de ton solde : ~R$ ${formatAmount(brlAmount, 2, locale)}
-*⚠️ Estimation proche du réel (frais ~0,1%).*`,
+*⚠️ Estimation proche du réel (frais ~0,10–0,20%).*`,
 
   STEP_3_3: (brlNet, locale) => `3️⃣ Retirer ton argent en R$
 
@@ -577,33 +585,33 @@ Ce que tu as appris aujourd'hui sera de plus en plus utilisé dans le futur : tu
 
 🙌 On espère que tu as kiffé l'expérience !`,
 
-  // Premium et alertes (inchangés, déjà dans le code)
-  PREMIUM_PRICING: `💎 PASSER À PREMIUM
+
+PREMIUM_PRICING: `💎 PASSER À PREMIUM
   
-✨ Avec Premium :
-• 🔔 Alertes personnalisées illimitées
-• 📢 Alertes spontanées régulières
-• 🎯 Multi-paires (EUR→BRL + BRL→EUR)
-• 📊 Analyses plus poussées
-• 🌍 Multi-devises à venir
-• ⚡ Accès prioritaire aux nouvelles fonctionnalités
-
-[ℹ️ Voir toutes les fonctionnalités Premium]
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-📱 15 R$ / 3 mois
-   Soit 5 R$/mois
-
-📱 27 R$ / 6 mois
-   Soit 4,50 R$/mois • Économie de 10%
-
-📱 50 R$ / 12 mois
-   Soit 4,17 R$/mois • Économie de 17%
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🔜 Carte bancaire internationale bientôt disponible`,
+  ✨ Avec Premium :
+  • 🔔 Alertes personnalisées illimitées
+  • 📢 Alertes spontanées régulières
+  • 🎯 Multi-paires (EUR→BRL + BRL→EUR)
+  • 📊 Analyses plus poussées
+  • 🌍 Multi-devises à venir
+  • ⚡ Accès prioritaire aux nouvelles fonctionnalités
+  
+  [ℹ️ Voir toutes les fonctionnalités Premium]
+  
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  
+  📱 15 R$ / 3 mois
+     Soit 5 R$/mois
+  
+  📱 27 R$ / 6 mois
+     Soit 4,50 R$/mois • Économie de 10%
+  
+  📱 50 R$ / 12 mois
+     Soit 4,17 R$/mois • Économie de 17%
+  
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  
+  🔜 Carte bancaire internationale bientôt disponible`,
   
     PREMIUM_DETAILS: `💎 FONCTIONNALITÉS PREMIUM
   
@@ -1158,93 +1166,83 @@ Premium users can create unlimited alerts.
 
 Price: from 5 R$/month`,
 
-btn: {
-  langFR: '🇫🇷 Français',
-  langPT: '🇧🇷 Português',
-  langEN: '🇬🇧 English',
-  about: 'ℹ️ À propos',
-  eurbrl: (amt, locale) => `🇪🇺 EUR → 🇧🇷 BRL (Pix) · €${formatAmount(amt, 0, locale)}`,
-  brleur: (amt, locale) => `🇧🇷 BRL → 🇪🇺 EUR (SEPA) · R$ ${formatAmount(amt, 0, locale)}`,
-  
-  // ✅ Boutons renommés (Écran 3)
-  contOn: '🚀 Convertir on-chain',
-  stayOff: '🏦 Convertir off-chain',
-  calcdetails: '🔍 Détails du calcul',
-  swapMode: '🔄 Inverser (recevoir plutôt)',
-  change: '✏️ Changer montant',
-  
-  back: '⬅️ Retour',
-  sources: '📊 Sources des données',
-  openWise: '🔗 Ouvrir Wise',
-  openRemitly: '🔗 Ouvrir Remitly',
-  openInstarem: '🔗 Ouvrir Instarem',
-  seeOnchain: '🚀 Voir route on-chain',
-  
-  // ✅ Nouveaux boutons (Écran 6)
-  createEU: '🇪🇺 Créer compte Europe',
-  createBR: '🇧🇷 Créer compte Brésil',
-  startGuide: '🚀 Démarrer le guide',
-  faqDoubt: "🤔 Un doute ?",
-  whyOnchain: "💡 Pourquoi on-chain ?",
-  askQuestion: '💬 Poser une question',
-  
-  whatIsUSDC: '🪙 Qu\'est-ce que l\'USDC ?',
-  whatIsExchange: '🏦 Qu\'est-ce qu\'un exchange ?',
-  proofSources: '📊 Preuves & sources',
-  openKraken: '🔗 Ouvrir Kraken',
-  openBinanceEU: '🔗 Ouvrir Binance (UE)',
-  openBitvavo: '🔗 Ouvrir Bitvavo',
-  openBitstamp: '🔗 Ouvrir Bitstamp',
-  openCoinbase: '🔗 Ouvrir Coinbase',
-  openBinanceBR: '🔗 Ouvrir Binance BR',
-  openBitso: '🔗 Ouvrir Bitso',
-  openMercadoBitcoin: '🔗 Ouvrir Mercado Bitcoin',
-  openFoxbit: '🔗 Ouvrir Foxbit',
-  
-  startStep1: '🚀 Déposer & convertir mes EUR en USDC',
-  step1Done: '✅ J\'ai déposé mes EUR',
-  step1_2Done: '✅ J\'ai trouvé le marché EUR/USDC',
-  step1_3Done: '✅ J\'ai acheté mes USDC',
-  marketVsLimit: 'ℹ️ Market vs Limit',
-  nextStep2: '👉 Passer à l\'étape 2 (transfert)',
-  
-  // ✅ Nouveau bouton skip (Écran 14)
-  skipToStep2: "J'ai déjà des USDC (skip)",
-  skipToStep3: "⏭️ Passer à l'étape 3",
-  
-  step2Done: '✅ J\'ai mon adresse → continuer',
-  step2_2Done: '✅ J\'ai saisi mon montant',
-  step2_3Done: '✅ J\'ai confirmé le transfert',
-  step3Start: '🇧🇷 Étape 3 — Vendre USDC & retirer en Pix',
-  step3_1Done: '✅ J\'ai trouvé le marché',
-  step3_2Done: '✅ J\'ai passé mon ordre',
-  step3_3Done: '✅ J\'ai lancé mon Pix',
-  whyNotExact: '🤔 Pourquoi pas le solde exact ?',
-  setAlert: '⏰ Activer mon alerte',
-  premium: '🚀 Découvrir Premium',
-  giveFeedback: '💬 Donner une suggestion',
-  seePremium: '💎 Voir Premium',
-  subscribe3m: '📱 15 R$ - 3 mois',
-  subscribe6m: '📱 27 R$ - 6 mois',
-  subscribe12m: '📱 50 R$ - 12 mois',
-  premiumDetails: 'ℹ️ Voir toutes les fonctionnalités',
-  createAlert: '➕ Créer une alerte',
-  myAlerts: '🔔 Mes alertes',
-  conservative: '🛡️ Conservateur',
-  balanced: '⚖️ Équilibré',
-  aggressive: '🎯 Opportuniste',
-  custom: '✏️ Personnalisé',
-  disableAlert: '🔕 Désactiver',
-  editAlert: '✏️ Modifier',
-  backToPricing: '⬅️ Retour aux tarifs',
-  chooseCooldown15: '⚡ 15 minutes',
-  chooseCooldown1h: '⏱️ 1 heure ⭐',
-  chooseCooldown6h: '⏰ 6 heures',
-  chooseCooldown24h: '📅  24 heures',
-  chooseCooldown1week: '📆  1 semaine',
-  deleteAlert: '🗑️ Supprimer',
-  viewAlert: '👁️ Voir détails',
-}
+  btn: {
+    langFR: '🇫🇷 Français',
+    langPT: '🇧🇷 Português',
+    langEN: '🇬🇧 English',
+    about: 'ℹ️ À propos',
+    eurbrl: (amt, locale) => `🇪🇺 EUR → 🇧🇷 BRL (Pix) · €${formatAmount(amt, 0, locale)}`,
+    brleur: (amt, locale) => `🇧🇷 BRL → 🇪🇺 EUR (SEPA) · R$ ${formatAmount(amt, 0, locale)}`,
+    contOn: '🚀 Convertir on-chain',
+    stayOff: '🏦 Convertir off-chain',
+    calcdetails: '🔍 Détails du calcul',
+    swapMode: '🔄 Inverser (recevoir plutôt)',
+    change: '✏️ Changer montant',
+    back: '⬅️ Retour',
+    sources: '📊 Sources des données',
+    openWise: '🔗 Ouvrir Wise',
+    openRemitly: '🔗 Ouvrir Remitly',
+    openInstarem: '🔗 Ouvrir Instarem',
+    seeOnchain: '🚀 Voir route on-chain',
+    createEU: '🇪🇺 Créer compte Europe',
+    createBR: '🇧🇷 Créer compte Brésil',
+    startGuide: '🚀 Démarrer le guide',
+    whatIsUSDC: '🪙 Qu\'est-ce que l\'USDC ?',
+    whatIsExchange: '🏦 Qu\'est-ce qu\'un exchange ?',
+    proofSources: '📊 Preuves & sources',
+    openKraken: '🔗 Ouvrir Kraken',
+    openBinanceEU: '🔗 Ouvrir Binance (UE)',
+    openBitvavo: '🔗 Ouvrir Bitvavo',
+    openBitstamp: '🔗 Ouvrir Bitstamp',
+    openCoinbase: '🔗 Ouvrir Coinbase',
+    openBinanceBR: '🔗 Ouvrir Binance BR',
+    openBitso: '🔗 Ouvrir Bitso',
+    openMercadoBitcoin: '🔗 Ouvrir Mercado Bitcoin',
+    openFoxbit: '🔗 Ouvrir Foxbit',
+    startStep1: '🚀 Déposer & convertir mes EUR en USDC',
+    step1Done: '✅ J\'ai déposé mes EUR',
+    step1_2Done: '✅ J\'ai trouvé le marché EUR/USDC',
+    step1_3Done: '✅ J\'ai acheté mes USDC',
+    marketVsLimit: 'ℹ️ Market vs Limit',
+    nextStep2: '👉 Passer à l\'étape 2 (transfert)',
+    step2Done: '✅ J\'ai mon adresse → continuer',
+    step2_2Done: '✅ J\'ai saisi mon montant',
+    step2_3Done: '✅ J\'ai confirmé le transfert',
+    step3Start: '🇧🇷 Étape 3 — Vendre USDC & retirer en Pix',
+    step3_1Done: '✅ J\'ai trouvé le marché',
+    step3_2Done: '✅ J\'ai passé mon ordre',
+    step3_3Done: '✅ J\'ai lancé mon Pix',
+    whyNotExact: '🤔 Pourquoi pas le solde exact ?',
+    setAlert: '⏰ Activer mon alerte',
+    premium: '🚀 Découvrir Premium',
+    giveFeedback: '💬 Donner une suggestion',
+    askQuestion: '💬 Poser une question',
+    seePremium: '💎 Voir Premium',
+    subscribe3m: '📱 15 R$ - 3 mois',
+    subscribe6m: '📱 27 R$ - 6 mois',
+    subscribe12m: '📱 50 R$ - 12 mois',
+    premiumDetails: 'ℹ️ Voir toutes les fonctionnalités',
+    createAlert: '➕ Créer une alerte',
+    myAlerts: '🔔 Mes alertes',
+    conservative: '🛡️ Conservateur',
+    balanced: '⚖️ Équilibré',
+    aggressive: '🎯 Opportuniste',
+    custom: '✏️ Personnalisé',
+    disableAlert: '🔕 Désactiver',
+    editAlert: '✏️ Modifier',
+    backToPricing: '⬅️ Retour aux tarifs',
+    chooseCooldown15: '⚡ 15 minutes',
+    chooseCooldown1h: '⏱️ 1 heure ⭐',
+    chooseCooldown6h: '⏰ 6 heures',
+    chooseCooldown24h: '📅 24 heures',
+    chooseCooldown1week: '📆 1 semaine',
+    deleteAlert: '🗑️ Supprimer',
+    viewAlert: '👁️ Voir détails',
+    whyOnchain: "💡 Pourquoi on-chain ?",
+    faqDoubt: "🤔 Un doute ?",
+    skipToStep2: "⏭️ Passer à l'étape 2",
+    skipToStep3: "⏭️ Passer à l'étape 3",
+  }
 };
 
 // ============================================
@@ -1264,18 +1262,16 @@ As taxas on-chain costumam ser melhores que as plataformas tradicionais. É lega
 
 Serviço gratuito, financiado por links de indicação.`,
 
-  ERROR_RATES_UNAVAILABLE: `⚠️ Taxas crypto indisponíveis. Tente novamente em instantes.`,
-  ERROR_INVALID_AMOUNT: `⚠️ Valor inválido. Digite um número (ex. 1000)`,
-  ERROR_UPDATE_FAILED: `❌ Erro ao atualizar.`,
+ERROR_RATES_UNAVAILABLE: `⚠️ Taxas crypto indisponíveis. Tente novamente em instantes.`,
+ERROR_INVALID_AMOUNT: `⚠️ Valor inválido. Digite um número (ex. 1000)`,
+ERROR_UPDATE_FAILED: `❌ Erro ao atualizar.`,
 
-  // ✅ TELA 2
-  promptAmt: `💬 Envie um valor ou escolha:`,
-  
+promptAmt: `💬 Envie um valor ou escolha:`,
+
   askAmount: `✏️ Digite um valor (ex. 1000)`,
   
   askRoute: (amount, locale) => `O que você quer fazer com ${formatAmount(amount, 0, locale)}?`,
   
-  // ✅ TELA 3: buildComparison
   buildComparison: ({ route, amount, rates, onchain, bestBank, others, delta, locale, isTargetMode = false }) => {
     const now = new Date();
     const dayOfWeek = now.getDay();
@@ -1297,8 +1293,7 @@ Serviço gratuito, financiado por links de indicação.`,
     const timeStr = now.toLocaleTimeString(locale, {hour: '2-digit', minute: '2-digit'});
     const tzAbbr = new Date().toLocaleTimeString('en-US', {timeZoneName: 'short'}).split(' ')[2];
     
-    // ✅ Linha referência
-    let ref = `📊 Taxa de referência ${formatRate(rates.cross, locale)} • ${timeStr} ${tzAbbr}`;
+    let ref = `📊 Ref. ${formatRate(rates.cross, locale)} • ${timeStr} ${tzAbbr}`;
     if (isWeekend) {
       ref += `\n⚠️ Fim de semana: taxa congelada até segunda`;
     }
@@ -1341,7 +1336,6 @@ Serviço gratuito, financiado por links de indicação.`,
       }
     }
     
-    // ✅ Seção "Outros"
     let othersText = '';
     if (others.length > 0) {
       const topOthers = others.slice(0, 3);
@@ -1358,32 +1352,30 @@ Serviço gratuito, financiado por links de indicação.`,
       }).join('\n');
       
       const count = others.length;
-      othersText = `\n\nOutros :\n${formattedOthers}`;
+      othersText = `\n\nOutros (${count}) :\n${formattedOthers}`;
       
       if (count > 3) {
-        othersText += `\n+ ${count - 3} outros disponíveis`;
+        othersText += `\n<i>+ ${count - 3} outros disponíveis</i>`;
       }
     }
     
-    // ✅ Delta
     let deltaText = '';
     if (delta !== null && bestBank) {
       if (isTargetMode) {
         const sign = delta <= 0 ? '−' : '+';
         const absValue = Math.abs(delta);
         deltaText = delta <= 0 
-          ? `\n\n✅ Você economiza aproximadamente ${sign}${formatAmount(absValue, 1, locale)}% on-chain`
+          ? `\n\n✅ ${sign}${formatAmount(absValue, 1, locale)}% on-chain (mais barato)`
           : `\n\n⚠️ ${sign}${formatAmount(absValue, 1, locale)}% on-chain (mais caro)`;
       } else {
         const sign = delta >= 0 ? '+' : '−';
-        deltaText = `\n\n✅ Você economiza aproximadamente ${sign}${formatAmount(Math.abs(delta), 1, locale)}% on-chain`;
+        deltaText = `\n\n✅ ${sign}${formatAmount(Math.abs(delta), 1, locale)}% on-chain`;
       }
     }
     
     return `${title}\n\n${ref}\n\n${onchainLine}\n\n${bankLine}${othersText}${deltaText}`;
   },
 
-  // ✅ TELA 4: buildCalcDetails
   buildCalcDetails: ({ route, amount, rates, onchain, locale }) => {
     const title = '🔍 Detalhes do cálculo on-chain';
     
@@ -1396,7 +1388,7 @@ Serviço gratuito, financiado por links de indicação.`,
 
 1️⃣ <b>Compra de USDC na Europa</b>
    💰 Valor : €${formatAmount(amount, 2, locale)}
-   📉 Taxa de trading (~0,1%) : −€${formatAmount(amount * 0.001, 2, locale)}
+   📉 Taxa de trading (~0,1-0,2%) : −€${formatAmount(amount * 0.001, 2, locale)}
    🪙 USDC obtidos : ${formatAmount(usdcAfterBuy, 2, locale)} USDC
 
 2️⃣ <b>Transferência blockchain</b>
@@ -1407,17 +1399,18 @@ Serviço gratuito, financiado por links de indicação.`,
 3️⃣ <b>Venda de USDC no Brasil</b>
    🪙 USDC para vender : ${formatAmount(usdcAfterNetwork, 2, locale)} USDC
    💱 Taxa USDC/BRL : ${formatRate(rates.usdcBRL, locale)}
-   📉 Taxa de trading (~0,1%) : −R$ ${formatAmount(usdcAfterNetwork * rates.usdcBRL * 0.001, 2, locale)}
-   💰 BRL obtidos : R$ ${formatAmount(brlAfterTrade, 2, locale)}
+   📉 Taxa de trading (~0,1-0,2%) : −R${formatAmount(usdcAfterNetwork * rates.usdcBRL * 0.001, 2, locale)}
+   💰 BRL obtidos : R${formatAmount(brlAfterTrade, 2, locale)}
 
 4️⃣ <b>Saque Pix</b>
-   📉 Taxa Pix (se aplicável) : −R$ ${formatAmount(3.5, 2, locale)}
+   📉 Taxa Pix (~R$3,50) : −R${formatAmount(3.5, 2, locale)}
    
-✅ <b>Total recebido : R$ ${formatAmount(brlNet, 2, locale)}</b>
+✅ <b>Total recebido : R${formatAmount(brlNet, 2, locale)}</b>
 📊 <b>Taxa efetiva : ${formatRate(onchain.rate, locale)}</b>
 
 💡 As taxas reais podem variar levemente segundo sua plataforma e seu volume de trading.`;
     } else {
+      // BRL → EUR
       const { usdcFromBRL, usdcAfterNetwork, eurOut, eurNet } = onchain.breakdown;
       
       return `${title}
@@ -1425,9 +1418,9 @@ Serviço gratuito, financiado por links de indicação.`,
 📊 BRL → EUR via USDC
 
 1️⃣ <b>Compra de USDC no Brasil</b>
-   💰 Valor : R$ ${formatAmount(amount, 2, locale)}
+   💰 Valor : R${formatAmount(amount, 2, locale)}
    💱 Taxa BRL/USDC : ${formatRate(1/rates.usdcBRL, locale)}
-   📉 Taxa de trading (~0,1%) : −R$ ${formatAmount(amount * 0.001, 2, locale)}
+   📉 Taxa de trading (~0,1-0,2%) : −R${formatAmount(amount * 0.001, 2, locale)}
    🪙 USDC obtidos : ${formatAmount(usdcFromBRL, 2, locale)} USDC
 
 2️⃣ <b>Transferência blockchain</b>
@@ -1437,8 +1430,8 @@ Serviço gratuito, financiado por links de indicação.`,
 
 3️⃣ <b>Venda de USDC na Europa</b>
    🪙 USDC para vender : ${formatAmount(usdcAfterNetwork, 2, locale)} USDC
-   💱 Taxa EUR/USDC : ${formatRate(rates.usdcEUR, locale)}
-   📉 Taxa de trading (~0,1%) : −€${formatAmount(usdcAfterNetwork * rates.usdcEUR * 0.001, 2, locale)}
+   💱 Taxa USDC/EUR : ${formatRate(rates.usdcEUR, locale)}
+   📉 Taxa de trading (~0,1-0,2%) : −€${formatAmount(usdcAfterNetwork * rates.usdcEUR * 0.001, 2, locale)}
    
 ✅ <b>Total recebido : €${formatAmount(eurNet, 2, locale)}</b>
 📊 <b>Taxa efetiva : ${formatRate(onchain.rate, locale)}</b>
@@ -1454,7 +1447,7 @@ Taxa de referência EUR/BRL: Yahoo Finance (taxa oficial de câmbio)
 Cálculo on-chain:
 • Taxas crypto: CoinGecko (USDC/EUR, USDC/BRL)
 • Taxas reais incluídas:
-  - Trading ~0,1%
+  - Trading ~0,1-0,2%
   - Rede Polygon ~1 USDC
   - Saque Pix ~R$3,50
 
@@ -1462,34 +1455,36 @@ Taxas off-chain: API Wise Comparisons (taxas ao vivo dos provedores)
 
 Links de indicação: gratuitos para você, financiam o serviço.`,
 
-  // ✅ TELA 5: buildOffChain
-  buildOffChain: ({ route, amount, bestBank, others, locale, onchainAmount }) => {
-    const title = '🏦 Off-chain';
-    
-    if (!bestBank) {
-      return `${title}\n\n⚠️ Taxas indisponíveis no momento.`;
+buildOffChain: ({ route, amount, bestBank, others, locale, onchainAmount }) => {
+  const title = '🏦 Off-chain';
+  
+  if (!bestBank) {
+    return `${title}\n\n⚠️ Taxas indisponíveis no momento.`;
+  }
+  
+  const priorityNames = ['Wise', 'Remitly'];
+  const allProviders = [bestBank, ...others];
+  
+  // ⚠️ CORRECTION : Afficher TOUS les providers dans le texte
+  const displayProviders = allProviders.sort((a, b) => b.out - a.out);
+  
+  const providersList = displayProviders.map((p, i) => {
+    if (route === 'eurbrl') {
+      return `<b>${i + 1}. ${p.provider}</b>\n💰 Você recebe : R$ ${formatAmount(p.out, 2, locale)}\n📊 Taxa efetiva : ${formatRate(p.rate, locale)}`;
+    } else {
+      return `<b>${i + 1}. ${p.provider}</b>\n💰 Você recebe : €${formatAmount(p.out, 2, locale)}\n📊 Taxa efetiva : ${formatRate(p.rate, locale)}`;
     }
-    
-    const allProviders = [bestBank, ...others];
-    const displayProviders = allProviders.sort((a, b) => b.out - a.out);
-    
-    const providersList = displayProviders.map((p, i) => {
-      if (route === 'eurbrl') {
-        return `<b>${i + 1}. ${p.provider}</b>\n💰 Você recebe : R$ ${formatAmount(p.out, 2, locale)}\n📊 Taxa efetiva : ${formatRate(p.rate, locale)}`;
-      } else {
-        return `<b>${i + 1}. ${p.provider}</b>\n💰 Você recebe : €${formatAmount(p.out, 2, locale)}\n📊 Taxa efetiva : ${formatRate(p.rate, locale)}`;
-      }
-    }).join('\n\n');
-    
-    const onchainCompare = onchainAmount 
-      ? `~${formatAmount(onchainAmount, 0, locale)}${route === 'eurbrl' ? ' R$' : '€'}`
-      : '—';
-    
-    const offchainBest = displayProviders[0]?.out 
-      ? formatAmount(displayProviders[0].out, 0, locale)
-      : '—';
-    
-    const footer = `
+  }).join('\n\n');
+  
+  const onchainCompare = onchainAmount 
+    ? `~${formatAmount(onchainAmount, 0, locale)}${route === 'eurbrl' ? ' R$' : '€'}`
+    : '—';
+  
+  const offchainBest = displayProviders[0]?.out 
+    ? formatAmount(displayProviders[0].out, 0, locale)
+    : '—';
+  
+  const footer = `
 
 💡 Mais caro que on-chain (você recebe ~${offchainBest}${route === 'eurbrl' ? ' R$' : '€'} vs ~${onchainCompare} on-chain), mas alguns preferem esses métodos porque são mais user-friendly que o processo on-chain.
 
@@ -1498,62 +1493,56 @@ Links de indicação: gratuitos para você, financiam o serviço.`,
 💡 Não hesite em usar nossos links de indicação quando disponíveis (⭐), é isso que nos permite financiar este serviço.
 
 <i>*Dados fornecidos por Wise Comparisons</i>`;
-    
-    return `${title}\n\n${providersList}${footer}`;
-  },
+  
+  return `${title}\n\n${providersList}${footer}`;
+},
 
-  // ✅ TELA 6: ONCHAIN_INTRO
-  ONCHAIN_INTRO: `🚀 ROTA ON-CHAIN
+ONCHAIN_INTRO: `🚀 ROTA ON-CHAIN
 
-📍 <b>O processo em 3 etapas</b>
+🔄 Como funciona :
 1️⃣ Europa → Troca seus EUR em USDC
 2️⃣ Blockchain → Envia seus USDC
 3️⃣ Brasil → Converte USDC em BRL (Pix)
 
-✅ <b>O que você precisa</b>
-• 🇪🇺 Exchange na Europa aceitando depósito EUR (SEPA)
-• 🇧🇷 Exchange no Brasil aceitando saque BRL (Pix)
+✅ O que você precisa :
+• 🇪🇺 Conta exchange na Europa
+• 🇧🇷 Conta exchange no Brasil
 
-💡 Temos recomendações!
+💡 <b>Fun fact :</b> As taxas on-chain (~0,5-1%) são 5 a 10 vezes mais baratas que transferências clássicas (2,5-6%)!`,
 
-💡 <b>Fun fact:</b> As taxas on-chain (~0,5-1%) são 5 a 10 vezes mais baratas que transferências clássicas (2,5-6%)!`,
+FAQ_MENU: `🤔 ALGUMA DÚVIDA ?
 
-  // ✅ TELA 7: FAQ_MENU
-  FAQ_MENU: `🤔 ALGUMA DÚVIDA?
+Escolha um assunto ou faça sua pergunta :`,
 
-Escolha um assunto ou faça sua pergunta:`,
-
-  // ✅ TELA 8: FAQ_WHY_ONCHAIN
-  FAQ_WHY_ONCHAIN: `💡 POR QUE ON-CHAIN?
+FAQ_WHY_ONCHAIN: `💡 POR QUE ON-CHAIN ?
 
 🌍 <b>A blockchain elimina os intermediários</b>
 
-Transferência clássica:
+Transferência clássica :
 Seu banco → Banco correspondente → Banco beneficiário
 💸 Cada intermediário cobra sua comissão (2,5-6% total)
 
-Transferência on-chain:
+Transferência on-chain :
 Você → Blockchain → Destinatário
 💸 Taxas fixas mínimas (~0,5-1% total)
 
-📊 <b>As provas:</b>
+📊 <b>As provas :</b>
 
 • <b>Cryptocurrency-based remittance statistics 2025</b>
 Serviços tradicionais cobram em média 6,5% em taxas, contra ~1% para stablecoins.
 
 • <b>World Bank (março 2025)</b>
-Custo médio das transferências tradicionais: 6,49% do valor.
+Custo médio das transferências tradicionais : 6,49% do valor.
 
 • <b>CFA Institute (2025)</b>
 Investidores institucionais já usam stablecoins para reduzir custos e tempo de liquidação.
 
 • <b>McKinsey (2025)</b>
-O volume de transferências transfronteiriças via stablecoins explodiu: infraestrutura de pagamento moderna.
+O volume de transferências transfronteiriças via stablecoins explodiu : infraestrutura de pagamento moderna.
 
 ✅ Legal, seguro, e usado por muitas instituições.`,
 
-  // ✅ TELA 9: FAQ_SEND_QUESTION
-  FAQ_SEND_QUESTION: `📧 FAÇA SUA PERGUNTA
+FAQ_SEND_QUESTION: `📧 FAÇA SUA PERGUNTA
 
 Envie sua pergunta e eu a transmitirei à equipe.
 
@@ -1561,55 +1550,37 @@ Você receberá uma resposta em 24-48h.
 
 <i>Para cancelar, clique em "Voltar"</i>`,
 
-  FAQ_QUESTION_RECEIVED: `✅ PERGUNTA RECEBIDA
+FAQ_QUESTION_RECEIVED: `✅ PERGUNTA RECEBIDA
 
-Obrigado! Respondemos em 24-48h.`,
+Obrigado ! Respondemos em 24-48h.`,
 
-  // ✅ TELA 10: WHAT_IS_EXCHANGE
-  WHAT_IS_EXCHANGE: `🏦 O que é um exchange?
-
-Um exchange crypto é como um bureau de câmbio digital.
-
-Você pode:
-• Depositar dinheiro tradicional (EUR, BRL...)
-• Comprar/vender cryptos (USDC, Bitcoin...)
-• Enviá-los para outros exchanges
-
-Os mais conhecidos: Kraken, Binance, Coinbase, Bitso...
-
-Para nosso caso:
-• Exchange Europa = você deposita EUR, compra USDC
-• Exchange Brasil = você recebe USDC, vende por BRL, saca por Pix
-
-É regulamentado e seguro (se escolher plataformas reconhecidas).
-
-👉 Vamos te recomendar nossos preferidos nas próximas telas.`,
-
-  // ✅ TELA 11: EXCHANGES_EU
-  EXCHANGES_EU: `🇪🇺 Exchanges para depositar/sacar EUR
+EXCHANGES_EU: `🇪🇺 Exchanges na Europa
 
 Nossas recomendações:
-• Kraken (👋 Usamos) — Transferência gratuita, sério, USDC disponível
+• Kraken — Transferência gratuita, sério, USDC disponível (👋 Usamos)
 • Bitstamp — Veterano UE, sério, transferências suportadas
 
-Verificar: SEPA ok (mesmo com residência BR) • USDC disponível • taxas razoáveis • reputação
-
+Verificar: Transferências EUR aceitas com residência brasileira • USDC disponível • taxas razoáveis • reputação
 ⚠️ Alguns exchanges (ex: Binance) só aceitam depósito EUR por cartão com >2% de taxas se residência BR.`,
 
-  // ✅ TELA 12: EXCHANGES_BR
-  EXCHANGES_BR: `🇧🇷 Exchanges para depositar/sacar BRL
+  // NOVO : Tarefa 7
+  COMPARE_TARGET_INTRO: `💡 Você quer receber um valor específico?
+
+Digite o valor que você quer receber (ex: 500)`,
+
+  EXCHANGES_BR: `🇧🇷 Exchanges no Brasil
 
 Nossa preferência:
-• Binance BR (👋 Usamos também) — Pix nativo, liquidez enorme, taxas baixas
+• Binance BR — Pix nativo, liquidez enorme, taxas baixas (~0,10%) + 3,50 BRL fixos por saque Pix. (👋 É o que usamos também)
 
 Outras soluções:
 • Bitso — Pix gratuito e instantâneo, interface clara, regulado localmente
 • Mercado Bitcoin — ator local histórico, Pix suportado
 • Foxbit — Pix 24/7, taxas corretas
 
-Verificar: Pix ok • USDC disponível • reputação
+Verificar: Pix ok • USDC disponível • taxas razoáveis • reputação
 
-Nossos links de indicação financiam este serviço (gratuitos para você, às vezes bônus).
+Nossos links de indicação financiam o serviço (gratuitos para você, às vezes bônus).
 
 ⚠️ Lembrete: um exchange serve para um lado. Você precisa de um 🇪🇺 (SEPA) + um 🇧🇷 (Pix).`,
 
@@ -1632,6 +1603,23 @@ Por que escolhemos USDC?
 
 Você o usa como "moeda pivô": EUR → USDC → BRL.`,
 
+  WHAT_IS_EXCHANGE: `🏦 O que é um exchange?
+
+Um exchange crypto é como um bureau de câmbio digital.
+
+Você pode:
+• Depositar dinheiro tradicional (EUR, BRL...)
+• Comprar/vender cryptos (USDC, Bitcoin...)
+• Enviá-los para outros exchanges
+
+Os mais conhecidos: Kraken, Binance, Coinbase, Bitso...
+
+Para nosso caso:
+• Exchange Europa = você deposita EUR, compra USDC
+• Exchange Brasil = você recebe USDC, vende por BRL, saca por Pix
+
+É regulamentado e seguro (se escolher plataformas reconhecidas).`,
+
   MARKET_VS_LIMIT: `📈 Market vs Limit
 
 <b>Market (a mercado)</b>:
@@ -1646,7 +1634,6 @@ Você o usa como "moeda pivô": EUR → USDC → BRL.`,
 
 <i>Dica: se você quer "só trocar", escolha Market.</i>`,
 
-  // ✅ TELA 13: GUIDE_TRANSITION
   GUIDE_TRANSITION: `✅ Você tem (ou vai ter):
 • Uma conta 🇪🇺 para depositar seus EUR (SEPA → USDC)
 • Uma conta 🇧🇷 para sacar seus BRL (USDC → Pix)
@@ -1759,8 +1746,8 @@ Estimativa: você receberá ~${formatAmount(usdcAmount - 1, 2, locale)} USDC lad
 
 👉 Para a maioria das pessoas, "ordem a mercado" = o mais simples e rápido.
 
-Estimativa do seu saldo: ~R$ ${formatAmount(brlAmount, 2, locale)}
-*⚠️ Estimativa próxima do real (taxas ~0,1%).*`,
+Estimativa do seu saldo: ~R${formatAmount(brlAmount, 2, locale)}
+*⚠️ Estimativa próxima do real (taxas ~0,10-0,20%).*`,
 
   STEP_3_3: (brlNet, locale) => `3️⃣ Sacar seu dinheiro em R$
 
@@ -1775,7 +1762,7 @@ Estimativa do seu saldo: ~R$ ${formatAmount(brlAmount, 2, locale)}
 👉 Geralmente, as taxas são muito baixas (ex. Binance ~R$3,50 por saque Pix).
 Deveria ser gratuito honestamente… mas enfim 😅
 
-Estimativa do seu saldo recebido: ~R$ ${formatAmount(brlNet, 2, locale)} líquidos
+Estimativa do seu saldo recebido: ~R${formatAmount(brlNet, 2, locale)} líquidos
 *⚠️ Bom, não devemos estar muito longe da realidade ;)*`,
 
   WHY_NOT_EXACT: `🤔 Por que não podemos dar o valor exato?
@@ -1803,10 +1790,10 @@ O que você aprendeu hoje será cada vez mais usado no futuro: você acabou de d
 
 🙌 Esperamos que você tenha curtido a experiência!`,
 
-  // Premium e alertas (mantidos iguais)
-  PREMIUM_PRICING: `💎 ASSINAR PREMIUM
 
-✨ Com Premium:
+PREMIUM_PRICING: `💎 ASSINAR PREMIUM
+
+✨ Com Premium :
 • 🔔 Alertas personalizados ilimitados
 • 📢 Alertas espontâneos regulares
 • 🎯 Multi-pares (EUR→BRL + BRL→EUR)
@@ -2241,30 +2228,21 @@ Exemplos: 2.5, 3, 5`,
     langEN: '🇬🇧 English',
     about: 'ℹ️ Sobre',
     eurbrl: (amt, locale) => `🇪🇺 EUR → 🇧🇷 BRL (Pix) · €${formatAmount(amt, 0, locale)}`,
-    brleur: (amt, locale) => `🇧🇷 BRL → 🇪🇺 EUR (SEPA) · R$ ${formatAmount(amt, 0, locale)}`,
-    
-    // ✅ Botões renomeados
+    brleur: (amt, locale) => `🇧🇷 BRL → 🇪🇺 EUR (SEPA) · R${formatAmount(amt, 0, locale)}`,
     contOn: '🚀 Converter on-chain',
     stayOff: '🏦 Converter off-chain',
     calcdetails: '🔍 Detalhes do cálculo',
     swapMode: '🔄 Inverter (receber ao invés)',
     change: '✏️ Alterar valor',
-    
     back: '⬅️ Voltar',
     sources: '📊 Fontes dos dados',
     openWise: '🔗 Abrir Wise',
     openRemitly: '🔗 Abrir Remitly',
     openInstarem: '🔗 Abrir Instarem',
     seeOnchain: '🚀 Ver rota on-chain',
-    
-    // ✅ Novos botões
     createEU: '🇪🇺 Criar conta Europa',
     createBR: '🇧🇷 Criar conta Brasil',
     startGuide: '🚀 Começar o guia',
-    faqDoubt: "🤔 Alguma dúvida?",
-    whyOnchain: "💡 Por que on-chain?",
-    askQuestion: '💬 Fazer uma pergunta',
-    
     whatIsUSDC: '🪙 O que é USDC?',
     whatIsExchange: '🏦 O que é um exchange?',
     proofSources: '📊 Provas & fontes',
@@ -2277,18 +2255,12 @@ Exemplos: 2.5, 3, 5`,
     openBitso: '🔗 Abrir Bitso',
     openMercadoBitcoin: '🔗 Abrir Mercado Bitcoin',
     openFoxbit: '🔗 Abrir Foxbit',
-    
     startStep1: '🚀 Depositar & converter meus EUR em USDC',
     step1Done: '✅ Depositei meus EUR',
     step1_2Done: '✅ Encontrei o mercado EUR/USDC',
     step1_3Done: '✅ Comprei meus USDC',
     marketVsLimit: 'ℹ️ Market vs Limit',
     nextStep2: '👉 Ir para etapa 2 (transferência)',
-    
-    // ✅ Novos botões skip
-    skipToStep2: "Já tenho USDC (pular)",
-    skipToStep3: "⏭️ Pular para etapa 3",
-    
     step2Done: '✅ Tenho meu endereço → continuar',
     step2_2Done: '✅ Inseri meu valor',
     step2_3Done: '✅ Confirmei a transferência',
@@ -2321,6 +2293,12 @@ Exemplos: 2.5, 3, 5`,
     chooseCooldown1week: '📆 1 semana',
     deleteAlert: '🗑️ Apagar',
     viewAlert: '👁️ Ver detalhes',
+    faqDoubt: "🤔 Alguma dúvida?",
+    skipToStep2: "⏭️ Pular para etapa 2",
+    skipToStep3: "⏭️ Pular para etapa 3",
+    whyOnchain: "💡 Por que on-chain?",
+    askQuestion: '💬 Fazer uma pergunta',
+
   },
 };
 
@@ -2341,18 +2319,16 @@ On-chain rates are often better than traditional platforms. It's legal, secure, 
 
 Free service, funded by referral links.`,
 
-  ERROR_RATES_UNAVAILABLE: `⚠️ Crypto rates unavailable. Try again in a moment.`,
+ERROR_RATES_UNAVAILABLE: `⚠️ Crypto rates unavailable. Try again in a moment.`,
   ERROR_INVALID_AMOUNT: `⚠️ Invalid amount. Enter a number (e.g. 1000)`,
   ERROR_UPDATE_FAILED: `❌ Update failed.`,
 
-  // ✅ SCREEN 2
-  promptAmt: `💬 Send an amount or choose:`,
-  
+promptAmt: `💬 Send an amount or choose:`,
+
   askAmount: `✏️ Enter an amount (e.g. 1000)`,
   
   askRoute: (amount, locale) => `What do you want to do with ${formatAmount(amount, 0, locale)}?`,
   
-  // ✅ SCREEN 3: buildComparison
   buildComparison: ({ route, amount, rates, onchain, bestBank, others, delta, locale, isTargetMode = false }) => {
     const now = new Date();
     const dayOfWeek = now.getDay();
@@ -2374,8 +2350,7 @@ Free service, funded by referral links.`,
     const timeStr = now.toLocaleTimeString(locale, {hour: '2-digit', minute: '2-digit'});
     const tzAbbr = new Date().toLocaleTimeString('en-US', {timeZoneName: 'short'}).split(' ')[2];
     
-    // ✅ Reference line
-    let ref = `📊 Reference rate ${formatRate(rates.cross, locale)} • ${timeStr} ${tzAbbr}`;
+    let ref = `📊 Ref. ${formatRate(rates.cross, locale)} • ${timeStr} ${tzAbbr}`;
     if (isWeekend) {
       ref += `\n⚠️ Weekend: rate frozen until Monday`;
     }
@@ -2418,7 +2393,6 @@ Free service, funded by referral links.`,
       }
     }
     
-    // ✅ "Others" section
     let othersText = '';
     if (others.length > 0) {
       const topOthers = others.slice(0, 3);
@@ -2435,32 +2409,30 @@ Free service, funded by referral links.`,
       }).join('\n');
       
       const count = others.length;
-      othersText = `\n\nOthers:\n${formattedOthers}`;
+      othersText = `\n\nOthers (${count}) :\n${formattedOthers}`;
       
       if (count > 3) {
-        othersText += `\n+ ${count - 3} more available`;
+        othersText += `\n<i>+ ${count - 3} more available</i>`;
       }
     }
     
-    // ✅ Delta
     let deltaText = '';
     if (delta !== null && bestBank) {
       if (isTargetMode) {
         const sign = delta <= 0 ? '−' : '+';
         const absValue = Math.abs(delta);
         deltaText = delta <= 0 
-          ? `\n\n✅ You save approximately ${sign}${formatAmount(absValue, 1, locale)}% on-chain`
+          ? `\n\n✅ ${sign}${formatAmount(absValue, 1, locale)}% on-chain (cheaper)`
           : `\n\n⚠️ ${sign}${formatAmount(absValue, 1, locale)}% on-chain (more expensive)`;
       } else {
         const sign = delta >= 0 ? '+' : '−';
-        deltaText = `\n\n✅ You save approximately ${sign}${formatAmount(Math.abs(delta), 1, locale)}% on-chain`;
+        deltaText = `\n\n✅ ${sign}${formatAmount(Math.abs(delta), 1, locale)}% on-chain`;
       }
     }
     
     return `${title}\n\n${ref}\n\n${onchainLine}\n\n${bankLine}${othersText}${deltaText}`;
   },
 
-  // ✅ SCREEN 4: buildCalcDetails
   buildCalcDetails: ({ route, amount, rates, onchain, locale }) => {
     const title = '🔍 On-chain calculation details';
     
@@ -2473,7 +2445,7 @@ Free service, funded by referral links.`,
 
 1️⃣ <b>Buying USDC in Europe</b>
    💰 Amount: €${formatAmount(amount, 2, locale)}
-   📉 Trading fees (~0.1%): −€${formatAmount(amount * 0.001, 2, locale)}
+   📉 Trading fees (~0.1-0.2%): −€${formatAmount(amount * 0.001, 2, locale)}
    🪙 USDC obtained: ${formatAmount(usdcAfterBuy, 2, locale)} USDC
 
 2️⃣ <b>Blockchain transfer</b>
@@ -2484,17 +2456,18 @@ Free service, funded by referral links.`,
 3️⃣ <b>Selling USDC in Brazil</b>
    🪙 USDC to sell: ${formatAmount(usdcAfterNetwork, 2, locale)} USDC
    💱 USDC/BRL rate: ${formatRate(rates.usdcBRL, locale)}
-   📉 Trading fees (~0.1%): −R$ ${formatAmount(usdcAfterNetwork * rates.usdcBRL * 0.001, 2, locale)}
-   💰 BRL obtained: R$ ${formatAmount(brlAfterTrade, 2, locale)}
+   📉 Trading fees (~0.1-0.2%): −R${formatAmount(usdcAfterNetwork * rates.usdcBRL * 0.001, 2, locale)}
+   💰 BRL obtained: R${formatAmount(brlAfterTrade, 2, locale)}
 
 4️⃣ <b>Pix withdrawal</b>
-   📉 Pix fee (if applicable): −R$ ${formatAmount(3.5, 2, locale)}
+   📉 Pix fee (~R$3.50): −R${formatAmount(3.5, 2, locale)}
    
-✅ <b>Total received: R$ ${formatAmount(brlNet, 2, locale)}</b>
+✅ <b>Total received: R${formatAmount(brlNet, 2, locale)}</b>
 📊 <b>Effective rate: ${formatRate(onchain.rate, locale)}</b>
 
 💡 Actual fees may vary slightly depending on your platform and trading volume.`;
     } else {
+      // BRL → EUR
       const { usdcFromBRL, usdcAfterNetwork, eurOut, eurNet } = onchain.breakdown;
       
       return `${title}
@@ -2502,9 +2475,9 @@ Free service, funded by referral links.`,
 📊 BRL → EUR via USDC
 
 1️⃣ <b>Buying USDC in Brazil</b>
-   💰 Amount: R$ ${formatAmount(amount, 2, locale)}
+   💰 Amount: R${formatAmount(amount, 2, locale)}
    💱 BRL/USDC rate: ${formatRate(1/rates.usdcBRL, locale)}
-   📉 Trading fees (~0.1%): −R$ ${formatAmount(amount * 0.001, 2, locale)}
+   📉 Trading fees (~0.1-0.2%): −R${formatAmount(amount * 0.001, 2, locale)}
    🪙 USDC obtained: ${formatAmount(usdcFromBRL, 2, locale)} USDC
 
 2️⃣ <b>Blockchain transfer</b>
@@ -2514,8 +2487,8 @@ Free service, funded by referral links.`,
 
 3️⃣ <b>Selling USDC in Europe</b>
    🪙 USDC to sell: ${formatAmount(usdcAfterNetwork, 2, locale)} USDC
-   💱 EUR/USDC rate: ${formatRate(rates.usdcEUR, locale)}
-   📉 Trading fees (~0.1%): −€${formatAmount(usdcAfterNetwork * rates.usdcEUR * 0.001, 2, locale)}
+   💱 USDC/EUR rate: ${formatRate(rates.usdcEUR, locale)}
+   📉 Trading fees (~0.1-0.2%): −€${formatAmount(usdcAfterNetwork * rates.usdcEUR * 0.001, 2, locale)}
    
 ✅ <b>Total received: €${formatAmount(eurNet, 2, locale)}</b>
 📊 <b>Effective rate: ${formatRate(onchain.rate, locale)}</b>
@@ -2531,7 +2504,7 @@ EUR/BRL reference rate: Yahoo Finance (official exchange rate)
 On-chain calculation:
 • Crypto rates: CoinGecko (USDC/EUR, USDC/BRL)
 • Real fees included:
-  - Trading ~0.1%
+  - Trading ~0.1-0.2%
   - Polygon network ~1 USDC
   - Pix withdrawal ~R$3.50
 
@@ -2539,34 +2512,36 @@ Off-chain rates: Wise Comparisons API (live provider rates)
 
 Referral links: free for you, fund the service.`,
 
-  // ✅ SCREEN 5: buildOffChain
-  buildOffChain: ({ route, amount, bestBank, others, locale, onchainAmount }) => {
-    const title = '🏦 Off-chain';
-    
-    if (!bestBank) {
-      return `${title}\n\n⚠️ Rates currently unavailable.`;
+buildOffChain: ({ route, amount, bestBank, others, locale, onchainAmount }) => {
+  const title = '🏦 Off-chain';
+  
+  if (!bestBank) {
+    return `${title}\n\n⚠️ Rates currently unavailable.`;
+  }
+  
+  const priorityNames = ['Wise', 'Remitly'];
+  const allProviders = [bestBank, ...others];
+  
+  // ⚠️ CORRECTION : Afficher TOUS les providers dans le texte
+  const displayProviders = allProviders.sort((a, b) => b.out - a.out);
+  
+  const providersList = displayProviders.map((p, i) => {
+    if (route === 'eurbrl') {
+      return `<b>${i + 1}. ${p.provider}</b>\n💰 You receive : R$ ${formatAmount(p.out, 2, locale)}\n📊 Effective rate : ${formatRate(p.rate, locale)}`;
+    } else {
+      return `<b>${i + 1}. ${p.provider}</b>\n💰 You receive : €${formatAmount(p.out, 2, locale)}\n📊 Effective rate : ${formatRate(p.rate, locale)}`;
     }
-    
-    const allProviders = [bestBank, ...others];
-    const displayProviders = allProviders.sort((a, b) => b.out - a.out);
-    
-    const providersList = displayProviders.map((p, i) => {
-      if (route === 'eurbrl') {
-        return `<b>${i + 1}. ${p.provider}</b>\n💰 You receive: R$ ${formatAmount(p.out, 2, locale)}\n📊 Effective rate: ${formatRate(p.rate, locale)}`;
-      } else {
-        return `<b>${i + 1}. ${p.provider}</b>\n💰 You receive: €${formatAmount(p.out, 2, locale)}\n📊 Effective rate: ${formatRate(p.rate, locale)}`;
-      }
-    }).join('\n\n');
-    
-    const onchainCompare = onchainAmount 
-      ? `~${formatAmount(onchainAmount, 0, locale)}${route === 'eurbrl' ? ' R$' : '€'}`
-      : '—';
-    
-    const offchainBest = displayProviders[0]?.out 
-      ? formatAmount(displayProviders[0].out, 0, locale)
-      : '—';
-    
-    const footer = `
+  }).join('\n\n');
+  
+  const onchainCompare = onchainAmount 
+    ? `~${formatAmount(onchainAmount, 0, locale)}${route === 'eurbrl' ? ' R$' : '€'}`
+    : '—';
+  
+  const offchainBest = displayProviders[0]?.out 
+    ? formatAmount(displayProviders[0].out, 0, locale)
+    : '—';
+  
+  const footer = `
 
 💡 More expensive than on-chain (you receive ~${offchainBest}${route === 'eurbrl' ? ' R$' : '€'} vs ~${onchainCompare} on-chain), but some prefer these methods because they're more user-friendly than the on-chain process.
 
@@ -2575,62 +2550,56 @@ Referral links: free for you, fund the service.`,
 💡 Don't hesitate to use our referral links when available (⭐), that's what allows us to fund this service.
 
 <i>*Data provided by Wise Comparisons</i>`;
-    
-    return `${title}\n\n${providersList}${footer}`;
-  },
+  
+  return `${title}\n\n${providersList}${footer}`;
+},
 
-  // ✅ SCREEN 6: ONCHAIN_INTRO
-  ONCHAIN_INTRO: `🚀 ON-CHAIN ROUTE
+ONCHAIN_INTRO: `🚀 ON-CHAIN ROUTE
 
-📍 <b>The 3-step process</b>
+🔄 How it works :
 1️⃣ Europe → Exchange your EUR to USDC
 2️⃣ Blockchain → Send your USDC
 3️⃣ Brazil → Convert USDC to BRL (Pix)
 
-✅ <b>What you need</b>
-• 🇪🇺 Exchange in Europe accepting EUR deposits (SEPA)
-• 🇧🇷 Exchange in Brazil accepting BRL withdrawals (Pix)
+✅ What you need :
+• 🇪🇺 Exchange account in Europe
+• 🇧🇷 Exchange account in Brazil
 
-💡 We have recommendations!
+💡 <b>Fun fact :</b> On-chain fees (~0.5-1%) are 5 to 10 times cheaper than traditional transfers (2.5-6%)!`,
 
-💡 <b>Fun fact:</b> On-chain fees (~0.5-1%) are 5 to 10 times cheaper than traditional transfers (2.5-6%)!`,
+FAQ_MENU: `🤔 ANY DOUBTS ?
 
-  // ✅ SCREEN 7: FAQ_MENU
-  FAQ_MENU: `🤔 ANY QUESTIONS?
+Choose a topic or ask your question :`,
 
-Choose a topic or ask your question:`,
-
-  // ✅ SCREEN 8: FAQ_WHY_ONCHAIN
-  FAQ_WHY_ONCHAIN: `💡 WHY ON-CHAIN?
+FAQ_WHY_ONCHAIN: `💡 WHY ON-CHAIN ?
 
 🌍 <b>Blockchain eliminates intermediaries</b>
 
-Traditional transfer:
+Traditional transfer :
 Your bank → Correspondent bank → Beneficiary bank
 💸 Each intermediary takes its commission (2.5-6% total)
 
-On-chain transfer:
+On-chain transfer :
 You → Blockchain → Recipient
 💸 Minimal fixed fees (~0.5-1% total)
 
-📊 <b>The proof:</b>
+📊 <b>The proof :</b>
 
 • <b>Cryptocurrency-based remittance statistics 2025</b>
 Traditional services charge an average of 6.5% in fees, versus ~1% for stablecoins.
 
 • <b>World Bank (March 2025)</b>
-Average cost of traditional transfers: 6.49% of amount.
+Average cost of traditional transfers : 6.49% of amount.
 
 • <b>CFA Institute (2025)</b>
 Institutional investors already use stablecoins to reduce costs and settlement times.
 
 • <b>McKinsey (2025)</b>
-Cross-border transfer volume via stablecoins has exploded: modern payment infrastructure.
+Cross-border transfer volume via stablecoins has exploded : modern payment infrastructure.
 
 ✅ Legal, secure, and used by many institutions.`,
 
-  // ✅ SCREEN 9: FAQ_SEND_QUESTION
-  FAQ_SEND_QUESTION: `📧 ASK YOUR QUESTION
+FAQ_SEND_QUESTION: `📧 ASK YOUR QUESTION
 
 Send me your question and I'll forward it to the team.
 
@@ -2638,55 +2607,37 @@ You'll receive an answer within 24-48h.
 
 <i>To cancel, click "Back"</i>`,
 
-  FAQ_QUESTION_RECEIVED: `✅ QUESTION RECEIVED
+FAQ_QUESTION_RECEIVED: `✅ QUESTION RECEIVED
 
-Thank you! We'll answer within 24-48h.`,
+Thank you ! We'll answer within 24-48h.`,
 
-  // ✅ SCREEN 10: WHAT_IS_EXCHANGE
-  WHAT_IS_EXCHANGE: `🏦 What is an exchange?
-
-A crypto exchange is like a digital currency exchange office.
-
-You can:
-• Deposit traditional money (EUR, BRL...)
-• Buy/sell cryptos (USDC, Bitcoin...)
-• Send them to other exchanges
-
-The most known: Kraken, Binance, Coinbase, Bitso...
-
-For our case:
-• Europe exchange = you deposit EUR, buy USDC
-• Brazil exchange = you receive USDC, sell for BRL, withdraw via Pix
-
-It's regulated and safe (if you choose recognized platforms).
-
-👉 We'll recommend our favorites in the next screens.`,
-
-  // ✅ SCREEN 11: EXCHANGES_EU
-  EXCHANGES_EU: `🇪🇺 Exchanges to deposit/withdraw EUR
+EXCHANGES_EU: `🇪🇺 Exchanges in Europe
 
 Our recommendations:
-• Kraken (👋 We use) — Free transfer, serious, USDC available
-• Bitstamp — EU veteran, serious, transfers supported
+• Kraken — Free transfer, serious, USDC available (👋 We use)
+• Bitstamp — EU veteran, serious, EUR transfers supported
 
-Check: SEPA ok (even with BR residency) • USDC available • reasonable fees • reputation
-
+Check: EUR transfers accepted (even with Brazilian residency) • USDC available • reasonable fees • reputation
 ⚠️ Some exchanges (e.g. Binance) only accept EUR deposit by card with >2% fees if BR residency.`,
 
-  // ✅ SCREEN 12: EXCHANGES_BR
-  EXCHANGES_BR: `🇧🇷 Exchanges to deposit/withdraw BRL
+  // NEW: Task 7
+  COMPARE_TARGET_INTRO: `💡 Do you want to receive a specific amount?
+
+Enter the amount you want to receive (e.g. 500)`,
+
+  EXCHANGES_BR: `🇧🇷 Exchanges in Brazil
 
 Our preference:
-• Binance BR (👋 We use too) — Native Pix, huge liquidity, low fees
+• Binance BR — native Pix, huge liquidity, low fees (~0.10%) + 3.50 BRL fixed per Pix withdrawal. (👋 It's what we use too)
 
 Other solutions:
-• Bitso — Free and instant Pix, clear interface, locally regulated
-• Mercado Bitcoin — Historic local player, Pix supported
+• Bitso — free and instant Pix, clear interface, locally regulated
+• Mercado Bitcoin — historic local player, Pix supported
 • Foxbit — Pix 24/7, decent fees
 
-Check: Pix ok • USDC available • reputation
+Check: Pix ok • USDC available • reasonable fees • reputation
 
-Our referral links fund this service (free for you, sometimes bonuses).
+Our referral links fund the service (free for you, sometimes bonuses).
 
 ⚠️ Reminder: one exchange serves one side. You need a 🇪🇺 (SEPA) + a 🇧🇷 (Pix).`,
 
@@ -2709,6 +2660,23 @@ It's perfect for transferring money without variation risk.
 
 You use it as a "pivot currency": EUR → USDC → BRL.`,
 
+  WHAT_IS_EXCHANGE: `🏦 What is an exchange?
+
+A crypto exchange is like a digital currency exchange office.
+
+You can:
+• Deposit traditional money (EUR, BRL...)
+• Buy/sell cryptos (USDC, Bitcoin...)
+• Send them to other exchanges
+
+The most known: Kraken, Binance, Coinbase, Bitso...
+
+For our case:
+• Europe exchange = you deposit EUR, buy USDC
+• Brazil exchange = you receive USDC, sell for BRL, withdraw via Pix
+
+It's regulated and safe (if you choose recognized platforms).`,
+
   MARKET_VS_LIMIT: `📈 Market vs Limit
 
 <b>Market</b>:
@@ -2723,7 +2691,6 @@ You use it as a "pivot currency": EUR → USDC → BRL.`,
 
 <i>Tip: if you just want to "exchange", choose Market.</i>`,
 
-  // ✅ SCREEN 13: GUIDE_TRANSITION
   GUIDE_TRANSITION: `✅ You have (or will have):
 • A 🇪🇺 account to deposit your EUR (SEPA → USDC)
 • A 🇧🇷 account to withdraw your BRL (USDC → Pix)
@@ -2836,8 +2803,8 @@ Estimate: you'll receive ~${formatAmount(usdcAmount - 1, 2, locale)} USDC 🇧�
 
 👉 For most people, "market order" = simplest and fastest.
 
-Balance estimate: ~R$ ${formatAmount(brlAmount, 2, locale)}
-*⚠️ Estimate close to reality (fees ~0.1%).*`,
+Balance estimate: ~R${formatAmount(brlAmount, 2, locale)}
+*⚠️ Estimate close to reality (fees ~0.10-0.20%).*`,
 
   STEP_3_3: (brlNet, locale) => `3️⃣ Withdraw your money in R$
 
@@ -2852,7 +2819,7 @@ Balance estimate: ~R$ ${formatAmount(brlAmount, 2, locale)}
 👉 Usually, fees are very low (e.g. Binance ~R$3.50 per Pix withdrawal).
 Should be free honestly… but well 😅
 
-Received balance estimate: ~R$ ${formatAmount(brlNet, 2, locale)} net
+Received balance estimate: ~R${formatAmount(brlNet, 2, locale)} net
 *⚠️ Well, we shouldn't be too far from reality ;)*`,
 
   WHY_NOT_EXACT: `🤔 Why can't we give the exact amount?
@@ -2880,8 +2847,7 @@ What you learned today will be increasingly used in the future: you just took a 
 
 🙌 We hope you enjoyed the experience!`,
 
-  // Premium and alerts (kept same)
-  PREMIUM_PRICING: `💎 GO PREMIUM
+PREMIUM_PRICING: `💎 GO PREMIUM
 
 ✨ With Premium:
 • 🔔 Unlimited custom alerts
@@ -3316,30 +3282,21 @@ Examples: 2.5, 3, 5`,
     langEN: '🇬🇧 English',
     about: 'ℹ️ About',
     eurbrl: (amt, locale) => `🇪🇺 EUR → 🇧🇷 BRL (Pix) · €${formatAmount(amt, 0, locale)}`,
-    brleur: (amt, locale) => `🇧🇷 BRL → 🇪🇺 EUR (SEPA) · R$ ${formatAmount(amt, 0, locale)}`,
-    
-    // ✅ Renamed buttons
+    brleur: (amt, locale) => `🇧🇷 BRL → 🇪🇺 EUR (SEPA) · R${formatAmount(amt, 0, locale)}`,
     contOn: '🚀 Convert on-chain',
     stayOff: '🏦 Convert off-chain',
     calcdetails: '🔍 Calculation details',
     swapMode: '🔄 Swap (receive instead)',
     change: '✏️ Change amount',
-    
     back: '⬅️ Back',
     sources: '📊 Data sources',
     openWise: '🔗 Open Wise',
     openRemitly: '🔗 Open Remitly',
     openInstarem: '🔗 Open Instarem',
     seeOnchain: '🚀 See on-chain route',
-    
-    // ✅ New buttons
     createEU: '🇪🇺 Create Europe account',
     createBR: '🇧🇷 Create Brazil account',
     startGuide: '🚀 Start guide',
-    faqDoubt: "🤔 Any questions?",
-    whyOnchain: "💡 Why on-chain?",
-    askQuestion: '💬 Ask a question',
-    
     whatIsUSDC: '🪙 What is USDC?',
     whatIsExchange: '🏦 What is an exchange?',
     proofSources: '📊 Proof & sources',
@@ -3352,18 +3309,12 @@ Examples: 2.5, 3, 5`,
     openBitso: '🔗 Open Bitso',
     openMercadoBitcoin: '🔗 Open Mercado Bitcoin',
     openFoxbit: '🔗 Open Foxbit',
-    
     startStep1: '🚀 Deposit & convert my EUR to USDC',
     step1Done: '✅ I deposited my EUR',
     step1_2Done: '✅ I found the EUR/USDC market',
     step1_3Done: '✅ I bought my USDC',
     marketVsLimit: 'ℹ️ Market vs Limit',
     nextStep2: '👉 Go to step 2 (transfer)',
-    
-    // ✅ New skip buttons
-    skipToStep2: "I already have USDC (skip)",
-    skipToStep3: "⏭️ Skip to step 3",
-    
     step2Done: '✅ I have my address → continue',
     step2_2Done: '✅ I entered my amount',
     step2_3Done: '✅ I confirmed the transfer',
@@ -3396,9 +3347,13 @@ Examples: 2.5, 3, 5`,
     chooseCooldown1week: '📆 1 week',
     deleteAlert: '🗑️ Delete',
     viewAlert: '👁️ View details',
+    faqDoubt: "🤔 Any doubts?",
+    skipToStep2: "⏭️ Skip to step 2",
+    skipToStep3: "⏭️ Skip to step 3",
+    whyOnchain: "💡 Why on-chain?",
+    askQuestion: '💬 Ask a question',
   },
 };
-
 
 // ============================================
 // EXPORT
