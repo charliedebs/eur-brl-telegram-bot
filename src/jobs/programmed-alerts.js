@@ -5,7 +5,7 @@ import 'dotenv/config';
 import { bot } from '../bot/index.js';
 import { getRates } from '../services/rates.js';
 import { DatabaseService } from '../services/database.js';
-import { messages } from '../bot/messages.js';
+import { messages } from '../bot/messages/messages-loader.js';
 import { buildKeyboards } from '../bot/keyboards.js';
 import { getLocale, formatRate, formatAmount } from '../services/rates.js';
 
