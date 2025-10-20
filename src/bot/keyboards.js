@@ -87,14 +87,16 @@ export function buildKeyboards(msg, type, options = {}) {
     
     // Écran 4 : Route on-chain
 // ⚠️ CASE MODIFIÉ : onchain_intro
-case 'onchain_intro':
+case 'onchain_intro': {
+  const stepLabel = route === 'eurbrl' ? '🚀 Étape 1 : EUR → USDC' : '🚀 Étape 1 : BRL → USDC';
   return Markup.inlineKeyboard([
-    [Markup.button.callback('🚀 Étape 1 : EUR → USDC', `action:start_guide:${route}:${amount}`)],
+    [Markup.button.callback(stepLabel, `action:start_guide:${route}:${amount}`)],
     [Markup.button.callback(msg.btn.faqDoubt, 'action:faq_menu')],
     [Markup.button.callback(msg.btn.createEU, 'action:exchanges_eu')],
     [Markup.button.callback(msg.btn.createBR, 'action:exchanges_br')],
     [Markup.button.callback(msg.btn.back, `action:back_comparison:${route}:${amount}`)],
   ]);
+}
 
 // ⚠️ NOUVEAU CASE : faq_menu
 case 'faq_menu':

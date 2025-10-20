@@ -405,124 +405,198 @@ export const messagesEn = {
     
     🚀 Now, let's start concretely: first step → deposit your EUR in your 🇪🇺 account and convert them to USDC.`,
     
-      STEP_1_1: (amount, locale) => `1️⃣ Deposit your EUR in the exchange account
-    
+      STEP_1_1: (amount, locale, route = 'eurbrl') => {
+        const isEurBrl = route === 'eurbrl';
+        const currency = isEurBrl ? 'EUR' : 'BRL';
+        const currencySymbol = isEurBrl ? '€' : 'R$';
+        const method = isEurBrl ? 'SEPA transfer' : 'Pix or TED';
+        const exchange = isEurBrl ? 'Kraken' : 'Binance BR, Bitso, Mercado Bitcoin or Foxbit';
+        const flag = isEurBrl ? '🇪🇺' : '🇧🇷';
+
+        return `1️⃣ Deposit your ${currency} in the exchange account ${flag}
+
     • Go to the "Deposit / Fiat" section.
-    • Choose EUR as currency.
-    • Simplest method: SEPA transfer (fast, low or no fees).
-    
+    • Choose ${currency} as currency.
+    • Simplest method: ${method} (fast, low or no fees).
+
     💡 "Fiat" = traditional currencies (EUR, USD, BRL…).
-    
-    👉 Recommended: Kraken.
-    
-    Balance estimate: €${formatAmount(amount, 0, locale)}
-    *⚠️ This is an estimate, close to reality. Bank fees and delays may vary slightly.*`,
-    
-      STEP_1_2: (amount, locale) => `2️⃣ Access the market to buy USDC
-    
+
+    👉 Recommended: ${exchange}.
+
+    Balance estimate: ${currencySymbol}${formatAmount(amount, 0, locale)}
+    *⚠️ This is an estimate, close to reality. Bank fees and delays may vary slightly.*`;
+      },
+
+      STEP_1_2: (amount, locale, route = 'eurbrl') => {
+        const isEurBrl = route === 'eurbrl';
+        const currency = isEurBrl ? 'EUR' : 'BRL';
+        const currencySymbol = isEurBrl ? '€' : 'R$';
+        const pair = isEurBrl ? 'EUR/USDC' : 'BRL/USDC';
+
+        return `2️⃣ Access the market to buy USDC
+
     • In your exchange, look for "Trader / Market / Trade".
-    • Select the EUR/USDC pair.
-    
+    • Select the ${pair} pair.
+
     💡 A crypto market is like a currency exchange: you exchange one currency for another.
-    
-    Balance estimate: €${formatAmount(amount, 0, locale)} (ready for USDC purchase)
-    *⚠️ Indicative estimate.*`,
-    
-      STEP_1_3: (usdcAmount, locale) => `3️⃣ Buy your USDC
-    
+
+    Balance estimate: ${currencySymbol}${formatAmount(amount, 0, locale)} (ready for USDC purchase)
+    *⚠️ Indicative estimate.*`;
+      },
+
+      STEP_1_3: (usdcAmount, locale, route = 'eurbrl') => {
+        return `3️⃣ Buy your USDC
+
     • Choose the order type:
       • Market → instant, simple, recommended.
       • Limit → you set your price, useful for large amounts/liquidity.
-    
+
     👉 For beginners: market order.
-    
+
     Balance estimate: ~${formatAmount(usdcAmount, 2, locale)} USDC
-    *⚠️ Estimate close to reality. Fees & prices may vary slightly.*`,
-    
-      STEP_1_4: `✅ Well done! You now have USDC in your 🇪🇺 account.
-    
+    *⚠️ Estimate close to reality. Fees & prices may vary slightly.*`;
+      },
+
+      STEP_1_4: (route = 'eurbrl') => {
+        const isEurBrl = route === 'eurbrl';
+        const fromFlag = isEurBrl ? '🇪🇺' : '🇧🇷';
+        const toRegion = isEurBrl ? 'Brazil' : 'Europe';
+
+        return `✅ Well done! You now have USDC in your ${fromFlag} account.
+
     ✨ USDC are "stablecoins": ~1 USDC = 1 USD.
     This is the key to transferring your money quickly and at low cost.
-    
-    Next step: send them on-chain to Brazil.`,
-    
-      STEP_2_1: `✨ This is the "on-chain" step → fast and low cost, but requires some concentration.
+
+    Next step: send them on-chain to ${toRegion}.`;
+      },
+
+      STEP_2_1: (route = 'eurbrl') => {
+        const isEurBrl = route === 'eurbrl';
+        const toFlag = isEurBrl ? '🇧🇷' : '🇪🇺';
+        const toRegion = isEurBrl ? 'Brazilian' : 'European';
+
+        return `✨ This is the "on-chain" step → fast and low cost, but requires some concentration.
     Unlike a bank, if you make a mistake, there's no customer service to recover your funds.
-    
-    1️⃣ Get your 🇧🇷 deposit address
-    
-    • In your Brazilian exchange, look for "Deposit / Crypto".
+
+    1️⃣ Get your ${toFlag} deposit address
+
+    • In your ${toRegion} exchange, look for "Deposit / Crypto".
     • Choose USDC as crypto to deposit.
     • Select the transfer network.
-    
+
     💡 We recommend Polygon (MATIC) → fast, reliable, low fees (~1 USDC).
-    
+
     • Carefully copy the address.
-    
-    💡 Imagine it's like your bank IBAN, but blockchain version (a long sequence of letters and numbers).`,
-    
-      STEP_2_2: (usdcAmount, locale) => `2️⃣ Send from your 🇪🇺 exchange
-    
+
+    💡 Imagine it's like your bank IBAN, but blockchain version (a long sequence of letters and numbers).`;
+      },
+
+      STEP_2_2: (usdcAmount, locale, route = 'eurbrl') => {
+        const isEurBrl = route === 'eurbrl';
+        const fromFlag = isEurBrl ? '🇪🇺' : '🇧🇷';
+        const toFlag = isEurBrl ? '🇧🇷' : '🇪🇺';
+
+        return `2️⃣ Send from your ${fromFlag} exchange
+
     • Go to "Withdrawal / Withdraw" → USDC.
     • Paste the copied address.
     • Choose the same network as the deposit (e.g. Polygon).
-    
+
     💡 The network is like train rails: if they're not the same on both sides, the money goes elsewhere and is lost.
-    
+
     • Enter your amount. You can send everything, or start with a test (e.g. 10 USDC).
-    
+
     👉 Testing costs a bit more (fixed fees ~1 USDC apply twice), but it's a common good practice in crypto.
-    
-    Estimate: you'll receive ~${formatAmount(usdcAmount - 1, 2, locale)} USDC 🇧🇷 side
-    *⚠️ Estimate close to reality (network fee ~1 USDC).*`,
-    
-      STEP_2_3: `3️⃣ Verify and confirm
-    
+
+    Estimate: you'll receive ~${formatAmount(usdcAmount - 1, 2, locale)} USDC ${toFlag} side
+    *⚠️ Estimate close to reality (network fee ~1 USDC).*`;
+      },
+
+      STEP_2_3: (route = 'eurbrl') => {
+        return `3️⃣ Verify and confirm
+
     • Carefully re-read the address and network before validating.
-    
+
     ⚠️ A single wrong character in the address, or wrong network, and your funds are permanently lost.
-    
-    👉 Once you've verified everything, you can confirm the transfer.`,
-    
-      STEP_2_4: `4️⃣ Wait for arrival
-    
+
+    👉 Once you've verified everything, you can confirm the transfer.`;
+      },
+
+      STEP_2_4: (route = 'eurbrl') => {
+        const isEurBrl = route === 'eurbrl';
+        const toFlag = isEurBrl ? '🇧🇷' : '🇪🇺';
+        const toCurrency = isEurBrl ? 'BRL' : 'EUR';
+        const withdrawMethod = isEurBrl ? 'Pix' : 'SEPA transfer';
+
+        return `4️⃣ Wait for arrival
+
     • Usually, the transaction takes 1-2 minutes, sometimes up to 10 min.
-    • You'll see your USDC balance appear 🇧🇷 side.
-    
-    ✅ Result: your USDC arrived → ready for step 3 (BRL sale + Pix withdrawal).`,
-    
-      STEP_3_1: `1️⃣ Find the USDC/BRL market 🇧🇷
-    
-    • In your Brazilian exchange, go to Trader / Market.
-    • Select the USDC/BRL pair.
-    
-    👉 Next step: your USDC finally turn into BRL 🎉`,
-    
-      STEP_3_2: (brlAmount, locale) => `2️⃣ Place your order
-    
+    • You'll see your USDC balance appear ${toFlag} side.
+
+    ✅ Result: your USDC arrived → ready for step 3 (${toCurrency} sale + ${withdrawMethod} withdrawal).`;
+      },
+
+      STEP_3_1: (route = 'eurbrl') => {
+        const isEurBrl = route === 'eurbrl';
+        const currency = isEurBrl ? 'BRL' : 'EUR';
+        const flag = isEurBrl ? '🇧🇷' : '🇪🇺';
+        const region = isEurBrl ? 'Brazilian' : 'European';
+        const pair = isEurBrl ? 'USDC/BRL' : 'USDC/EUR';
+
+        return `1️⃣ Find the ${pair} market ${flag}
+
+    • In your ${region} exchange, go to Trader / Market.
+    • Select the ${pair} pair.
+
+    👉 Next step: your USDC finally turn into ${currency} 🎉`;
+      },
+
+      STEP_3_2: (targetAmount, locale, route = 'eurbrl') => {
+        const isEurBrl = route === 'eurbrl';
+        const currencySymbol = isEurBrl ? 'R$' : '€';
+
+        return `2️⃣ Place your order
+
     • "Market" → instant, at current price (simple, recommended).
     • "Limit" → you set your price, useful for large amounts.
-    
+
     👉 For most people, "market order" = simplest and fastest.
-    
-    Balance estimate: ~R$ ${formatAmount(brlAmount, 2, locale)}
-    *⚠️ Estimate close to reality (fees ~0.1%).*`,
-    
-      STEP_3_3: (brlNet, locale) => `3️⃣ Withdraw your money in R$
-    
-    • Once your USDC are sold, your balance appears in BRL.
+
+    Balance estimate: ~${currencySymbol} ${formatAmount(targetAmount, 2, locale)}
+    *⚠️ Estimate close to reality (fees ~0.1%).*`;
+      },
+
+      STEP_3_3: (netAmount, locale, route = 'eurbrl') => {
+        const isEurBrl = route === 'eurbrl';
+        const currency = isEurBrl ? 'BRL' : 'EUR';
+        const currencySymbol = isEurBrl ? 'R$' : '€';
+        const withdrawMethod = isEurBrl ? 'Pix' : 'SEPA transfer';
+        const withdrawKey = isEurBrl
+          ? 'your Pix key (CPF, email, phone, random key)'
+          : 'your IBAN';
+        const withdrawNote = isEurBrl
+          ? '… but you already know how to do that 😉'
+          : '';
+        const feeExample = isEurBrl
+          ? 'e.g. Binance ~R$3.50 per Pix withdrawal'
+          : 'usually free for SEPA';
+
+        return `3️⃣ Withdraw your money in ${currency}
+
+    • Once your USDC are sold, your balance appears in ${currency}.
     • Go to Withdrawal / Withdraw.
-    • Choose Pix as method.
-    
-    👉 Enter your Pix key (CPF, email, phone, random key)… but you already know how to do that 😉
-    
-    💡 By the way: just like a crypto address, if the key is wrong, the money goes to the wrong place.
-    
-    👉 Usually, fees are very low (e.g. Binance ~R$3.50 per Pix withdrawal).
-    Should be free honestly… but well 😅
-    
-    Received balance estimate: ~R$ ${formatAmount(brlNet, 2, locale)} net
-    *⚠️ Well, we shouldn't be too far from reality ;)*`,
+    • Choose ${withdrawMethod} as method.
+
+    👉 Enter ${withdrawKey}${withdrawNote}
+
+    💡 By the way: just like a crypto address, if the information is wrong, the money goes to the wrong place.
+
+    👉 Usually, fees are very low (${feeExample}).
+    ${isEurBrl ? 'Should be free honestly… but well 😅' : ''}
+
+    Received balance estimate: ~${currencySymbol} ${formatAmount(netAmount, 2, locale)} net
+    *⚠️ Well, we shouldn't be too far from reality ;)*`;
+      },
     
       WHY_NOT_EXACT: `🤔 Why can't we give the exact amount?
     
@@ -536,18 +610,27 @@ export const messagesEn = {
     
     Our estimates are prudent and close to reality. You shouldn't have any bad surprises.`,
     
-      STEP_3_4: `✅ Your transfer is complete!
-    
-    • You converted your EUR to USDC 🇪🇺 side.
+      STEP_3_4: (route = 'eurbrl') => {
+        const isEurBrl = route === 'eurbrl';
+        const fromCurrency = isEurBrl ? 'EUR' : 'BRL';
+        const toCurrency = isEurBrl ? 'BRL' : 'EUR';
+        const fromFlag = isEurBrl ? '🇪🇺' : '🇧🇷';
+        const toFlag = isEurBrl ? '🇧🇷' : '🇪🇺';
+        const withdrawMethod = isEurBrl ? 'Pix' : 'SEPA transfer';
+
+        return `✅ Your transfer is complete!
+
+    • You converted your ${fromCurrency} to USDC ${fromFlag} side.
     • You sent them on-chain.
-    • You sold them for BRL and withdrew via Pix 🇧🇷 side.
-    
+    • You sold them for ${toCurrency} and withdrew via ${withdrawMethod} ${toFlag} side.
+
     ✨ Result: fast, secure, and low cost.
-    
+
     🌍 You just made a real blockchain passage.
     What you learned today will be increasingly used in the future: you just took a step ahead.
-    
-    🙌 We hope you enjoyed the experience!`,
+
+    🙌 We hope you enjoyed the experience!`;
+      },
     
       // Premium and alerts (kept same)
       PREMIUM_PRICING: `💎 GO PREMIUM

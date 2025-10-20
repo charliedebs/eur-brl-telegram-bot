@@ -732,56 +732,56 @@ bot.action(/^guide:step:(.+):(.+):(\d+)$/, async (ctx) => {
   
   switch (step) {
     case '1.1':
-      text = msg.STEP_1_1(amount, locale);
+      text = msg.STEP_1_1(amount, locale, route);
       kbType = 'step_1_1';
       break;
     case '1.2':
-      text = msg.STEP_1_2(amount, locale);
+      text = msg.STEP_1_2(amount, locale, route);
       kbType = 'step_1_2';
       break;
     case '1.3':
       const usdcAfterBuy = rates ? amount * (1 / rates.usdcEUR) * 0.999 : amount;
-      text = msg.STEP_1_3(usdcAfterBuy, locale);
+      text = msg.STEP_1_3(usdcAfterBuy, locale, route);
       kbType = 'step_1_3';
       break;
     case '1.4':
-      text = msg.STEP_1_4;
+      text = msg.STEP_1_4(route);
       kbType = 'step_1_4';
       break;
     case '2.1':
-      text = msg.STEP_2_1;
+      text = msg.STEP_2_1(route);
       kbType = 'step_2_1';
       break;
     case '2.2':
       const usdcAmount = rates ? amount * (1 / rates.usdcEUR) * 0.999 : amount;
-      text = msg.STEP_2_2(usdcAmount, locale);
+      text = msg.STEP_2_2(usdcAmount, locale, route);
       kbType = 'step_2_2';
       break;
     case '2.3':
-      text = msg.STEP_2_3;
+      text = msg.STEP_2_3(route);
       kbType = 'step_2_3';
       break;
     case '2.4':
-      text = msg.STEP_2_4;
+      text = msg.STEP_2_4(route);
       kbType = 'step_2_4';
       break;
     case '3.1':
-      text = msg.STEP_3_1;
+      text = msg.STEP_3_1(route);
       kbType = 'step_3_1';
       break;
     case '3.2':
       const onchain = rates ? calculateOnChain(route, amount, rates) : { out: amount * 6 };
-      text = msg.STEP_3_2(onchain.out, locale);
+      text = msg.STEP_3_2(onchain.out, locale, route);
       kbType = 'step_3_2';
       break;
     case '3.3':
       const onchainCalc = rates ? calculateOnChain(route, amount, rates) : { out: amount * 6 };
       const brlNet = onchainCalc.out - 3.5;
-      text = msg.STEP_3_3(brlNet, locale);
+      text = msg.STEP_3_3(brlNet, locale, route);
       kbType = 'step_3_3';
       break;
     case '3.4':
-      text = msg.STEP_3_4;
+      text = msg.STEP_3_4(route);
       kbType = 'step_3_4';
       break;
   }
@@ -814,10 +814,34 @@ bot.action(/^action:change_amount:(.+)$/, async (ctx) => {
 bot.action(/^action:swap_mode:(.+):(\d+)$/, async (ctx) => {
   const route = ctx.match[1];
   const amount = parseFloat(ctx.match[2]);
-  
-  // Inverser le mode : si on était en mode "send", passer en "target" et vice-versa
-  const currentMode = ctx.session.lastIsTargetMode || false;
-  await showComparison(ctx, route, amount, !currentMode);
+
+  // Récupérer le résultat de la dernière comparaison
+  const lastComparison = ctx.session.lastComparison;
+
+  if (!lastComparison) {
+    // Fallback: inverser simplement le mode
+    const currentMode = ctx.session.lastIsTargetMode || false;
+    await showComparison(ctx, route, amount, !currentMode);
+    await ctx.answerCbQuery();
+    return;
+  }
+
+  // Inverser la route
+  const newRoute = route === 'eurbrl' ? 'brleur' : 'eurbrl';
+
+  // Utiliser le montant de sortie comme nouveau montant d'entrée
+  // Arrondir à un nombre raisonnable
+  let newAmount;
+  if (lastComparison.isTargetMode) {
+    // Si on était en mode target, utiliser le montant source calculé
+    newAmount = Math.round(lastComparison.onchain);
+  } else {
+    // Si on était en mode normal, utiliser le montant de sortie
+    newAmount = Math.round(lastComparison.onchain);
+  }
+
+  // Afficher la comparaison inversée en mode normal
+  await showComparison(ctx, newRoute, newAmount, false);
   await ctx.answerCbQuery();
 });
 
