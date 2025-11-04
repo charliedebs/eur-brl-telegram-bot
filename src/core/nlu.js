@@ -3,6 +3,7 @@
 // Architecture CORE : Fonctionne pour Telegram ET WhatsApp
 
 import OpenAI from 'openai';
+import { logger } from '../utils/logger.js';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -67,7 +68,7 @@ function tryRegexMatch(text) {
   for (const { pattern, extract } of REGEX_PATTERNS) {
     const match = normalized.match(pattern);
     if (match) {
-      console.log('[NLU] ⚡ Regex match:', pattern.source);
+      logger.info('[NLU] ⚡ Regex match:', { pattern: pattern.source });
       return extract(match);
     }
   }
@@ -214,8 +215,8 @@ async function analyzeWithAI(text, context) {
     
     const processingTime = Date.now() - startTime;
     const parsed = JSON.parse(response.choices[0].message.content);
-    
-    console.log('[NLU] 🤖 AI analysis:', {
+
+    logger.info('[NLU] 🤖 AI analysis:', {
       intent: parsed.intent,
       confidence: parsed.confidence,
       reasoning: parsed.reasoning,
@@ -227,8 +228,8 @@ async function analyzeWithAI(text, context) {
       processingTime
     };
   } catch (error) {
-    console.error('[NLU] ❌ AI error:', error.message);
-    
+    logger.error('[NLU] ❌ AI error:', { error: error.message });
+
     // Fallback : unknown
     return {
       intent: 'unknown',
@@ -245,8 +246,8 @@ async function analyzeWithAI(text, context) {
 // ==========================================
 
 export async function parseUserIntent(text, context = {}) {
-  console.log('[NLU] 📥 Input:', text);
-  console.log('[NLU] 📋 Context:', context);
+  logger.info('[NLU] 📥 Input:', { text });
+  logger.info('[NLU] 📋 Context:', context);
   
   // 1. Essayer regex d'abord (rapide)
   const regexResult = tryRegexMatch(text);
@@ -262,9 +263,12 @@ export async function parseUserIntent(text, context = {}) {
     if (aiResult.entities.language !== context.language) {
       // Changement de langue détecté
       if (aiResult.intent === 'greeting' || aiResult.confidence >= 0.85) {
-        console.log('[NLU] 🔄 Language change allowed:', context.language, '→', aiResult.entities.language);
+        logger.info('[NLU] 🔄 Language change allowed:', {
+          from: context.language,
+          to: aiResult.entities.language
+        });
       } else {
-        console.log('[NLU] 🔒 Language change blocked (low confidence)');
+        logger.info('[NLU] 🔒 Language change blocked (low confidence)');
         aiResult.entities.language = context.language; // Garder langue actuelle
       }
     }

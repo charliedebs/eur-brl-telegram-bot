@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import { bot } from './bot/index.js';
 import { startCronJobs } from './jobs/scheduler.js';
+import { logger } from './utils/logger.js';
 
 // ==========================================
 // VALIDATE REQUIRED ENVIRONMENT VARIABLES
@@ -16,13 +17,13 @@ const requiredEnvVars = [
 const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
 
 if (missingVars.length > 0) {
-  console.error('❌ Missing required environment variables:');
-  missingVars.forEach(varName => console.error(`   - ${varName}`));
-  console.error('\n💡 Copy .env.example to .env and fill in your credentials');
+  logger.error('❌ Missing required environment variables:');
+  missingVars.forEach(varName => logger.error(`   - ${varName}`));
+  logger.error('\n💡 Copy .env.example to .env and fill in your credentials');
   process.exit(1);
 }
 
-console.log('✅ Environment variables validated');
+logger.info('✅ Environment variables validated');
 
 // Optional variables (log warnings but don't exit)
 const optionalVars = {
@@ -33,7 +34,7 @@ const optionalVars = {
 
 Object.entries(optionalVars).forEach(([varName, note]) => {
   if (!process.env[varName]) {
-    console.log(`ℹ️  ${varName} not set - ${note}`);
+    logger.info(`ℹ️  ${varName} not set - ${note}`);
   }
 });
 
@@ -68,7 +69,7 @@ app.get('/health', async (req, res) => {
     await db.supabase.from('users').select('id').limit(1);
     checks.services.database = 'ok';
   } catch (error) {
-    console.error('[HEALTH] Database check failed:', error.message);
+    logger.error('[HEALTH] Database check failed:', { error: error.message });
     checks.services.database = 'error';
     checks.status = 'degraded';
   }
@@ -78,7 +79,7 @@ app.get('/health', async (req, res) => {
     await bot.telegram.getMe();
     checks.services.telegram = 'ok';
   } catch (error) {
-    console.error('[HEALTH] Telegram check failed:', error.message);
+    logger.error('[HEALTH] Telegram check failed:', { error: error.message });
     checks.services.telegram = 'error';
     checks.status = 'degraded';
   }
@@ -101,16 +102,16 @@ app.post('/webhook/telegram', (req, res) => {
 let server;
 
 app.listen(PORT, async () => {
-  console.log(`Server running on port ${PORT}`);
+  logger.info(`Server running on port ${PORT}`);
 
   startCronJobs();
 
   if (process.env.NODE_ENV === 'production' && WEBHOOK_DOMAIN) {
     const webhookUrl = `${WEBHOOK_DOMAIN}/webhook/telegram`;
     await bot.telegram.setWebhook(webhookUrl);
-    console.log(`Webhook set to: ${webhookUrl}`);
+    logger.info(`Webhook set to: ${webhookUrl}`);
   } else {
-    console.log('Development mode: using polling');
+    logger.info('Development mode: using polling');
     bot.launch();
   }
 }).then(s => { server = s; });
@@ -122,32 +123,32 @@ let isShuttingDown = false;
 
 async function gracefulShutdown(signal) {
   if (isShuttingDown) {
-    console.log('Shutdown already in progress...');
+    logger.info('Shutdown already in progress...');
     return;
   }
 
   isShuttingDown = true;
-  console.log(`\n${signal} received - starting graceful shutdown...`);
+  logger.info(`\n${signal} received - starting graceful shutdown...`);
 
   // Stop accepting new connections
   if (server) {
     server.close(() => {
-      console.log('✅ HTTP server closed');
+      logger.info('✅ HTTP server closed');
     });
   }
 
   // Stop bot
   try {
     await bot.stop(signal);
-    console.log('✅ Bot stopped');
+    logger.info('✅ Bot stopped');
   } catch (error) {
-    console.error('❌ Error stopping bot:', error.message);
+    logger.error('❌ Error stopping bot:', { error: error.message });
   }
 
   // Give pending operations time to complete
-  console.log('⏳ Waiting for pending operations (max 5s)...');
+  logger.info('⏳ Waiting for pending operations (max 5s)...');
   setTimeout(() => {
-    console.log('👋 Shutdown complete');
+    logger.info('👋 Shutdown complete');
     process.exit(0);
   }, 5000);
 }
