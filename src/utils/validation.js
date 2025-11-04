@@ -25,17 +25,46 @@ export function validateAmount(amount, min = 1, max = 1000000) {
 export function parseAndValidateAmount(input, min = 1, max = 1000000) {
   if (!input) return null;
 
-  // Remove non-numeric characters except . and ,
-  const cleaned = input.replace(/[^\d.,]/g, '');
+  // Remove non-numeric characters except . , and -
+  const cleaned = String(input).replace(/[^\d.,-]/g, '');
+
+  // Reject if starts with minus (negative numbers)
+  if (cleaned.startsWith('-')) return null;
 
   // Handle European format (1.000,50) and US format (1,000.50)
   let normalized;
   if (cleaned.includes(',') && cleaned.includes('.')) {
-    // If both present, assume . is thousands separator
-    normalized = cleaned.replace(/\./g, '').replace(',', '.');
+    // Both present: determine which is decimal separator
+    const lastComma = cleaned.lastIndexOf(',');
+    const lastDot = cleaned.lastIndexOf('.');
+
+    if (lastDot > lastComma) {
+      // Dot comes after comma: US format (1,000.50)
+      normalized = cleaned.replace(/,/g, '');
+    } else {
+      // Comma comes after dot: European format (1.000,50)
+      normalized = cleaned.replace(/\./g, '').replace(',', '.');
+    }
   } else if (cleaned.includes(',')) {
-    // Only comma, could be decimal separator
-    normalized = cleaned.replace(',', '.');
+    // Only comma: check if it's thousands separator or decimal
+    const parts = cleaned.split(',');
+    if (parts.length === 2 && parts[1].length === 3) {
+      // Pattern like "5,000" - likely US thousands separator
+      normalized = cleaned.replace(',', '');
+    } else {
+      // Pattern like "5,50" - likely decimal separator
+      normalized = cleaned.replace(',', '.');
+    }
+  } else if (cleaned.includes('.')) {
+    // Only dot: check if it's likely a thousands separator
+    const parts = cleaned.split('.');
+    if (parts.length === 2 && parts[1].length === 3) {
+      // Pattern like "5.000" - likely European thousands separator
+      normalized = cleaned.replace('.', '');
+    } else {
+      // Pattern like "5.50" - likely decimal
+      normalized = cleaned;
+    }
   } else {
     normalized = cleaned;
   }
