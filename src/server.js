@@ -99,6 +99,84 @@ app.post('/webhook/telegram', (req, res) => {
   res.sendStatus(200);
 });
 
+// ==========================================
+// PAYMENT WEBHOOKS
+// ==========================================
+
+// Mercado Pago webhook
+app.post('/webhook/mercadopago', async (req, res) => {
+  try {
+    const { MercadoPago } = await import('./services/payments/index.js');
+
+    logger.info('[WEBHOOK] Mercado Pago notification received');
+
+    const paymentInfo = await MercadoPago.processWebhook(req.body);
+
+    if (paymentInfo && paymentInfo.approved) {
+      // Activate premium for user
+      const { activatePremium } = await import('./services/payments/index.js');
+      await activatePremium(paymentInfo.telegram_id, paymentInfo.plan);
+
+      // Notify user via bot
+      await bot.telegram.sendMessage(
+        paymentInfo.telegram_id,
+        `🎉 Pagamento aprovado! Seu plano Premium ${paymentInfo.plan} foi ativado por ${paymentInfo.duration_days} dias.`
+      );
+
+      logger.info('[WEBHOOK] Premium activated via Mercado Pago:', {
+        telegram_id: paymentInfo.telegram_id,
+        plan: paymentInfo.plan
+      });
+    }
+
+    res.sendStatus(200);
+  } catch (error) {
+    logger.error('[WEBHOOK] Mercado Pago error:', { error: error.message });
+    res.sendStatus(500);
+  }
+});
+
+// PayPal webhook
+app.post('/webhook/paypal', async (req, res) => {
+  try {
+    const { PayPal } = await import('./services/payments/index.js');
+
+    logger.info('[WEBHOOK] PayPal notification received');
+
+    // Verify webhook signature for security
+    const isValid = await PayPal.verifyWebhookSignature(req.headers, req.body);
+
+    if (!isValid) {
+      logger.warn('[WEBHOOK] Invalid PayPal webhook signature');
+      return res.sendStatus(401);
+    }
+
+    const paymentInfo = await PayPal.processWebhook(req.body);
+
+    if (paymentInfo && paymentInfo.approved) {
+      // Activate premium for user
+      const { activatePremium } = await import('./services/payments/index.js');
+      const result = await activatePremium(paymentInfo.telegram_id, 'monthly'); // Extract plan from order
+
+      // Notify user via bot
+      await bot.telegram.sendMessage(
+        paymentInfo.telegram_id,
+        `🎉 Payment approved! Your Premium plan has been activated.`
+      );
+
+      logger.info('[WEBHOOK] Premium activated via PayPal:', {
+        telegram_id: paymentInfo.telegram_id,
+        order_id: paymentInfo.order_id
+      });
+    }
+
+    res.sendStatus(200);
+  } catch (error) {
+    logger.error('[WEBHOOK] PayPal error:', { error: error.message });
+    res.sendStatus(500);
+  }
+});
+
 let server;
 
 app.listen(PORT, async () => {

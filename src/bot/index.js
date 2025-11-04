@@ -865,18 +865,209 @@ bot.action('premium:details', async (ctx) => {
   await ctx.answerCbQuery();
 });
 
-bot.action(/^premium:subscribe:(\d+)$/, async (ctx) => {
-  const months = parseInt(ctx.match[1]);
-  const prices = { 3: 15, 6: 27, 12: 50 };
-  const price = prices[months];
-  
-  await ctx.answerCbQuery('🚧 Paiement Pix bientôt disponible !');
-  
-  await ctx.reply(
-    `💳 Souscription ${months} mois (${price} R$)\n\n` +
-    `🚧 Le paiement par Pix sera disponible très bientôt !\n\n` +
-    `En attendant, contacte-nous pour activer ton Premium manuellement.`
-  );
+// Plan selection - show payment methods
+bot.action(/^premium:subscribe:(.+)$/, async (ctx) => {
+  const plan = ctx.match[1]; // 'monthly', 'quarterly', 'annual'
+  const msg = getMsg(ctx);
+
+  await ctx.answerCbQuery();
+
+  // Import payment service
+  const { getAvailablePaymentMethods, getPremiumPlans } = await import('../services/payments/index.js');
+
+  const plans = getPremiumPlans();
+  const planInfo = plans[plan];
+  const methods = getAvailablePaymentMethods();
+
+  if (!planInfo) {
+    return ctx.reply('❌ Plano inválido / Plan invalide / Invalid plan');
+  }
+
+  // Build payment methods keyboard
+  const { Markup } = await import('telegraf');
+  const buttons = methods.map(method => [
+    Markup.button.callback(
+      `${method.icon} ${method.name} (${method.currency} ${planInfo.prices[method.currency]})`,
+      `payment:method:${plan}:${method.id}`
+    )
+  ]);
+  buttons.push([Markup.button.callback(msg.btn.back || '◀️ Retour', 'premium:pricing')]);
+
+  const text = {
+    pt: `💳 <b>Escolha seu método de pagamento</b>\n\n` +
+        `📦 Plano: ${planInfo.name.pt}\n` +
+        `⏱ Duração: ${planInfo.duration} dias\n\n` +
+        `Selecione abaixo:`,
+    fr: `💳 <b>Choisissez votre méthode de paiement</b>\n\n` +
+        `📦 Plan: ${planInfo.name.fr}\n` +
+        `⏱ Durée: ${planInfo.duration} jours\n\n` +
+        `Sélectionnez ci-dessous:`,
+    en: `💳 <b>Choose your payment method</b>\n\n` +
+        `📦 Plan: ${planInfo.name.en}\n` +
+        `⏱ Duration: ${planInfo.duration} days\n\n` +
+        `Select below:`
+  };
+
+  const lang = ctx.state.lang || 'en';
+  await ctx.editMessageText(text[lang] || text.en, {
+    parse_mode: 'HTML',
+    reply_markup: { inline_keyboard: buttons }
+  });
+});
+
+// Payment method selected - initiate payment
+bot.action(/^payment:method:(.+):(.+)$/, async (ctx) => {
+  const [plan, method] = [ctx.match[1], ctx.match[2]];
+  const telegram_id = ctx.from.id;
+  const email = ctx.from.username ? `${ctx.from.username}@telegram.user` : null;
+
+  await ctx.answerCbQuery('Processando... / Processing...');
+
+  try {
+    // Import payment service
+    const { initiatePayment } = await import('../services/payments/index.js');
+
+    const paymentData = await initiatePayment({
+      telegram_id,
+      plan,
+      method,
+      email
+    });
+
+    const lang = ctx.state.lang || 'en';
+
+    if (method === 'pix_manual') {
+      // Manual Pix payment - show QR code and instructions
+      const text = {
+        pt: `🏦 <b>Pagamento via Pix</b>\n\n` +
+            `💰 Valor: R$ ${paymentData.amount.toFixed(2)}\n` +
+            `🔑 Chave Pix: <code>${paymentData.pix_key}</code>\n` +
+            `📝 Referência: <code>${paymentData.reference}</code>\n\n` +
+            `${paymentData.instructions.pt}\n\n` +
+            `⚠️ <b>Importante:</b> Após o pagamento, envie o comprovante para confirmação manual.\n` +
+            `Use o comando /suporte para entrar em contato.`,
+        fr: `🏦 <b>Paiement via Pix</b>\n\n` +
+            `💰 Montant: R$ ${paymentData.amount.toFixed(2)}\n` +
+            `🔑 Clé Pix: <code>${paymentData.pix_key}</code>\n` +
+            `📝 Référence: <code>${paymentData.reference}</code>\n\n` +
+            `${paymentData.instructions.fr}\n\n` +
+            `⚠️ <b>Important:</b> Après le paiement, envoyez le reçu pour confirmation manuelle.\n` +
+            `Utilisez /suporte pour nous contacter.`,
+        en: `🏦 <b>Payment via Pix</b>\n\n` +
+            `💰 Amount: R$ ${paymentData.amount.toFixed(2)}\n` +
+            `🔑 Pix Key: <code>${paymentData.pix_key}</code>\n` +
+            `📝 Reference: <code>${paymentData.reference}</code>\n\n` +
+            `${paymentData.instructions.en}\n\n` +
+            `⚠️ <b>Important:</b> After payment, send the receipt for manual confirmation.\n` +
+            `Use /suporte to contact us.`
+      };
+
+      // Send QR code image
+      await ctx.replyWithPhoto(
+        { source: Buffer.from(paymentData.qr_code_data_url.split(',')[1], 'base64') },
+        { caption: text[lang] || text.en, parse_mode: 'HTML' }
+      );
+
+    } else if (method === 'mercadopago') {
+      // Mercado Pago - send payment link
+      const text = {
+        pt: `💳 <b>Pagamento Mercado Pago</b>\n\n` +
+            `💰 Valor: R$ ${paymentData.amount || paymentData.plan_info.prices.BRL}\n` +
+            `📦 Plano: ${paymentData.plan_info.name.pt}\n\n` +
+            `Clique no botão abaixo para completar o pagamento:`,
+        fr: `💳 <b>Paiement Mercado Pago</b>\n\n` +
+            `💰 Montant: R$ ${paymentData.amount || paymentData.plan_info.prices.BRL}\n` +
+            `📦 Plan: ${paymentData.plan_info.name.fr}\n\n` +
+            `Cliquez sur le bouton ci-dessous pour compléter le paiement:`,
+        en: `💳 <b>Mercado Pago Payment</b>\n\n` +
+            `💰 Amount: R$ ${paymentData.amount || paymentData.plan_info.prices.BRL}\n` +
+            `📦 Plan: ${paymentData.plan_info.name.en}\n\n` +
+            `Click the button below to complete payment:`
+      };
+
+      const { Markup } = await import('telegraf');
+      await ctx.reply(text[lang] || text.en, {
+        parse_mode: 'HTML',
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.url('💳 Pagar / Pay', paymentData.init_point)]
+        ])
+      });
+
+    } else if (method === 'paypal') {
+      // PayPal - send payment link
+      const text = {
+        pt: `💳 <b>Pagamento PayPal</b>\n\n` +
+            `💰 Valor: $${paymentData.amount}\n` +
+            `📦 Plano: ${paymentData.plan_info.name.pt}\n\n` +
+            `Clique no botão abaixo para completar o pagamento:`,
+        fr: `💳 <b>Paiement PayPal</b>\n\n` +
+            `💰 Montant: $${paymentData.amount}\n` +
+            `📦 Plan: ${paymentData.plan_info.name.fr}\n\n` +
+            `Cliquez sur le bouton ci-dessous pour compléter le paiement:`,
+        en: `💳 <b>PayPal Payment</b>\n\n` +
+            `💰 Amount: $${paymentData.amount}\n` +
+            `📦 Plan: ${paymentData.plan_info.name.en}\n\n` +
+            `Click the button below to complete payment:`
+      };
+
+      const { Markup } = await import('telegraf');
+      await ctx.reply(text[lang] || text.en, {
+        parse_mode: 'HTML',
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.url('💳 Pagar / Pay', paymentData.approval_url)]
+        ])
+      });
+    }
+
+  } catch (error) {
+    logger.error('[BOT] Payment initiation failed:', { error: error.message, telegram_id, plan, method });
+
+    const errorText = {
+      pt: '❌ Erro ao processar pagamento. Tente novamente ou contate o suporte.',
+      fr: '❌ Erreur lors du traitement du paiement. Réessayez ou contactez le support.',
+      en: '❌ Error processing payment. Please try again or contact support.'
+    };
+    const lang = ctx.state.lang || 'en';
+    await ctx.reply(errorText[lang] || errorText.en);
+  }
+});
+
+// Check payment status
+bot.command('checkpayment', async (ctx) => {
+  const msg = getMsg(ctx);
+  const telegram_id = ctx.from.id;
+
+  try {
+    const { getPremiumDetails } = await import('../services/payments/index.js');
+    const premiumInfo = await getPremiumDetails(telegram_id);
+
+    if (premiumInfo) {
+      const text = {
+        pt: `✅ <b>Você é Premium!</b>\n\n` +
+            `⏰ Expira em: ${premiumInfo.expires_at.toLocaleDateString('pt-BR')}\n` +
+            `📅 Dias restantes: ${premiumInfo.days_remaining}`,
+        fr: `✅ <b>Vous êtes Premium!</b>\n\n` +
+            `⏰ Expire le: ${premiumInfo.expires_at.toLocaleDateString('fr-FR')}\n` +
+            `📅 Jours restants: ${premiumInfo.days_remaining}`,
+        en: `✅ <b>You are Premium!</b>\n\n` +
+            `⏰ Expires: ${premiumInfo.expires_at.toLocaleDateString('en-US')}\n` +
+            `📅 Days remaining: ${premiumInfo.days_remaining}`
+      };
+      const lang = ctx.state.lang || 'en';
+      await ctx.reply(text[lang] || text.en, { parse_mode: 'HTML' });
+    } else {
+      const text = {
+        pt: '❌ Você não tem uma assinatura Premium ativa.\nUse /premium para assinar.',
+        fr: '❌ Vous n\'avez pas d\'abonnement Premium actif.\nUtilisez /premium pour vous abonner.',
+        en: '❌ You don\'t have an active Premium subscription.\nUse /premium to subscribe.'
+      };
+      const lang = ctx.state.lang || 'en';
+      await ctx.reply(text[lang] || text.en);
+    }
+  } catch (error) {
+    logger.error('[BOT] Check payment failed:', { error: error.message, telegram_id });
+    await ctx.reply('❌ Erro ao verificar status / Error checking status');
+  }
 });
 
 // ==================== ALERTS CALLBACKS ====================
