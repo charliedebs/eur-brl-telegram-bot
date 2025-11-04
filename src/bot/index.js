@@ -1,4 +1,5 @@
 import { Telegraf, Markup, session } from 'telegraf';
+import rateLimit from 'telegraf-ratelimit';
 import { buildKeyboards } from './keyboards.js';
 import { updateNLUFeedback } from '../services/nlu-logger.js';
 import { getRates, calculateOnChain, getLocale, formatAmount, formatRate, calculateOnChainReverse } from '../services/rates.js';
@@ -7,8 +8,32 @@ import { AlertsService } from '../services/alerts.js';
 import { DatabaseService } from '../services/database.js';
 import { parseUserIntent } from '../core/nlu.js';
 import { messages } from './messages/messages-loader.js';
+import { parseAndValidateAmount, validateThreshold } from '../utils/validation.js';
 
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
+
+// ==========================================
+// RATE LIMITING
+// ==========================================
+const limitConfig = {
+  window: 3000,      // 3 seconds window
+  limit: 5,          // 5 messages max per window
+  onLimitExceeded: (ctx) => {
+    const lang = ctx.state?.lang || 'en';
+    const messages = {
+      fr: '⏱️ Ralentis un peu ! Tu peux envoyer maximum 5 messages par 3 secondes.',
+      pt: '⏱️ Devagar! Você pode enviar no máximo 5 mensagens a cada 3 segundos.',
+      en: '⏱️ Slow down! You can send maximum 5 messages per 3 seconds.'
+    };
+    return ctx.reply(messages[lang] || messages.en);
+  },
+  keyGenerator: (ctx) => {
+    // Rate limit per user
+    return ctx.from?.id?.toString();
+  }
+};
+
+bot.use(rateLimit(limitConfig));
 
 // Activer les sessions
 bot.use(session());
@@ -81,12 +106,12 @@ Choisis ta langue`;
 bot.command('rate', async (ctx) => {
   const msg = getMsg(ctx);
   const locale = getLocale(ctx.state.lang);
-  
-  // Parse amount (default 1000)
+
+  // Parse and validate amount (default 1000)
   const args = ctx.message.text.split(' ').slice(1).join(' ').trim();
-  const amount = args ? parseFloat(args.replace(/[^\d.]/g, '')) : 1000;
-  
-  if (!amount || !isFinite(amount)) {
+  const amount = args ? parseAndValidateAmount(args) : 1000;
+
+  if (!amount) {
     return ctx.reply(msg.ERROR_INVALID_AMOUNT);
   }
   
@@ -158,11 +183,11 @@ bot.command('convert', async (ctx) => {
     return ctx.reply(msg.ERROR_INVALID_AMOUNT);
   }
   
-  const amount = parseFloat(match[1].replace(',', '.'));
+  const amount = parseAndValidateAmount(match[1]);
   const currency = match[2]; // peut être null
   const forcedLang = match[3]; // peut être null
-  
-  if (!amount || !isFinite(amount)) {
+
+  if (!amount) {
     const msg = getMsg(ctx);
     return ctx.reply(msg.ERROR_INVALID_AMOUNT);
   }
@@ -471,7 +496,8 @@ async function showComparison(ctx, route, amount, isTargetMode = false) {
   ]);
   
   if (!rates) {
-    await ctx.reply("⚠️ Taux crypto indisponibles. Réessaie dans un instant.");
+    const msg = getMsg(ctx);
+    await ctx.reply(msg.ERROR_RATES_UNAVAILABLE || "⚠️ Rates temporarily unavailable. Try again in a moment.");
     return;
   }
   
@@ -559,7 +585,8 @@ bot.action(/^action:calc_details:(.+):(\d+)$/, async (ctx) => {
   
   const rates = await getRates();
   if (!rates) {
-    await ctx.reply("⚠️ Taux indisponibles.");
+    const msg = getMsg(ctx);
+    await ctx.reply(msg.ERROR_RATES_UNAVAILABLE || "⚠️ Rates temporarily unavailable.");
     await ctx.answerCbQuery();
     return;
   }
@@ -585,9 +612,10 @@ bot.action(/^action:stay_offchain:(.+):(\d+)$/, async (ctx) => {
     getRates(),
     getWiseComparison(route, amount)
   ]);
-  
+
   if (!rates) {
-    await ctx.reply("⚠️ Taux indisponibles.");
+    const msg = getMsg(ctx);
+    await ctx.reply(msg.ERROR_RATES_UNAVAILABLE || "⚠️ Rates temporarily unavailable.");
     await ctx.answerCbQuery();
     return;
   }
@@ -1301,8 +1329,13 @@ bot.on('inline_query', async (ctx) => {
     ]);
     
     if (!rates) {
+      const errorText = {
+        fr: "⚠️ Taux indisponibles",
+        pt: "⚠️ Taxas indisponíveis",
+        en: "⚠️ Rates unavailable"
+      };
       return ctx.answerInlineQuery([], {
-        switch_pm_text: "⚠️ Taux indisponibles",
+        switch_pm_text: errorText[lang] || errorText.en,
         switch_pm_parameter: "inline_error",
         cache_time: 1
       });
@@ -1397,14 +1430,15 @@ bot.on('text', async (ctx) => {
     
     // PRIORITÉ 1: Montant attendu
     if (ctx.session?.awaitingAmount) {
-      const amount = parseFloat(text.replace(/[^\d.]/g, ''));
-      if (amount && isFinite(amount)) {
+      const amount = parseAndValidateAmount(text);
+      if (amount) {
         const isTargetMode = ctx.session.targetMode || false;
         await showComparison(ctx, ctx.session.awaitingAmount, amount, isTargetMode);
         delete ctx.session.awaitingAmount;
         delete ctx.session.targetMode;
       } else {
-        await ctx.reply("⚠️ Montant invalide. Entre un nombre (ex. 1000)");
+        const msg = getMsg(ctx);
+        await ctx.reply(msg.ERROR_INVALID_AMOUNT || "⚠️ Montant invalide. Entre un nombre entre 1 et 1,000,000 (ex. 1000)");
       }
       return;
     }
@@ -1413,26 +1447,28 @@ bot.on('text', async (ctx) => {
     if (ctx.session?.awaitingCustomPercent) {
       const { pair, refType } = ctx.session.awaitingCustomPercent;
       const msg = getMsg(ctx);
-      
+
       const match = ctx.message.text.trim().match(/^\+?(\d+(?:[.,]\d+)?)$/);
       if (!match) {
         return ctx.reply('⚠️ Format invalide. Entre un nombre (ex: 3.5)');
       }
-      
+
       const percent = parseFloat(match[1].replace(',', '.'));
-      
-      // ✅ SUPPRIMÉ : Validation min/max
-      // Laisse l'utilisateur libre
-      
+      const validPercent = validateThreshold(percent, 'relative', pair);
+
+      if (!validPercent) {
+        return ctx.reply('⚠️ Valeur invalide. Entre un pourcentage entre 0.1% et 50% (ex: 3.5)');
+      }
+
       delete ctx.session.awaitingCustomPercent;
-      
+
       const alertData = {
         pair,
         threshold_type: 'relative',
-        threshold_value: percent,
+        threshold_value: validPercent,
         reference_type: refType
       };
-      
+
       const kb = buildKeyboards(msg, 'alert_choose_cooldown_v2', { alertData });
       return ctx.reply(msg.ALERT_CHOOSE_COOLDOWN, { parse_mode: 'HTML', ...kb });
     }
@@ -1441,26 +1477,31 @@ bot.on('text', async (ctx) => {
     if (ctx.session?.awaitingAbsoluteThreshold) {
       const { pair } = ctx.session.awaitingAbsoluteThreshold;
       const msg = getMsg(ctx);
-      
+
       const match = ctx.message.text.trim().match(/^(\d+(?:[.,]\d+)?)$/);
       if (!match) {
         return ctx.reply('⚠️ Format invalide. Entre un nombre décimal (ex: 6.30)');
       }
-      
+
       const threshold = parseFloat(match[1].replace(',', '.'));
-      
-      // ✅ SUPPRIMÉ : Validation min/max
-      // Laisse l'utilisateur libre
-      
+      const validThreshold = validateThreshold(threshold, 'absolute', pair);
+
+      if (!validThreshold) {
+        const range = pair === 'eurbrl'
+          ? 'entre 3.0 et 10.0'
+          : 'entre 0.10 et 0.35';
+        return ctx.reply(`⚠️ Valeur invalide. Entre un taux ${range} (ex: ${pair === 'eurbrl' ? '6.30' : '0.165'})`);
+      }
+
       delete ctx.session.awaitingAbsoluteThreshold;
-      
+
       const alertData = {
         pair,
         threshold_type: 'absolute',
-        threshold_value: threshold,
+        threshold_value: validThreshold,
         reference_type: null
       };
-      
+
       const kb = buildKeyboards(msg, 'alert_choose_cooldown_v2', { alertData });
       return ctx.reply(msg.ALERT_CHOOSE_COOLDOWN, { parse_mode: 'HTML', ...kb });
     }
@@ -1529,14 +1570,14 @@ if (ctx.session?.awaitingFaqQuestion) {
 
 // NOUVEAU: Montant pour /convert
 if (ctx.session?.awaitingConvertAmount) {
-  const amount = parseFloat(text.replace(/[^\d.]/g, ''));
-  if (amount && isFinite(amount)) {
+  const amount = parseAndValidateAmount(text);
+  if (amount) {
     delete ctx.session.awaitingConvertAmount;
     ctx.session.awaitingConvertRoute = amount;
     const kb = buildKeyboards(msg, 'route_choice', { amount, locale });
     return ctx.reply(msg.askRoute(amount, locale), { parse_mode: 'HTML', ...kb });
   } else {
-    return ctx.reply("⚠️ Montant invalide. Entre un nombre (ex. 1000)");
+    return ctx.reply(msg.ERROR_INVALID_AMOUNT || "⚠️ Montant invalide. Entre un nombre entre 1 et 1,000,000 (ex. 1000)");
   }
 }
 
@@ -1753,7 +1794,16 @@ bot.action('feedback:wrong', async (ctx) => {
 
 bot.catch((err, ctx) => {
   console.error('[BOT] Error:', err);
-  ctx.reply("❌ Une erreur est survenue.").catch(() => {});
+
+  // Try to get user's language for error message
+  const lang = ctx.state?.lang || 'en';
+  const errorMessages = {
+    fr: "❌ Une erreur est survenue. Réessaie dans un instant.",
+    pt: "❌ Ocorreu um erro. Tente novamente em um momento.",
+    en: "❌ An error occurred. Please try again in a moment."
+  };
+
+  ctx.reply(errorMessages[lang] || errorMessages.en).catch(() => {});
 });
 
 // ==================== EXPORTS ====================

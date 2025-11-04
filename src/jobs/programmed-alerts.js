@@ -53,7 +53,11 @@ export async function checkProgrammedAlerts() {
       } else if (alert.threshold_type === 'relative') {
         // Seuil relatif : calculer selon référence
         if (alert.reference_type === 'current') {
-          refValue = currentRate;
+          // ❌ This should never happen - bot/index.js converts these to absolute
+          // If we find one, it's a data corruption issue - skip it
+          console.error(`[CRON-PROGRAMMED] ❌ Invalid alert ${alert.id}: reference_type='current' should be absolute`);
+          console.error(`[CRON-PROGRAMMED] Skipping alert. User: ${alert.users.telegram_id}, Pair: ${alert.pair}`);
+          continue;
         } else if (alert.reference_type === 'avg7d') {
           refValue = await db.getAverage(alert.pair, 7);
         } else if (alert.reference_type === 'avg30d') {
@@ -61,12 +65,12 @@ export async function checkProgrammedAlerts() {
         } else if (alert.reference_type === 'avg90d') {
           refValue = await db.getAverage(alert.pair, 90);
         }
-        
+
         if (!refValue) {
           console.log(`[CRON-PROGRAMMED] ⚠️ No reference data for ${alert.pair} (${alert.reference_type})`);
           continue;
         }
-        
+
         threshold = refValue * (1 + alert.threshold_value / 100);
       }
       
