@@ -1554,13 +1554,24 @@ if (ctx.session?.awaitingFaqQuestion) {
   const userLang = ctx.state.lang;
   
   // Log la question dans la console (ou DB si tu veux)
-  console.log('[FAQ-QUESTION] User:', userId, username);
-  console.log('[FAQ-QUESTION] Lang:', userLang);
-  console.log('[FAQ-QUESTION] Question:', question);
-  
-  // TODO: Envoyer notification à toi (admin)
-  // Exemple: await bot.telegram.sendMessage(ADMIN_TELEGRAM_ID, `❓ Question de @${username}:\n\n${question}`);
-  
+  logger.info('[FAQ-QUESTION] User:', { userId, username, lang: userLang });
+  logger.info('[FAQ-QUESTION] Question:', { question });
+
+  // Send notification to admin
+  if (process.env.ADMIN_TELEGRAM_ID) {
+    try {
+      const adminId = parseInt(process.env.ADMIN_TELEGRAM_ID);
+      const adminMessage = `❓ <b>New FAQ Question</b>\n\n<b>From:</b> ${username ? '@' + username : 'User ' + userId}\n<b>Language:</b> ${userLang}\n<b>Question:</b>\n${question}`;
+
+      await bot.telegram.sendMessage(adminId, adminMessage, { parse_mode: 'HTML' });
+      logger.info('[FAQ-QUESTION] Admin notification sent');
+    } catch (error) {
+      logger.error('[FAQ-QUESTION] Failed to send admin notification:', { error: error.message });
+    }
+  } else {
+    logger.warn('[FAQ-QUESTION] ADMIN_TELEGRAM_ID not configured, skipping admin notification');
+  }
+
   delete ctx.session.awaitingFaqQuestion;
   
   const msg = getMsg(ctx);
