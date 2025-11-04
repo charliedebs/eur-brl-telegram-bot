@@ -502,12 +502,125 @@ async createAlert(userId, alertData) {
       .not('user_feedback', 'is', null)
       .order('created_at', { ascending: false })
       .limit(limit);
-    
+
     if (error) {
       console.error('[DB] Failed to get NLU feedbacks:', error);
       return [];
     }
-    
+
+    return data || [];
+  }
+
+  // ==========================================
+  // PAYMENTS (NEW - Enhanced payment tracking)
+  // ==========================================
+
+  async createPayment(paymentData) {
+    const { data, error } = await supabase
+      .from('payments')
+      .insert([{
+        telegram_id: paymentData.telegram_id,
+        plan: paymentData.plan,
+        method: paymentData.method,
+        amount: paymentData.amount,
+        currency: paymentData.currency,
+        payment_id: paymentData.payment_id,
+        status: paymentData.status || 'pending',
+        payment_data: paymentData.data || {},
+        created_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[DB] Failed to create payment:', error);
+      return null;
+    }
+
+    console.log(`[DB] ✅ Payment created: ${paymentData.payment_id}`);
+    return data;
+  }
+
+  async getPayment(payment_id) {
+    const { data, error } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('payment_id', payment_id)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('[DB] Failed to get payment:', error);
+      return null;
+    }
+
+    return data;
+  }
+
+  async getPaymentsByUser(telegram_id) {
+    const { data, error } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('telegram_id', telegram_id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[DB] Failed to get user payments:', error);
+      return [];
+    }
+
+    return data || [];
+  }
+
+  async updatePaymentStatus(payment_id, status, details = {}) {
+    const { data, error } = await supabase
+      .from('payments')
+      .update({
+        status,
+        confirmed_at: status === 'approved' ? new Date().toISOString() : null,
+        ...details
+      })
+      .eq('payment_id', payment_id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[DB] Failed to update payment status:', error);
+      return null;
+    }
+
+    console.log(`[DB] ✅ Payment status updated: ${payment_id} -> ${status}`);
+    return data;
+  }
+
+  async getPendingPayments() {
+    const { data, error } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[DB] Failed to get pending payments:', error);
+      return [];
+    }
+
+    return data || [];
+  }
+
+  async getExpiredPendingPayments(hours = 24) {
+    const cutoffTime = new Date(Date.now() - hours * 60 * 60 * 1000);
+
+    const { data, error } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('status', 'pending')
+      .lt('created_at', cutoffTime.toISOString());
+
+    if (error) {
+      console.error('[DB] Failed to get expired pending payments:', error);
+      return [];
+    }
+
     return data || [];
   }
 }

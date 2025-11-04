@@ -71,7 +71,7 @@ CREATE INDEX IF NOT EXISTS idx_free_alerts_pair ON free_alerts_sent(pair);
 CREATE INDEX IF NOT EXISTS idx_free_alerts_sent_at ON free_alerts_sent(sent_at DESC);
 
 -- ==========================================
--- PIX_PAYMENTS TABLE (Premium subscription tracking)
+-- PIX_PAYMENTS TABLE (Legacy - keeping for backward compatibility)
 -- ==========================================
 CREATE TABLE IF NOT EXISTS pix_payments (
     id BIGSERIAL PRIMARY KEY,
@@ -89,6 +89,31 @@ CREATE TABLE IF NOT EXISTS pix_payments (
 CREATE INDEX IF NOT EXISTS idx_pix_payments_telegram_id ON pix_payments(telegram_id);
 CREATE INDEX IF NOT EXISTS idx_pix_payments_status ON pix_payments(status);
 CREATE INDEX IF NOT EXISTS idx_pix_payments_created_at ON pix_payments(created_at DESC);
+
+-- ==========================================
+-- PAYMENTS TABLE (New unified payment tracking)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS payments (
+    id BIGSERIAL PRIMARY KEY,
+    telegram_id BIGINT NOT NULL,
+    payment_id VARCHAR(255) UNIQUE NOT NULL, -- External payment ID (from Mercado Pago, PayPal, etc.)
+    method VARCHAR(50) NOT NULL, -- 'mercadopago', 'pix_manual', 'paypal'
+    plan VARCHAR(20) NOT NULL, -- 'monthly', 'quarterly', 'annual'
+    amount DECIMAL(10, 2) NOT NULL,
+    currency VARCHAR(3) NOT NULL, -- 'BRL', 'USD'
+    status VARCHAR(20) DEFAULT 'pending', -- 'pending', 'approved', 'rejected', 'cancelled'
+    payment_data JSONB, -- Additional payment data from provider
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    confirmed_at TIMESTAMP WITH TIME ZONE,
+    FOREIGN KEY (telegram_id) REFERENCES users(telegram_id) ON DELETE CASCADE
+);
+
+-- Indexes for payments table
+CREATE INDEX IF NOT EXISTS idx_payments_telegram_id ON payments(telegram_id);
+CREATE INDEX IF NOT EXISTS idx_payments_payment_id ON payments(payment_id);
+CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);
+CREATE INDEX IF NOT EXISTS idx_payments_method ON payments(method);
+CREATE INDEX IF NOT EXISTS idx_payments_created_at ON payments(created_at DESC);
 
 -- ==========================================
 -- NLU_LOGS TABLE (Natural Language Understanding analytics)
