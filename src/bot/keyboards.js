@@ -460,7 +460,23 @@ case 'what_exchange':
         [Markup.button.callback('🗑️ Supprimer cette alerte', `alert:delete:${alertId}`)],
         [Markup.button.callback('🔔 Mes alertes', 'alert:list')]
       ]);
-    
+
+    // Alerte déclenchée manuellement (admin)
+    case 'triggered_alert':
+      const triggeredPair = options.pair || 'eurbrl';
+      const triggeredAmount = options.amount || 1000;
+      return Markup.inlineKeyboard([
+        [Markup.button.callback('🚀 Comparer maintenant', `route:${triggeredPair}:${triggeredAmount}`)],
+        [Markup.button.callback(msg.btn.back, 'action:back_main')]
+      ]);
+
+    // User n'est pas premium
+    case 'not_premium':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback(msg.btn.seePremium, 'premium:pricing')],
+        [Markup.button.callback(msg.btn.back, 'action:back_main')]
+      ]);
+
     default:
       return Markup.inlineKeyboard([[Markup.button.callback(msg.btn.back, 'action:back_main')]]);
   }
