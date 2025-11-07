@@ -1161,6 +1161,80 @@ bot.command('checkpayment', async (ctx) => {
   }
 });
 
+// ==================== PREMIUM ACTION CALLBACKS ====================
+
+// Action button: View Premium Status
+bot.action('action:premium_status', async (ctx) => {
+  const telegram_id = ctx.from.id;
+
+  try {
+    const { getPremiumDetails } = await import('../services/payments/index.js');
+    const premiumInfo = await getPremiumDetails(telegram_id);
+
+    if (premiumInfo) {
+      const text = {
+        pt: `✅ <b>Você é Premium!</b>\n\n` +
+            `⏰ Expira em: ${premiumInfo.expires_at.toLocaleDateString('pt-BR')}\n` +
+            `📅 Dias restantes: ${premiumInfo.days_remaining}`,
+        fr: `✅ <b>Vous êtes Premium!</b>\n\n` +
+            `⏰ Expire le: ${premiumInfo.expires_at.toLocaleDateString('fr-FR')}\n` +
+            `📅 Jours restants: ${premiumInfo.days_remaining}`,
+        en: `✅ <b>You are Premium!</b>\n\n` +
+            `⏰ Expires: ${premiumInfo.expires_at.toLocaleDateString('en-US')}\n` +
+            `📅 Days remaining: ${premiumInfo.days_remaining}`
+      };
+      const lang = ctx.state.lang || 'en';
+      await ctx.answerCbQuery();
+      await ctx.reply(text[lang] || text.en, { parse_mode: 'HTML' });
+    } else {
+      const text = {
+        pt: '❌ Você não tem uma assinatura Premium ativa.\nUse /premium para assinar.',
+        fr: '❌ Vous n\'avez pas d\'abonnement Premium actif.\nUtilisez /premium pour vous abonner.',
+        en: '❌ You don\'t have an active Premium subscription.\nUse /premium to subscribe.'
+      };
+      const lang = ctx.state.lang || 'en';
+      await ctx.answerCbQuery();
+      await ctx.reply(text[lang] || text.en);
+    }
+  } catch (error) {
+    logger.error('[BOT] Premium status check failed:', { error: error.message, telegram_id });
+    await ctx.answerCbQuery();
+    await ctx.reply('❌ Erro ao verificar status / Error checking status');
+  }
+});
+
+// Action button: Start Conversion
+bot.action('action:convert', async (ctx) => {
+  const msg = getMsg(ctx);
+
+  await ctx.answerCbQuery();
+
+  // Show conversion prompt
+  const text = {
+    pt: '💱 <b>Conversão de Moeda</b>\n\n' +
+        'Digite o valor que você quer converter:\n\n' +
+        'Exemplos:\n' +
+        '• <code>100 EUR</code> → valor em BRL\n' +
+        '• <code>500 BRL</code> → valor em EUR\n' +
+        '• <code>1000</code> → assume EUR',
+    fr: '💱 <b>Conversion de Devise</b>\n\n' +
+        'Entrez le montant que vous souhaitez convertir:\n\n' +
+        'Exemples:\n' +
+        '• <code>100 EUR</code> → valeur en BRL\n' +
+        '• <code>500 BRL</code> → valeur en EUR\n' +
+        '• <code>1000</code> → suppose EUR',
+    en: '💱 <b>Currency Conversion</b>\n\n' +
+        'Enter the amount you want to convert:\n\n' +
+        'Examples:\n' +
+        '• <code>100 EUR</code> → value in BRL\n' +
+        '• <code>500 BRL</code> → value in EUR\n' +
+        '• <code>1000</code> → assumes EUR'
+  };
+
+  const lang = ctx.state.lang || 'en';
+  await ctx.reply(text[lang] || text.en, { parse_mode: 'HTML' });
+});
+
 // ==================== ALERTS CALLBACKS ====================
 // Handler: Choix de la paire (déjà existant, garder tel quel)
 bot.action('alert:choose_pair', async (ctx) => {
