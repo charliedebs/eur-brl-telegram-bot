@@ -135,6 +135,12 @@ export async function createManualPixPayment({ amount, plan, telegram_id }) {
     const pixName = process.env.PIX_NAME || 'EUR BRL Bot';
     const pixCity = process.env.PIX_CITY || 'Sao Paulo';
 
+    // Ensure amount is a valid number
+    const numericAmount = Number(amount);
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+      throw new Error(`Invalid amount: ${amount}`);
+    }
+
     // Create reference for this transaction
     const reference = `${telegram_id}_${plan}_${Date.now()}`;
 
@@ -146,7 +152,7 @@ export async function createManualPixPayment({ amount, plan, telegram_id }) {
       city: pixCity, // Receiver city
       transactionId: reference.substring(0, 25), // Max 25 chars
       message: `Premium ${plan}`, // Payment description
-      value: amount.toFixed(2) // Amount with 2 decimals
+      value: numericAmount.toFixed(2) // Amount with 2 decimals
     });
 
     // Generate BR Code (Pix copy-paste code)
@@ -157,7 +163,7 @@ export async function createManualPixPayment({ amount, plan, telegram_id }) {
 
     logger.info('[PIX-MANUAL] Pix QR Code created:', {
       telegram_id,
-      amount,
+      amount: numericAmount,
       plan,
       reference,
       pixKey
@@ -165,15 +171,15 @@ export async function createManualPixPayment({ amount, plan, telegram_id }) {
 
     return {
       pix_key: pixKey,
-      amount: amount,
+      amount: numericAmount,
       reference: reference,
       pix_copy_paste: pixCopyPaste, // BR Code for copy-paste
       qr_code_base64: qrCodeBase64, // QR code image
       qr_code_data_url: qrCodeBase64, // Compatibility with old code
       instructions: {
-        pt: `1. Abra seu app bancário\n2. Vá em Pix\n3. Escaneie o QR Code ou use Pix Copia e Cola\n4. Confirme o pagamento de R$ ${amount.toFixed(2)}`,
-        fr: `1. Ouvrez votre app bancaire\n2. Allez dans Pix\n3. Scannez le QR Code ou utilisez Pix Copier-Coller\n4. Confirmez le paiement de R$ ${amount.toFixed(2)}`,
-        en: `1. Open your banking app\n2. Go to Pix\n3. Scan the QR Code or use Pix Copy-Paste\n4. Confirm payment of R$ ${amount.toFixed(2)}`
+        pt: `1. Abra seu app bancário\n2. Vá em Pix\n3. Escaneie o QR Code ou use Pix Copia e Cola\n4. Confirme o pagamento de R$ ${numericAmount.toFixed(2)}`,
+        fr: `1. Ouvrez votre app bancaire\n2. Allez dans Pix\n3. Scannez le QR Code ou utilisez Pix Copier-Coller\n4. Confirmez le paiement de R$ ${numericAmount.toFixed(2)}`,
+        en: `1. Open your banking app\n2. Go to Pix\n3. Scan the QR Code or use Pix Copy-Paste\n4. Confirm payment of R$ ${numericAmount.toFixed(2)}`
       }
     };
 
