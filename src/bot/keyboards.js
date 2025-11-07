@@ -275,9 +275,9 @@ case 'what_exchange':
  case 'premium_pricing':
     return Markup.inlineKeyboard([
       [Markup.button.callback(msg.btn.premiumDetails, 'premium:details')],
-      [Markup.button.callback(msg.btn.subscribe3m, 'premium:subscribe:3')],
-      [Markup.button.callback(msg.btn.subscribe6m, 'premium:subscribe:6')],
-      [Markup.button.callback(msg.btn.subscribe12m, 'premium:subscribe:12')],
+      [Markup.button.callback('📅 1 mois - 29,90 R$', 'premium:subscribe:monthly')],
+      [Markup.button.callback('📅 3 mois - 79,90 R$ (-11%)', 'premium:subscribe:quarterly')],
+      [Markup.button.callback('📅 12 mois - 299,90 R$ (-17%)', 'premium:subscribe:annual')],
       [Markup.button.callback(msg.btn.back, 'action:back_main')],
     ]);
 
@@ -285,9 +285,9 @@ case 'what_exchange':
   case 'premium_details':
     return Markup.inlineKeyboard([
       [Markup.button.callback(msg.btn.backToPricing, 'premium:pricing')],
-      [Markup.button.callback(msg.btn.subscribe3m, 'premium:subscribe:3')],
-      [Markup.button.callback(msg.btn.subscribe6m, 'premium:subscribe:6')],
-      [Markup.button.callback(msg.btn.subscribe12m, 'premium:subscribe:12')],
+      [Markup.button.callback('📅 1 mois - 29,90 R$', 'premium:subscribe:monthly')],
+      [Markup.button.callback('📅 3 mois - 79,90 R$ (-11%)', 'premium:subscribe:quarterly')],
+      [Markup.button.callback('📅 12 mois - 299,90 R$ (-17%)', 'premium:subscribe:annual')],
       [Markup.button.callback(msg.btn.back, 'premium:pricing')]
     ]);
 
