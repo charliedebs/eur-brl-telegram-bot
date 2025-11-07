@@ -197,9 +197,7 @@ app.post('/webhook/paypal', async (req, res) => {
   }
 });
 
-let server;
-
-app.listen(PORT, async () => {
+const server = app.listen(PORT, async () => {
   logger.info(`Server running on port ${PORT}`);
 
   startCronJobs();
@@ -233,7 +231,7 @@ app.listen(PORT, async () => {
   } else {
     logger.info('ℹ️  WhatsApp bot disabled. Set WHATSAPP_ENABLED=true to enable.');
   }
-}).then(s => { server = s; });
+});
 
 // ==========================================
 // GRACEFUL SHUTDOWN
