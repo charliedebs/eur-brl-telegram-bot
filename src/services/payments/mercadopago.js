@@ -105,16 +105,26 @@ export async function createPixPayment({ amount, plan, email, telegram_id, descr
     // Use new v2 API
     const response = await preferenceClient.create({ body: preferenceData });
 
+    // Debug: Log full response structure
+    logger.info('[MERCADOPAGO] Full API response:', {
+      keys: Object.keys(response),
+      id: response.id,
+      init_point: response.init_point,
+      sandbox_init_point: response.sandbox_init_point
+    });
+
     logger.info('[MERCADOPAGO] Payment preference created:', {
       preference_id: response.id,
       telegram_id,
       amount,
-      plan
+      plan,
+      has_init_point: !!response.init_point,
+      has_sandbox: !!response.sandbox_init_point
     });
 
     return {
       payment_id: response.id,
-      init_point: response.init_point, // Web checkout URL
+      init_point: response.init_point || response.sandbox_init_point, // Use sandbox in test mode
       sandbox_init_point: response.sandbox_init_point,
       qr_code: response.qr_code,
       qr_code_base64: response.qr_code_base64,
