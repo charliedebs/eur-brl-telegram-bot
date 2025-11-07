@@ -113,6 +113,11 @@ export class BotEngine {
       return this.handleCompare(context);
     }
 
+    if (intent.intent === 'premium_status') {
+      context.nluIntent = intent;
+      return this.handleCheckPayment(context);
+    }
+
     // Default response
     return {
       text: msg.UNKNOWN_COMMAND || 'Comando não reconhecido. Use /help para ver os comandos disponíveis.',

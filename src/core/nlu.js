@@ -54,6 +54,31 @@ const REGEX_PATTERNS = [
       entities: {},
       confidence: 0.98
     })
+  },
+  // Premium status queries
+  {
+    pattern: /^(meu premium|minha assinatura|sou premium|premium status|statut premium|mon premium|ma souscription|am i premium|my premium|my subscription)$/i,
+    extract: () => ({
+      intent: 'premium_status',
+      entities: {},
+      confidence: 0.95
+    })
+  },
+  {
+    pattern: /(check|ver|voir|consultar|verificar).*(premium|subscription|assinatura|souscription)/i,
+    extract: () => ({
+      intent: 'premium_status',
+      entities: {},
+      confidence: 0.90
+    })
+  },
+  {
+    pattern: /(premium|subscription|assinatura|souscription).*(status|expira|expire|validade|validité|validity|ativa|active|actif)/i,
+    extract: () => ({
+      intent: 'premium_status',
+      entities: {},
+      confidence: 0.90
+    })
   }
 ];
 
@@ -135,6 +160,7 @@ INTENTIONS POSSIBLES :
 - compare : demande de comparaison EUR↔BRL
 - help : demande d'aide
 - about : demande d'info sur le bot
+- premium_status : demande de statut premium/assinatura (sou premium?, minha assinatura, premium status, etc.)
 - clarification : référence à un résultat précédent
 - unknown : message incompréhensible
 
@@ -147,7 +173,7 @@ ENTITÉS À EXTRAIRE :
 
 FORMAT DE RÉPONSE (JSON uniquement) :
 {
-  "intent": "greeting|compare|help|about|clarification|unknown",
+  "intent": "greeting|compare|help|about|premium_status|clarification|unknown",
   "entities": {
     "amount": 1000,
     "route": "eurbrl",
@@ -190,6 +216,18 @@ Context: {}
 User: "R$3000"
 Context: {}
 → {"intent":"compare","entities":{"amount":3000,"route":"brleur"},"confidence":0.85,"reasoning":"R$ = possède reais, veut convertir en EUR"}
+
+User: "sou premium?"
+Context: {language: "pt"}
+→ {"intent":"premium_status","entities":{"language":"pt"},"confidence":0.95,"reasoning":"Pergunta direta sobre status premium"}
+
+User: "when does my subscription expire"
+Context: {language: "en"}
+→ {"intent":"premium_status","entities":{"language":"en"},"confidence":0.92,"reasoning":"Pergunta sobre validade da assinatura premium"}
+
+User: "ma souscription est active?"
+Context: {language: "fr"}
+→ {"intent":"premium_status","entities":{"language":"fr"},"confidence":0.93,"reasoning":"Question sur l'état de l'abonnement premium"}
 
 Maintenant, analyse ce message avec le contexte fourni.`;
 }
