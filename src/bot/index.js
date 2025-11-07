@@ -90,37 +90,86 @@ bot.command('premium', async (ctx) => {
     const { getPremiumDetails } = await import('../services/payments/index.js');
     const premiumInfo = await getPremiumDetails(telegram_id);
 
-    let statusMessage = '';
-
     if (premiumInfo) {
-      // User has premium - show status at the top
+      // User has premium - show different message
       const expiryDate = premiumInfo.expires_at.toLocaleDateString(
         ctx.state.lang === 'pt' ? 'pt-BR' : ctx.state.lang === 'fr' ? 'fr-FR' : 'en-US'
       );
 
-      const statusText = {
-        pt: `✅ <b>Você é Premium!</b>\n` +
+      const premiumMessage = {
+        pt: `✅ <b>Você é Premium!</b>\n\n` +
             `⏰ Expira em: ${expiryDate}\n` +
             `📅 Dias restantes: ${premiumInfo.days_remaining}\n\n` +
-            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`,
-        fr: `✅ <b>Vous êtes Premium!</b>\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+            `💎 <b>FUNCIONALIDADES ATIVAS</b>\n\n` +
+            `✨ Você tem acesso a:\n` +
+            `• 🔔 Alertas personalizados ilimitados\n` +
+            `• 📢 Alertas espontâneos regulares\n` +
+            `• 🎯 Multi-pares (EUR→BRL + BRL→EUR)\n` +
+            `• 📊 Análises avançadas\n` +
+            `• ⚡ Acesso prioritário às novas funcionalidades\n\n` +
+            `[ℹ️ Ver detalhes das funcionalidades]\n\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+            `🔄 <b>PROLONGAR ASSINATURA</b>\n\n` +
+            `Adicione mais meses ao seu Premium:\n\n` +
+            `📱 R$ 15,00 / 3 meses\n` +
+            `   Ou seja R$ 5,00/mês\n\n` +
+            `📱 R$ 28,00 / 6 meses\n` +
+            `   Ou seja R$ 4,67/mês • Economia de 7%\n\n` +
+            `📱 R$ 50,00 / 12 meses\n` +
+            `   Ou seja R$ 4,17/mês • Economia de 17%`,
+        fr: `✅ <b>Vous êtes Premium!</b>\n\n` +
             `⏰ Expire le: ${expiryDate}\n` +
             `📅 Jours restants: ${premiumInfo.days_remaining}\n\n` +
-            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`,
-        en: `✅ <b>You are Premium!</b>\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+            `💎 <b>FONCTIONNALITÉS ACTIVES</b>\n\n` +
+            `✨ Vous avez accès à:\n` +
+            `• 🔔 Alertes personnalisées illimitées\n` +
+            `• 📢 Alertes spontanées régulières\n` +
+            `• 🎯 Multi-paires (EUR→BRL + BRL→EUR)\n` +
+            `• 📊 Analyses avancées\n` +
+            `• ⚡ Accès prioritaire aux nouvelles fonctionnalités\n\n` +
+            `[ℹ️ Voir détails des fonctionnalités]\n\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+            `🔄 <b>PROLONGER L'ABONNEMENT</b>\n\n` +
+            `Ajoutez plus de mois à votre Premium:\n\n` +
+            `📱 R$ 15,00 / 3 mois\n` +
+            `   Soit R$ 5,00/mois\n\n` +
+            `📱 R$ 28,00 / 6 mois\n` +
+            `   Soit R$ 4,67/mois • Économie de 7%\n\n` +
+            `📱 R$ 50,00 / 12 mois\n` +
+            `   Soit R$ 4,17/mois • Économie de 17%`,
+        en: `✅ <b>You are Premium!</b>\n\n` +
             `⏰ Expires: ${expiryDate}\n` +
             `📅 Days remaining: ${premiumInfo.days_remaining}\n\n` +
-            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`
+            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+            `💎 <b>ACTIVE FEATURES</b>\n\n` +
+            `✨ You have access to:\n` +
+            `• 🔔 Unlimited custom alerts\n` +
+            `• 📢 Regular spontaneous alerts\n` +
+            `• 🎯 Multi-pairs (EUR→BRL + BRL→EUR)\n` +
+            `• 📊 Advanced analytics\n` +
+            `• ⚡ Priority access to new features\n\n` +
+            `[ℹ️ See feature details]\n\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+            `🔄 <b>EXTEND SUBSCRIPTION</b>\n\n` +
+            `Add more months to your Premium:\n\n` +
+            `📱 R$ 15,00 / 3 months\n` +
+            `   That's R$ 5,00/month\n\n` +
+            `📱 R$ 28,00 / 6 months\n` +
+            `   That's R$ 4,67/month • Save 7%\n\n` +
+            `📱 R$ 50,00 / 12 months\n` +
+            `   That's R$ 4,17/month • Save 17%`
       };
 
       const lang = ctx.state.lang || 'en';
-      statusMessage = statusText[lang] || statusText.en;
+      const kb = buildKeyboards(msg, 'premium_pricing_renew');
+      await ctx.reply(premiumMessage[lang] || premiumMessage.en, { parse_mode: 'HTML', ...kb });
+    } else {
+      // User doesn't have premium - show regular pricing
+      const kb = buildKeyboards(msg, 'premium_pricing');
+      await ctx.reply(msg.PREMIUM_PRICING, { parse_mode: 'HTML', ...kb });
     }
-
-    // Show pricing with status at the top
-    const fullMessage = statusMessage + msg.PREMIUM_PRICING;
-    const kb = buildKeyboards(msg, 'premium_pricing');
-    await ctx.reply(fullMessage, { parse_mode: 'HTML', ...kb });
 
   } catch (error) {
     logger.error('[BOT] Premium command failed:', { error: error.message, telegram_id });
@@ -2078,7 +2127,42 @@ if (ctx.session?.awaitingConvertRoute) {
         const aboutMsg = getMsg(ctx);
         const aboutKb = buildKeyboards(aboutMsg, 'about');
         return ctx.reply(aboutMsg.ABOUT_TEXT, { parse_mode: 'HTML', ...aboutKb });
-        
+
+      case 'premium_status':
+        const telegram_id = ctx.from.id;
+
+        try {
+          const { getPremiumDetails } = await import('../services/payments/index.js');
+          const premiumInfo = await getPremiumDetails(telegram_id);
+
+          if (premiumInfo) {
+            const statusText = {
+              pt: `✅ <b>Você é Premium!</b>\n\n` +
+                  `⏰ Expira em: ${premiumInfo.expires_at.toLocaleDateString('pt-BR')}\n` +
+                  `📅 Dias restantes: ${premiumInfo.days_remaining}`,
+              fr: `✅ <b>Vous êtes Premium!</b>\n\n` +
+                  `⏰ Expire le: ${premiumInfo.expires_at.toLocaleDateString('fr-FR')}\n` +
+                  `📅 Jours restants: ${premiumInfo.days_remaining}`,
+              en: `✅ <b>You are Premium!</b>\n\n` +
+                  `⏰ Expires: ${premiumInfo.expires_at.toLocaleDateString('en-US')}\n` +
+                  `📅 Days remaining: ${premiumInfo.days_remaining}`
+            };
+            const lang = ctx.state.lang || 'en';
+            return ctx.reply(statusText[lang] || statusText.en, { parse_mode: 'HTML' });
+          } else {
+            const noStatusText = {
+              pt: '❌ Você não tem uma assinatura Premium ativa.\nUse /premium para assinar.',
+              fr: '❌ Vous n\'avez pas d\'abonnement Premium actif.\nUtilisez /premium pour vous abonner.',
+              en: '❌ You don\'t have an active Premium subscription.\nUse /premium to subscribe.'
+            };
+            const lang = ctx.state.lang || 'en';
+            return ctx.reply(noStatusText[lang] || noStatusText.en);
+          }
+        } catch (error) {
+          logger.error('[BOT] Premium status check failed:', { error: error.message, telegram_id });
+          return ctx.reply('❌ Erro ao verificar status / Error checking status');
+        }
+
       case 'clarification':
         const clarMsg = getMsg(ctx);
         const clarKb = buildKeyboards(clarMsg, 'main', { locale: getLocale(ctx.state.lang) });

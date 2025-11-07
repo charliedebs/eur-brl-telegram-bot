@@ -291,6 +291,17 @@ case 'what_exchange':
       [Markup.button.callback(msg.btn.back, 'premium:pricing')]
     ]);
 
+  // Écran Premium Pricing pour utilisateurs déjà premium (renew)
+  case 'premium_pricing_renew':
+    return Markup.inlineKeyboard([
+      [Markup.button.callback('ℹ️ Ver detalhes / Voir détails / See details', 'premium:details')],
+      [Markup.button.callback('🔄 Prolonger 3 meses - R$ 15,00', 'premium:subscribe:quarterly')],
+      [Markup.button.callback('🔄 Prolonger 6 meses - R$ 28,00 (-7%)', 'premium:subscribe:semiannual')],
+      [Markup.button.callback('🔄 Prolonger 12 meses - R$ 50,00 (-17%)', 'premium:subscribe:annual')],
+      [Markup.button.callback('🔔 Criar Alerta / Create Alert', 'alert:choose_pair')],
+      [Markup.button.callback(msg.btn.back, 'action:back_main')]
+    ]);
+
    // 👇 NOUVEAUX CASES ALERTES
     
     // Choix de la paire pour créer alerte
