@@ -4,6 +4,10 @@ import { bot } from './bot/index.js';
 import { startCronJobs } from './jobs/scheduler.js';
 import { logger } from './utils/logger.js';
 
+// Import WhatsApp bot (optional)
+let whatsappBot = null;
+let whatsappClient = null;
+
 // ==========================================
 // VALIDATE REQUIRED ENVIRONMENT VARIABLES
 // ==========================================
@@ -29,7 +33,8 @@ logger.info('✅ Environment variables validated');
 const optionalVars = {
   'COINGECKO_API_KEY': 'CoinGecko will be used as fallback only',
   'WISE_API_TOKEN': 'Not needed - Wise API is public',
-  'TELEGRAM_WEBHOOK_DOMAIN': 'Bot will use polling mode (development)'
+  'TELEGRAM_WEBHOOK_DOMAIN': 'Bot will use polling mode (development)',
+  'WHATSAPP_ENABLED': 'WhatsApp bot will not start (Telegram only)'
 };
 
 Object.entries(optionalVars).forEach(([varName, note]) => {
@@ -58,6 +63,7 @@ app.get('/health', async (req, res) => {
     services: {
       database: 'unknown',
       telegram: 'unknown',
+      whatsapp: whatsappClient ? 'unknown' : 'disabled',
       server: 'ok'
     }
   };
@@ -84,8 +90,22 @@ app.get('/health', async (req, res) => {
     checks.status = 'degraded';
   }
 
-  // Determine overall status
-  const allOk = Object.values(checks.services).every(s => s === 'ok');
+  // Check WhatsApp if enabled
+  if (whatsappClient) {
+    try {
+      const state = await whatsappClient.getState();
+      checks.services.whatsapp = state === 'CONNECTED' ? 'ok' : state;
+    } catch (error) {
+      logger.error('[HEALTH] WhatsApp check failed:', { error: error.message });
+      checks.services.whatsapp = 'error';
+      checks.status = 'degraded';
+    }
+  }
+
+  // Determine overall status (excluding disabled services)
+  const allOk = Object.entries(checks.services)
+    .filter(([_, status]) => status !== 'disabled')
+    .every(([_, status]) => status === 'ok');
   if (!allOk) {
     checks.status = 'degraded';
   }
@@ -184,6 +204,7 @@ app.listen(PORT, async () => {
 
   startCronJobs();
 
+  // Start Telegram bot
   if (process.env.NODE_ENV === 'production' && WEBHOOK_DOMAIN) {
     const webhookUrl = `${WEBHOOK_DOMAIN}/webhook/telegram`;
     await bot.telegram.setWebhook(webhookUrl);
@@ -191,6 +212,26 @@ app.listen(PORT, async () => {
   } else {
     logger.info('Development mode: using polling');
     bot.launch();
+  }
+
+  // Start WhatsApp bot if enabled
+  if (process.env.WHATSAPP_ENABLED === 'true') {
+    try {
+      logger.info('[WHATSAPP] Starting WhatsApp bot...');
+      const { createWhatsAppBot } = await import('./platforms/whatsapp/index.js');
+      const whatsapp = await createWhatsAppBot();
+      whatsappClient = whatsapp.client;
+      whatsappBot = whatsapp.engine;
+      logger.info('✅ WhatsApp bot initialized');
+    } catch (error) {
+      logger.error('[WHATSAPP] Failed to start WhatsApp bot:', {
+        error: error.message,
+        stack: error.stack
+      });
+      logger.info('ℹ️  Telegram bot will continue running');
+    }
+  } else {
+    logger.info('ℹ️  WhatsApp bot disabled. Set WHATSAPP_ENABLED=true to enable.');
   }
 }).then(s => { server = s; });
 
@@ -215,12 +256,22 @@ async function gracefulShutdown(signal) {
     });
   }
 
-  // Stop bot
+  // Stop Telegram bot
   try {
     await bot.stop(signal);
-    logger.info('✅ Bot stopped');
+    logger.info('✅ Telegram bot stopped');
   } catch (error) {
-    logger.error('❌ Error stopping bot:', { error: error.message });
+    logger.error('❌ Error stopping Telegram bot:', { error: error.message });
+  }
+
+  // Stop WhatsApp bot if running
+  if (whatsappClient) {
+    try {
+      await whatsappClient.destroy();
+      logger.info('✅ WhatsApp bot stopped');
+    } catch (error) {
+      logger.error('❌ Error stopping WhatsApp bot:', { error: error.message });
+    }
   }
 
   // Give pending operations time to complete
