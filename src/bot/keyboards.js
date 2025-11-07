@@ -292,15 +292,44 @@ case 'what_exchange':
     ]);
 
   // Écran Premium Pricing pour utilisateurs déjà premium (renew)
-  case 'premium_pricing_renew':
+  case 'premium_pricing_renew': {
+    const lang = options.lang || 'en';
+
+    const buttonTexts = {
+      pt: {
+        details: 'ℹ️ Ver detalhes',
+        renew3: '🔄 Prolongar 3 meses - R$ 15,00',
+        renew6: '🔄 Prolongar 6 meses - R$ 28,00 (-7%)',
+        renew12: '🔄 Prolongar 12 meses - R$ 50,00 (-17%)',
+        createAlert: '🔔 Criar Alerta'
+      },
+      fr: {
+        details: 'ℹ️ Voir détails',
+        renew3: '🔄 Prolonger 3 mois - R$ 15,00',
+        renew6: '🔄 Prolonger 6 mois - R$ 28,00 (-7%)',
+        renew12: '🔄 Prolonger 12 mois - R$ 50,00 (-17%)',
+        createAlert: '🔔 Créer Alerte'
+      },
+      en: {
+        details: 'ℹ️ See details',
+        renew3: '🔄 Extend 3 months - R$ 15,00',
+        renew6: '🔄 Extend 6 months - R$ 28,00 (-7%)',
+        renew12: '🔄 Extend 12 months - R$ 50,00 (-17%)',
+        createAlert: '🔔 Create Alert'
+      }
+    };
+
+    const texts = buttonTexts[lang] || buttonTexts.en;
+
     return Markup.inlineKeyboard([
-      [Markup.button.callback('ℹ️ Ver detalhes / Voir détails / See details', 'premium:details')],
-      [Markup.button.callback('🔄 Prolonger 3 meses - R$ 15,00', 'premium:subscribe:quarterly')],
-      [Markup.button.callback('🔄 Prolonger 6 meses - R$ 28,00 (-7%)', 'premium:subscribe:semiannual')],
-      [Markup.button.callback('🔄 Prolonger 12 meses - R$ 50,00 (-17%)', 'premium:subscribe:annual')],
-      [Markup.button.callback('🔔 Criar Alerta / Create Alert', 'alert:choose_pair')],
+      [Markup.button.callback(texts.details, 'premium:details')],
+      [Markup.button.callback(texts.renew3, 'premium:subscribe:quarterly')],
+      [Markup.button.callback(texts.renew6, 'premium:subscribe:semiannual')],
+      [Markup.button.callback(texts.renew12, 'premium:subscribe:annual')],
+      [Markup.button.callback(texts.createAlert, 'alert:choose_pair')],
       [Markup.button.callback(msg.btn.back, 'action:back_main')]
     ]);
+  }
 
    // 👇 NOUVEAUX CASES ALERTES
     

@@ -48,12 +48,21 @@ bot.use(async (ctx, next) => {
   if (userId) {
     let user = await db.getUser(userId);
     if (!user) {
+      // New user - detect language from Telegram
       const langCode = ctx.from.language_code || 'en';
       const lang = langCode.startsWith('fr') ? 'fr' : langCode.startsWith('pt') ? 'pt' : 'en';
       user = await db.createUser(userId, lang);
+      logger.info('[LANG] New user created with language:', { userId, lang, telegram_lang: langCode });
     }
     ctx.state.user = user;
-    ctx.state.lang = user.language;
+    ctx.state.lang = user.language || 'en'; // Ensure we always have a language
+
+    // Log if user language is not set (should not happen)
+    if (!user.language) {
+      logger.warn('[LANG] User without language detected, defaulting to EN:', { userId });
+      await db.updateUser(userId, { language: 'en' });
+      ctx.state.lang = 'en';
+    }
   }
 
   if (!ctx.session) {
@@ -66,7 +75,7 @@ bot.use(async (ctx, next) => {
   await next();
 });
 
-const getMsg = (ctx) => messages[ctx.state.lang || 'fr'];
+const getMsg = (ctx) => messages[ctx.state.lang || 'en'];
 
 // ==================== COMMANDS ====================
 
@@ -163,7 +172,7 @@ bot.command('premium', async (ctx) => {
       };
 
       const lang = ctx.state.lang || 'en';
-      const kb = buildKeyboards(msg, 'premium_pricing_renew');
+      const kb = buildKeyboards(msg, 'premium_pricing_renew', { lang });
       await ctx.reply(premiumMessage[lang] || premiumMessage.en, { parse_mode: 'HTML', ...kb });
     } else {
       // User doesn't have premium - show regular pricing
@@ -288,6 +297,11 @@ bot.command('convert', async (ctx) => {
   // Appliquer langue forcée si présente
   if (forcedLang && ['fr', 'pt', 'en'].includes(forcedLang)) {
     if (forcedLang !== ctx.state.lang) {
+      logger.info('[LANG] Language changed via /convert command:', {
+        userId: ctx.from.id,
+        from: ctx.state.lang,
+        to: forcedLang
+      });
       await db.updateUser(ctx.from.id, { language: forcedLang });
       ctx.state.lang = forcedLang;
     }
@@ -535,13 +549,21 @@ bot.command('sources', async (ctx) => {
 
 bot.action(/^lang:(.+)$/, async (ctx) => {
   const lang = ctx.match[1];
+  const previousLang = ctx.state.lang;
+
+  logger.info('[LANG] Language changed via button:', {
+    userId: ctx.from.id,
+    from: previousLang,
+    to: lang
+  });
+
   await db.updateUser(ctx.from.id, { language: lang });
   ctx.state.lang = lang;
-  
+
   const msg = getMsg(ctx);
   const locale = getLocale(lang);
   const kb = buildKeyboards(msg, 'main', { locale });
-  
+
   await ctx.editMessageText(msg.promptAmt, { parse_mode: 'HTML', ...kb });
   await ctx.answerCbQuery();
 });
@@ -2034,8 +2056,22 @@ if (ctx.session?.awaitingConvertRoute) {
       case 'greeting':
         if (intent.entities.language && intent.entities.language !== ctx.state.lang) {
           if (intent.confidence >= 0.85) {
+            logger.info('[LANG] Language changed via NLU greeting:', {
+              userId: ctx.from.id,
+              from: ctx.state.lang,
+              to: intent.entities.language,
+              confidence: intent.confidence,
+              message: text
+            });
             await db.updateUser(ctx.from.id, { language: intent.entities.language });
             ctx.state.lang = intent.entities.language;
+          } else {
+            logger.info('[LANG] Language change blocked (low confidence):', {
+              userId: ctx.from.id,
+              detected: intent.entities.language,
+              current: ctx.state.lang,
+              confidence: intent.confidence
+            });
           }
         }
         
@@ -2047,10 +2083,26 @@ if (ctx.session?.awaitingConvertRoute) {
           if (intent.entities.language && intent.entities.language !== ctx.state.lang) {
             const isFirstMessage = ctx.session.messageHistory.length <= 1;
             const isHighConfidence = intent.confidence >= 0.85;
-            
+
             if (isFirstMessage || isHighConfidence) {
+              logger.info('[LANG] Language changed via NLU compare:', {
+                userId: ctx.from.id,
+                from: ctx.state.lang,
+                to: intent.entities.language,
+                confidence: intent.confidence,
+                isFirstMessage,
+                message: text
+              });
               await db.updateUser(ctx.from.id, { language: intent.entities.language });
               ctx.state.lang = intent.entities.language;
+            } else {
+              logger.info('[LANG] Language change blocked (not first message and low confidence):', {
+                userId: ctx.from.id,
+                detected: intent.entities.language,
+                current: ctx.state.lang,
+                confidence: intent.confidence,
+                isFirstMessage
+              });
             }
           }
           
