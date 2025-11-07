@@ -126,7 +126,9 @@ app.post('/webhook/telegram', (req, res) => {
 // Mercado Pago webhook
 app.post('/webhook/mercadopago', async (req, res) => {
   try {
-    const { MercadoPago } = await import('./services/payments/index.js');
+    // Import the whole module and access MercadoPago from default export
+    const paymentsModule = await import('./services/payments/index.js');
+    const MercadoPago = paymentsModule.default.MercadoPago;
 
     logger.info('[WEBHOOK] Mercado Pago notification received');
 
@@ -134,7 +136,7 @@ app.post('/webhook/mercadopago', async (req, res) => {
 
     if (paymentInfo && paymentInfo.approved) {
       // Activate premium for user
-      const { activatePremium } = await import('./services/payments/index.js');
+      const { activatePremium } = paymentsModule.default;
       await activatePremium(paymentInfo.telegram_id, paymentInfo.plan);
 
       // Notify user via bot
