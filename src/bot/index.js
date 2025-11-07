@@ -1010,7 +1010,7 @@ bot.action(/^payment:method:(.+):(.+)$/, async (ctx) => {
             `Click the button below to complete payment:`
       };
 
-      const { Markup } = await import('telegraf');
+      // Markup is already imported at the top of the file - no need to import again
 
       if (!paymentData.init_point) {
         logger.error('[BOT] ERROR: init_point is missing from paymentData!');
@@ -1056,7 +1056,7 @@ bot.action(/^payment:method:(.+):(.+)$/, async (ctx) => {
             `Click the button below to complete payment:`
       };
 
-      const { Markup } = await import('telegraf');
+      // Markup is already imported at the top of the file
       await ctx.reply(text[lang] || text.en, {
         parse_mode: 'HTML',
         reply_markup: Markup.inlineKeyboard([
