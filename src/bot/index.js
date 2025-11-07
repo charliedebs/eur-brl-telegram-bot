@@ -1018,12 +1018,26 @@ bot.action(/^payment:method:(.+):(.+)$/, async (ctx) => {
         return;
       }
 
-      await ctx.reply(text[lang] || text.en, {
-        parse_mode: 'HTML',
-        reply_markup: Markup.inlineKeyboard([
-          [Markup.button.url('💳 Pagar / Pay', paymentData.init_point)]
-        ])
-      });
+      logger.info('[BOT] Sending Mercado Pago message with button...');
+
+      try {
+        await ctx.reply(text[lang] || text.en, {
+          parse_mode: 'HTML',
+          reply_markup: Markup.inlineKeyboard([
+            [Markup.button.url('💳 Pagar / Pay', paymentData.init_point)]
+          ])
+        });
+        logger.info('[BOT] ✅ Mercado Pago message sent successfully');
+      } catch (sendError) {
+        logger.error('[BOT] ❌ Failed to send Mercado Pago message:', {
+          error: sendError.message,
+          stack: sendError.stack
+        });
+        // Fallback: send without button
+        await ctx.reply(`${text[lang] || text.en}\n\n🔗 Link: ${paymentData.init_point}`, {
+          parse_mode: 'HTML'
+        });
+      }
 
     } else if (method === 'paypal') {
       // PayPal - send payment link
