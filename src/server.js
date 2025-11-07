@@ -135,19 +135,32 @@ app.post('/webhook/mercadopago', async (req, res) => {
     const paymentInfo = await MercadoPago.processWebhook(req.body);
 
     if (paymentInfo && paymentInfo.approved) {
-      // Activate premium for user
+      // Activate premium for user with amount and payment_id
       const { activatePremium } = paymentsModule.default;
-      await activatePremium(paymentInfo.telegram_id, paymentInfo.plan);
-
-      // Notify user via bot
-      await bot.telegram.sendMessage(
+      await activatePremium(
         paymentInfo.telegram_id,
-        `🎉 Pagamento aprovado! Seu plano Premium ${paymentInfo.plan} foi ativado por ${paymentInfo.duration_days} dias.`
+        paymentInfo.plan,
+        paymentInfo.amount,
+        paymentInfo.payment_id
       );
+
+      // Notify user via bot (only if they've started the bot)
+      try {
+        await bot.telegram.sendMessage(
+          paymentInfo.telegram_id,
+          `🎉 Pagamento aprovado! Seu plano Premium ${paymentInfo.plan} foi ativado por ${paymentInfo.duration_days} dias.`
+        );
+      } catch (sendError) {
+        // User hasn't started the bot yet - this is OK, they'll see Premium when they do
+        logger.warn('[WEBHOOK] Could not send message to user (not started bot yet):', {
+          telegram_id: paymentInfo.telegram_id
+        });
+      }
 
       logger.info('[WEBHOOK] Premium activated via Mercado Pago:', {
         telegram_id: paymentInfo.telegram_id,
-        plan: paymentInfo.plan
+        plan: paymentInfo.plan,
+        amount: paymentInfo.amount
       });
     }
 

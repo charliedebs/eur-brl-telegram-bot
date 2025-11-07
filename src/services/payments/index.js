@@ -276,9 +276,11 @@ export async function confirmManualPayment(payment_id, telegram_id) {
  * Activate premium subscription for user
  * @param {string} telegram_id - User's Telegram ID
  * @param {string} plan - Plan type
+ * @param {number} amount - Payment amount (optional)
+ * @param {string} payment_id - Payment ID to update status (optional)
  * @returns {Promise<Object>} Activation result
  */
-export async function activatePremium(telegram_id, plan) {
+export async function activatePremium(telegram_id, plan, amount = null, payment_id = null) {
   try {
     const plans = getPremiumPlans();
     const planInfo = plans[plan];
@@ -291,14 +293,26 @@ export async function activatePremium(telegram_id, plan) {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + planInfo.duration * 24 * 60 * 60 * 1000);
 
-    // Update user premium status
+    // Determine subscription amount
+    const subscriptionAmount = amount || planInfo.prices.BRL;
+
+    // Update user premium status with ALL fields
     await db.updateUser(telegram_id, {
-      premium_until: expiresAt.toISOString()
+      premium: true,
+      premium_until: expiresAt.toISOString(),
+      subscription_type: plan,
+      subscription_amount: subscriptionAmount.toString()
     });
+
+    // Update payment status if payment_id provided
+    if (payment_id) {
+      await db.updatePaymentStatus(payment_id, 'approved');
+    }
 
     logger.info('[PAYMENT] Premium activated:', {
       telegram_id,
       plan,
+      amount: subscriptionAmount,
       expires_at: expiresAt.toISOString()
     });
 
@@ -307,6 +321,7 @@ export async function activatePremium(telegram_id, plan) {
       plan,
       duration_days: planInfo.duration,
       expires_at: expiresAt,
+      amount: subscriptionAmount,
       activated: true
     };
 
