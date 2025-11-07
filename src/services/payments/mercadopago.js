@@ -152,7 +152,7 @@ export async function createManualPixPayment({ amount, plan, telegram_id }) {
       city: pixCity, // Receiver city
       transactionId: reference.substring(0, 25), // Max 25 chars
       message: `Premium ${plan}`, // Payment description
-      value: numericAmount.toFixed(2) // Amount with 2 decimals
+      value: numericAmount // Library will call toFixed internally
     });
 
     // Generate BR Code (Pix copy-paste code)
