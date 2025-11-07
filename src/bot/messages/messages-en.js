@@ -18,8 +18,8 @@ export const messagesEn = {
       ERROR_INVALID_AMOUNT: `⚠️ Invalid amount. Enter a number (e.g. 1000)`,
       ERROR_UPDATE_FAILED: `❌ Update failed.`,
     
-      // ✅ SCREEN 2
-      promptAmt: `💬 Send an amount or choose:`,
+      // ✅ MAIN MENU
+      promptAmt: `🏠 <b>Main Menu</b>\n\n💱 Compare best EUR↔BRL rates in real-time\n🔔 Set up custom alerts (Premium)\n📊 View analytics and trends\n\n<b>What would you like to do?</b>`,
       
       askAmount: `✏️ Enter an amount (e.g. 1000)`,
       

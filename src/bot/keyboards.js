@@ -17,13 +17,25 @@ export function buildKeyboards(msg, type, options = {}) {
         ],
       ]);
     
-    // Écran 1 : Choix route/montant
-    case 'main':
-      return Markup.inlineKeyboard([
+    // Écran 1 : Menu Principal
+    case 'main': {
+      const isPremium = options.isPremium || false;
+      const buttons = [
         [Markup.button.callback(msg.btn.eurbrl(DEFAULTS.EUR, locale), `route:eurbrl:${DEFAULTS.EUR}`)],
         [Markup.button.callback(msg.btn.brleur(DEFAULTS.BRL, locale), `route:brleur:${DEFAULTS.BRL}`)],
-        [Markup.button.callback(msg.btn.about, 'action:about')],
-      ]);
+      ];
+
+      // Add alerts button for premium users
+      if (isPremium) {
+        buttons.push([Markup.button.callback(msg.btn.myAlerts, 'alert:list')]);
+      } else {
+        buttons.push([Markup.button.callback(msg.btn.seePremium, 'premium:pricing')]);
+      }
+
+      buttons.push([Markup.button.callback(msg.btn.about, 'action:about')]);
+
+      return Markup.inlineKeyboard(buttons);
+    }
     
     // Écran "À propos"
     case 'about':
@@ -293,7 +305,7 @@ case 'what_exchange':
 
   // Écran Premium Pricing pour utilisateurs déjà premium (renew)
   case 'premium_pricing_renew': {
-    const lang = options.lang || 'en';
+    const lang = options.lang || 'pt';
 
     const buttonTexts = {
       pt: {

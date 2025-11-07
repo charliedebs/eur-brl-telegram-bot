@@ -18,8 +18,8 @@ Service gratuit, financé par des liens de parrainage.`,
   ERROR_INVALID_AMOUNT: `⚠️ Montant invalide. Entre un nombre (ex. 1000)`,
   ERROR_UPDATE_FAILED: `❌ Erreur lors de la mise à jour.`,
 
-  // ✅ ÉCRAN 2 : Changement "le" → "un"
-  promptAmt: `💬 Envoie un montant ou choisis :`,
+  // ✅ MENU PRINCIPAL
+  promptAmt: `🏠 <b>Menu Principal</b>\n\n💱 Compare les meilleurs taux EUR↔BRL en temps réel\n🔔 Configure des alertes personnalisées (Premium)\n📊 Consulte analyses et tendances\n\n<b>Que veux-tu faire?</b>`,
   
   askAmount: `✏️ Entre un montant (ex. 1000)`,
   

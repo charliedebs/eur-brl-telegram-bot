@@ -18,8 +18,8 @@ export const messagesPt = {
       ERROR_INVALID_AMOUNT: `⚠️ Valor inválido. Digite um número (ex. 1000)`,
       ERROR_UPDATE_FAILED: `❌ Erro ao atualizar.`,
     
-      // ✅ TELA 2
-      promptAmt: `💬 Envie um valor ou escolha:`,
+      // ✅ MENU PRINCIPAL
+      promptAmt: `🏠 <b>Menu Principal</b>\n\n💱 Compare as melhores taxas EUR↔BRL em tempo real\n🔔 Configure alertas personalizados (Premium)\n📊 Veja análises e tendências\n\n<b>O que você quer fazer?</b>`,
       
       askAmount: `✏️ Digite um valor (ex. 1000)`,
       

@@ -20,7 +20,7 @@ const limitConfig = {
   window: 3000,      // 3 seconds window
   limit: 5,          // 5 messages max per window
   onLimitExceeded: (ctx) => {
-    const lang = ctx.state?.lang || 'en';
+    const lang = ctx.state?.lang || 'pt';
     const messages = {
       fr: '⏱️ Ralentis un peu ! Tu peux envoyer maximum 5 messages par 3 secondes.',
       pt: '⏱️ Devagar! Você pode enviar no máximo 5 mensagens a cada 3 segundos.',
@@ -49,19 +49,19 @@ bot.use(async (ctx, next) => {
     let user = await db.getUser(userId);
     if (!user) {
       // New user - detect language from Telegram
-      const langCode = ctx.from.language_code || 'en';
-      const lang = langCode.startsWith('fr') ? 'fr' : langCode.startsWith('pt') ? 'pt' : 'en';
+      const langCode = ctx.from.language_code || 'pt';
+      const lang = langCode.startsWith('fr') ? 'fr' : langCode.startsWith('pt') ? 'pt' : langCode.startsWith('en') ? 'en' : 'pt';
       user = await db.createUser(userId, lang);
       logger.info('[LANG] New user created with language:', { userId, lang, telegram_lang: langCode });
     }
     ctx.state.user = user;
-    ctx.state.lang = user.language || 'en'; // Ensure we always have a language
+    ctx.state.lang = user.language || 'pt'; // Ensure we always have a language (PT default)
 
     // Log if user language is not set (should not happen)
     if (!user.language) {
-      logger.warn('[LANG] User without language detected, defaulting to EN:', { userId });
-      await db.updateUser(userId, { language: 'en' });
-      ctx.state.lang = 'en';
+      logger.warn('[LANG] User without language detected, defaulting to PT:', { userId });
+      await db.updateUser(userId, { language: 'pt' });
+      ctx.state.lang = 'pt';
     }
   }
 
@@ -75,7 +75,7 @@ bot.use(async (ctx, next) => {
   await next();
 });
 
-const getMsg = (ctx) => messages[ctx.state.lang || 'en'];
+const getMsg = (ctx) => messages[ctx.state.lang || 'pt'];
 
 // ==================== COMMANDS ====================
 
@@ -171,7 +171,7 @@ bot.command('premium', async (ctx) => {
             `   That's R$ 4,17/month • Save 17%`
       };
 
-      const lang = ctx.state.lang || 'en';
+      const lang = ctx.state.lang || 'pt';
       const kb = buildKeyboards(msg, 'premium_pricing_renew', { lang });
       await ctx.reply(premiumMessage[lang] || premiumMessage.en, { parse_mode: 'HTML', ...kb });
     } else {
@@ -578,7 +578,11 @@ bot.action('action:about', async (ctx) => {
 bot.action('action:back_main', async (ctx) => {
   const msg = getMsg(ctx);
   const locale = getLocale(ctx.state.lang);
-  const kb = buildKeyboards(msg, 'main', { locale });
+
+  // Check if user is premium to show alerts button
+  const isPremium = await db.isPremium(ctx.from.id);
+  const kb = buildKeyboards(msg, 'main', { locale, isPremium });
+
   await ctx.editMessageText(msg.promptAmt, { parse_mode: 'HTML', ...kb });
   await ctx.answerCbQuery();
 });
@@ -1023,7 +1027,7 @@ bot.action(/^premium:subscribe:(.+)$/, async (ctx) => {
         `Select below:`
   };
 
-  const lang = ctx.state.lang || 'en';
+  const lang = ctx.state.lang || 'pt';
   await ctx.editMessageText(text[lang] || text.en, {
     parse_mode: 'HTML',
     reply_markup: { inline_keyboard: buttons }
@@ -1049,7 +1053,7 @@ bot.action(/^payment:method:(.+):(.+)$/, async (ctx) => {
       email
     });
 
-    const lang = ctx.state.lang || 'en';
+    const lang = ctx.state.lang || 'pt';
 
     if (method === 'pix_manual') {
       // Manual Pix payment - simple Pix key display
@@ -1189,7 +1193,7 @@ bot.action(/^payment:method:(.+):(.+)$/, async (ctx) => {
       fr: '❌ Erreur lors du traitement du paiement. Réessayez ou contactez le support.',
       en: '❌ Error processing payment. Please try again or contact support.'
     };
-    const lang = ctx.state.lang || 'en';
+    const lang = ctx.state.lang || 'pt';
     await ctx.reply(errorText[lang] || errorText.en);
   }
 });
@@ -1215,7 +1219,7 @@ bot.command('checkpayment', async (ctx) => {
             `⏰ Expires: ${premiumInfo.expires_at.toLocaleDateString('en-US')}\n` +
             `📅 Days remaining: ${premiumInfo.days_remaining}`
       };
-      const lang = ctx.state.lang || 'en';
+      const lang = ctx.state.lang || 'pt';
       await ctx.reply(text[lang] || text.en, { parse_mode: 'HTML' });
     } else {
       const text = {
@@ -1223,7 +1227,7 @@ bot.command('checkpayment', async (ctx) => {
         fr: '❌ Vous n\'avez pas d\'abonnement Premium actif.\nUtilisez /premium pour vous abonner.',
         en: '❌ You don\'t have an active Premium subscription.\nUse /premium to subscribe.'
       };
-      const lang = ctx.state.lang || 'en';
+      const lang = ctx.state.lang || 'pt';
       await ctx.reply(text[lang] || text.en);
     }
   } catch (error) {
@@ -1254,7 +1258,7 @@ bot.action('action:premium_status', async (ctx) => {
             `⏰ Expires: ${premiumInfo.expires_at.toLocaleDateString('en-US')}\n` +
             `📅 Days remaining: ${premiumInfo.days_remaining}`
       };
-      const lang = ctx.state.lang || 'en';
+      const lang = ctx.state.lang || 'pt';
       await ctx.answerCbQuery();
       await ctx.reply(text[lang] || text.en, { parse_mode: 'HTML' });
     } else {
@@ -1263,7 +1267,7 @@ bot.action('action:premium_status', async (ctx) => {
         fr: '❌ Vous n\'avez pas d\'abonnement Premium actif.\nUtilisez /premium pour vous abonner.',
         en: '❌ You don\'t have an active Premium subscription.\nUse /premium to subscribe.'
       };
-      const lang = ctx.state.lang || 'en';
+      const lang = ctx.state.lang || 'pt';
       await ctx.answerCbQuery();
       await ctx.reply(text[lang] || text.en);
     }
@@ -1302,7 +1306,7 @@ bot.action('action:convert', async (ctx) => {
         '• <code>1000</code> → assumes EUR'
   };
 
-  const lang = ctx.state.lang || 'en';
+  const lang = ctx.state.lang || 'pt';
   await ctx.reply(text[lang] || text.en, { parse_mode: 'HTML' });
 });
 
@@ -1746,7 +1750,7 @@ bot.on('inline_query', async (ctx) => {
            code.startsWith('pt') ? 'pt' : 'en';
   }
   
-  lang = lang || 'en'; // Fallback anglais
+  lang = lang || 'pt'; // Fallback anglais
   
   try {
     // Récupérer les taux
@@ -2199,7 +2203,7 @@ if (ctx.session?.awaitingConvertRoute) {
                   `⏰ Expires: ${premiumInfo.expires_at.toLocaleDateString('en-US')}\n` +
                   `📅 Days remaining: ${premiumInfo.days_remaining}`
             };
-            const lang = ctx.state.lang || 'en';
+            const lang = ctx.state.lang || 'pt';
             return ctx.reply(statusText[lang] || statusText.en, { parse_mode: 'HTML' });
           } else {
             const noStatusText = {
@@ -2207,7 +2211,7 @@ if (ctx.session?.awaitingConvertRoute) {
               fr: '❌ Vous n\'avez pas d\'abonnement Premium actif.\nUtilisez /premium pour vous abonner.',
               en: '❌ You don\'t have an active Premium subscription.\nUse /premium to subscribe.'
             };
-            const lang = ctx.state.lang || 'en';
+            const lang = ctx.state.lang || 'pt';
             return ctx.reply(noStatusText[lang] || noStatusText.en);
           }
         } catch (error) {
@@ -2299,7 +2303,7 @@ bot.catch((err, ctx) => {
   console.error('[BOT] Error:', err);
 
   // Try to get user's language for error message
-  const lang = ctx.state?.lang || 'en';
+  const lang = ctx.state?.lang || 'pt';
   const errorMessages = {
     fr: "❌ Une erreur est survenue. Réessaie dans un instant.",
     pt: "❌ Ocorreu um erro. Tente novamente em um momento.",
