@@ -1,15 +1,21 @@
 // src/services/payments/mercadopago.js
 // Mercado Pago integration for Pix and other Brazilian payment methods
 
-import mercadopago from 'mercadopago';
+import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
 import { logger } from '../../utils/logger.js';
 import QRCode from 'qrcode';
 
-// Initialize Mercado Pago
+// Initialize Mercado Pago client (v2 API)
+let client = null;
+let preferenceClient = null;
+
 if (process.env.MERCADOPAGO_ACCESS_TOKEN) {
-  mercadopago.configure({
-    access_token: process.env.MERCADOPAGO_ACCESS_TOKEN
+  client = new MercadoPagoConfig({
+    accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN,
+    options: { timeout: 5000 }
   });
+  preferenceClient = new Preference(client);
+  logger.info('[MERCADOPAGO] Client initialized successfully');
 }
 
 // Premium plans configuration
@@ -60,11 +66,13 @@ export const PREMIUM_PLANS = {
  */
 export async function createPixPayment({ amount, plan, email, telegram_id, description }) {
   try {
-    if (!process.env.MERCADOPAGO_ACCESS_TOKEN) {
+    if (!preferenceClient) {
       throw new Error('MERCADOPAGO_ACCESS_TOKEN not configured');
     }
 
-    const preference = {
+    const external_reference = `${telegram_id}_${plan}_${Date.now()}`;
+
+    const preferenceData = {
       items: [{
         title: description || `Premium ${plan} - EUR/BRL Bot`,
         quantity: 1,
@@ -79,12 +87,12 @@ export async function createPixPayment({ amount, plan, email, telegram_id, descr
         excluded_payment_methods: [],
         installments: 1
       },
-      external_reference: `${telegram_id}_${plan}_${Date.now()}`,
-      notification_url: process.env.MERCADOPAGO_WEBHOOK_URL,
+      external_reference: external_reference,
+      notification_url: process.env.MERCADOPAGO_WEBHOOK_URL || undefined,
       metadata: {
         telegram_id: telegram_id.toString(),
         plan: plan,
-        duration_days: PREMIUM_PLANS[plan].duration
+        duration_days: PREMIUM_PLANS[plan]?.duration || 30
       },
       back_urls: {
         success: process.env.APP_URL || 'https://t.me/your_bot',
@@ -94,27 +102,29 @@ export async function createPixPayment({ amount, plan, email, telegram_id, descr
       auto_return: 'approved'
     };
 
-    const response = await mercadopago.preferences.create(preference);
+    // Use new v2 API
+    const response = await preferenceClient.create({ body: preferenceData });
 
-    logger.info('[MERCADOPAGO] Payment created:', {
-      payment_id: response.body.id,
+    logger.info('[MERCADOPAGO] Payment preference created:', {
+      preference_id: response.id,
       telegram_id,
       amount,
       plan
     });
 
     return {
-      payment_id: response.body.id,
-      init_point: response.body.init_point, // Web checkout URL
-      sandbox_init_point: response.body.sandbox_init_point,
-      qr_code: response.body.qr_code,
-      qr_code_base64: response.body.qr_code_base64,
-      external_reference: preference.external_reference
+      payment_id: response.id,
+      init_point: response.init_point, // Web checkout URL
+      sandbox_init_point: response.sandbox_init_point,
+      qr_code: response.qr_code,
+      qr_code_base64: response.qr_code_base64,
+      external_reference: external_reference
     };
 
   } catch (error) {
-    logger.error('[MERCADOPAGO] Failed to create payment:', {
+    logger.error('[MERCADOPAGO] Failed to create payment preference:', {
       error: error.message,
+      stack: error.stack,
       telegram_id,
       amount
     });
@@ -172,12 +182,12 @@ export async function createManualPixPayment({ amount, plan, telegram_id }) {
  */
 export async function checkPaymentStatus(payment_id) {
   try {
-    if (!process.env.MERCADOPAGO_ACCESS_TOKEN) {
+    if (!client) {
       throw new Error('MERCADOPAGO_ACCESS_TOKEN not configured');
     }
 
-    const response = await mercadopago.payment.get(payment_id);
-    const payment = response.body;
+    const paymentClient = new Payment(client);
+    const payment = await paymentClient.get({ id: payment_id });
 
     logger.info('[MERCADOPAGO] Payment status checked:', {
       payment_id,
