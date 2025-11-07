@@ -71,16 +71,16 @@ export function getAvailablePaymentMethods(userCountry = null) {
  */
 export function getPremiumPlans() {
   return {
-    monthly: {
-      duration: 30,
+    quarterly: {
+      duration: 90,
       prices: {
-        BRL: 29.90,
-        USD: 5.99
+        BRL: 15.00,
+        USD: 3.00
       },
       name: {
-        pt: 'Mensal',
-        fr: 'Mensuel',
-        en: 'Monthly'
+        pt: '3 Meses',
+        fr: '3 Mois',
+        en: '3 Months'
       },
       features: {
         pt: ['Alertas personalizados', 'Sem limite de consultas', 'Suporte prioritário'],
@@ -88,40 +88,40 @@ export function getPremiumPlans() {
         en: ['Custom alerts', 'Unlimited queries', 'Priority support']
       }
     },
-    quarterly: {
-      duration: 90,
+    semiannual: {
+      duration: 180,
       prices: {
-        BRL: 79.90,
-        USD: 15.99
+        BRL: 28.00,
+        USD: 5.60
       },
-      discount: '11%',
+      discount: '7%',
       name: {
-        pt: 'Trimestral',
-        fr: 'Trimestriel',
-        en: 'Quarterly'
+        pt: '6 Meses',
+        fr: '6 Mois',
+        en: '6 Months'
       },
       features: {
-        pt: ['Tudo do Mensal', '11% de desconto', '3 meses de acesso'],
-        fr: ['Tout du Mensuel', '11% de réduction', "3 mois d'accès"],
-        en: ['All Monthly features', '11% discount', '3 months access']
+        pt: ['Tudo dos 3 meses', '7% de desconto', '6 meses de acesso'],
+        fr: ['Tout des 3 mois', '7% de réduction', "6 mois d'accès"],
+        en: ['All 3-month features', '7% discount', '6 months access']
       }
     },
     annual: {
       duration: 365,
       prices: {
-        BRL: 299.90,
-        USD: 59.99
+        BRL: 50.00,
+        USD: 10.00
       },
       discount: '17%',
       name: {
-        pt: 'Anual',
-        fr: 'Annuel',
-        en: 'Annual'
+        pt: '12 Meses',
+        fr: '12 Mois',
+        en: '12 Months'
       },
       features: {
-        pt: ['Tudo do Mensal', '17% de desconto', '12 meses de acesso'],
-        fr: ['Tout du Mensuel', '17% de réduction', "12 mois d'accès"],
-        en: ['All Monthly features', '17% discount', '12 months access']
+        pt: ['Tudo dos 3 meses', '17% de desconto', '1 ano completo'],
+        fr: ['Tout des 3 mois', '17% de réduction', '1 an complet'],
+        en: ['All 3-month features', '17% discount', '1 full year']
       }
     }
   };

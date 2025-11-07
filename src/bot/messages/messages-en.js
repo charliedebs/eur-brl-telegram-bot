@@ -563,16 +563,16 @@ export const messagesEn = {
     [ℹ️ See all Premium features]
     
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    
-    📱 15 R$ / 3 months
-       That's 5 R$/month
-    
-    📱 27 R$ / 6 months
-       That's 4.50 R$/month • Save 10%
-    
-    📱 50 R$ / 12 months
-       That's 4.17 R$/month • Save 17%
-    
+
+    📱 R$ 15.00 / 3 months
+       That's R$ 5.00/month
+
+    📱 R$ 28.00 / 6 months
+       That's R$ 4.67/month • Save 7%
+
+    📱 R$ 50.00 / 12 months
+       That's R$ 4.17/month • Save 17%
+
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     
     🔜 International credit card coming soon`,

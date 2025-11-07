@@ -563,16 +563,16 @@ export const messagesPt = {
     [ℹ️ Ver todas as funcionalidades Premium]
     
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    
-    📱 15 R$ / 3 meses
-       Ou seja 5 R$/mês
-    
-    📱 27 R$ / 6 meses
-       Ou seja 4,50 R$/mês • Economia de 10%
-    
-    📱 50 R$ / 12 meses
-       Ou seja 4,17 R$/mês • Economia de 17%
-    
+
+    📱 R$ 15,00 / 3 meses
+       Ou seja R$ 5,00/mês
+
+    📱 R$ 28,00 / 6 meses
+       Ou seja R$ 4,67/mês • Economia de 7%
+
+    📱 R$ 50,00 / 12 meses
+       Ou seja R$ 4,17/mês • Economia de 17%
+
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     
     🔜 Cartão de crédito internacional em breve`,

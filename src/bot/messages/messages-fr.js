@@ -569,14 +569,14 @@ Ce que tu as appris aujourd'hui sera de plus en plus utilisé dans le futur : tu
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📱 15 R$ / 3 mois
-   Soit 5 R$/mois
+📱 R$ 15,00 / 3 mois
+   Soit R$ 5,00/mois
 
-📱 27 R$ / 6 mois
-   Soit 4,50 R$/mois • Économie de 10%
+📱 R$ 28,00 / 6 mois
+   Soit R$ 4,67/mois • Économie de 7%
 
-📱 50 R$ / 12 mois
-   Soit 4,17 R$/mois • Économie de 17%
+📱 R$ 50,00 / 12 mois
+   Soit R$ 4,17/mois • Économie de 17%
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
