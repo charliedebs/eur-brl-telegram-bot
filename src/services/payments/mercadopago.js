@@ -4,7 +4,7 @@
 import mercadopago from 'mercadopago';
 import { logger } from '../../utils/logger.js';
 import QRCode from 'qrcode';
-import QRCodePix from 'qrcode-pix';
+import { QrCodePix } from 'qrcode-pix';
 
 // Initialize Mercado Pago
 if (process.env.MERCADOPAGO_ACCESS_TOKEN) {
@@ -139,7 +139,7 @@ export async function createManualPixPayment({ amount, plan, telegram_id }) {
     const reference = `${telegram_id}_${plan}_${Date.now()}`;
 
     // Create Pix QR Code with proper EMV format
-    const qrCodePix = new QRCodePix({
+    const qrCodePix = QrCodePix({
       version: '01',
       key: pixKey, // Your Pix key (email, phone, CPF, CNPJ, or random key)
       name: pixName, // Receiver name
