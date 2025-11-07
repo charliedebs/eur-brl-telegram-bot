@@ -1023,9 +1023,11 @@ bot.action(/^payment:method:(.+):(.+)$/, async (ctx) => {
       try {
         await ctx.reply(text[lang] || text.en, {
           parse_mode: 'HTML',
-          reply_markup: Markup.inlineKeyboard([
-            [Markup.button.url('💳 Pagar / Pay', paymentData.init_point)]
-          ])
+          reply_markup: {
+            inline_keyboard: [[
+              { text: '💳 Pagar / Pay', url: paymentData.init_point }
+            ]]
+          }
         });
         logger.info('[BOT] ✅ Mercado Pago message sent successfully');
       } catch (sendError) {
