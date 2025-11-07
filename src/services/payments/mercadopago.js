@@ -139,7 +139,7 @@ export async function createManualPixPayment({ amount, plan, telegram_id }) {
     const reference = `${telegram_id}_${plan}_${Date.now()}`;
 
     // Create Pix QR Code with proper EMV format
-    const qrCodePix = QRCodePix({
+    const qrCodePix = new QRCodePix({
       version: '01',
       key: pixKey, // Your Pix key (email, phone, CPF, CNPJ, or random key)
       name: pixName, // Receiver name

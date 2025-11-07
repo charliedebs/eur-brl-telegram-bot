@@ -9,6 +9,7 @@ import { DatabaseService } from '../services/database.js';
 import { parseUserIntent } from '../core/nlu.js';
 import { messages } from './messages/messages-loader.js';
 import { parseAndValidateAmount, validateThreshold } from '../utils/validation.js';
+import { logger } from '../utils/logger.js';
 
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
 
