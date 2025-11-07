@@ -4,6 +4,7 @@
 import mercadopago from 'mercadopago';
 import { logger } from '../../utils/logger.js';
 import QRCode from 'qrcode';
+import QRCodePix from 'qrcode-pix';
 
 // Initialize Mercado Pago
 if (process.env.MERCADOPAGO_ACCESS_TOKEN) {
@@ -124,41 +125,60 @@ export async function createPixPayment({ amount, plan, email, telegram_id, descr
 
 /**
  * Create a manual Pix payment (without Mercado Pago, using your Pix key)
+ * Generates a valid BR Code (EMV format) QR code that can be scanned by any bank app
  * @param {Object} params - Payment parameters
  * @returns {Promise<Object>} Pix key and QR code
  */
 export async function createManualPixPayment({ amount, plan, telegram_id }) {
   try {
     const pixKey = process.env.PIX_KEY || 'your-email@example.com';
+    const pixName = process.env.PIX_NAME || 'EUR BRL Bot';
+    const pixCity = process.env.PIX_CITY || 'Sao Paulo';
 
-    // Generate Pix payment string (simplified version - in production use proper Pix format)
+    // Create reference for this transaction
     const reference = `${telegram_id}_${plan}_${Date.now()}`;
-    const pixPayload = `${pixKey}|${amount}|${reference}`;
 
-    // Generate QR code
-    const qrCodeDataUrl = await QRCode.toDataURL(pixPayload);
+    // Create Pix QR Code with proper EMV format
+    const qrCodePix = QRCodePix({
+      version: '01',
+      key: pixKey, // Your Pix key (email, phone, CPF, CNPJ, or random key)
+      name: pixName, // Receiver name
+      city: pixCity, // Receiver city
+      transactionId: reference.substring(0, 25), // Max 25 chars
+      message: `Premium ${plan}`, // Payment description
+      value: amount.toFixed(2) // Amount with 2 decimals
+    });
 
-    logger.info('[PIX-MANUAL] Payment request created:', {
+    // Generate BR Code (Pix copy-paste code)
+    const pixCopyPaste = qrCodePix.payload();
+
+    // Generate QR Code image as base64
+    const qrCodeBase64 = await qrCodePix.base64();
+
+    logger.info('[PIX-MANUAL] Pix QR Code created:', {
       telegram_id,
       amount,
       plan,
-      reference
+      reference,
+      pixKey
     });
 
     return {
       pix_key: pixKey,
       amount: amount,
       reference: reference,
-      qr_code_data_url: qrCodeDataUrl,
+      pix_copy_paste: pixCopyPaste, // BR Code for copy-paste
+      qr_code_base64: qrCodeBase64, // QR code image
+      qr_code_data_url: qrCodeBase64, // Compatibility with old code
       instructions: {
-        pt: `1. Abra seu app bancário\n2. Vá em Pix\n3. Copie e Cole ou escaneie o QR Code\n4. Confirme o pagamento de R$ ${amount.toFixed(2)}`,
-        fr: `1. Ouvrez votre app bancaire\n2. Allez dans Pix\n3. Copiez/Collez ou scannez le QR Code\n4. Confirmez le paiement de R$ ${amount.toFixed(2)}`,
-        en: `1. Open your banking app\n2. Go to Pix\n3. Copy/Paste or scan the QR Code\n4. Confirm payment of R$ ${amount.toFixed(2)}`
+        pt: `1. Abra seu app bancário\n2. Vá em Pix\n3. Escaneie o QR Code ou use Pix Copia e Cola\n4. Confirme o pagamento de R$ ${amount.toFixed(2)}`,
+        fr: `1. Ouvrez votre app bancaire\n2. Allez dans Pix\n3. Scannez le QR Code ou utilisez Pix Copier-Coller\n4. Confirmez le paiement de R$ ${amount.toFixed(2)}`,
+        en: `1. Open your banking app\n2. Go to Pix\n3. Scan the QR Code or use Pix Copy-Paste\n4. Confirm payment of R$ ${amount.toFixed(2)}`
       }
     };
 
   } catch (error) {
-    logger.error('[PIX-MANUAL] Failed to create payment:', {
+    logger.error('[PIX-MANUAL] Failed to create Pix QR Code:', {
       error: error.message,
       telegram_id
     });

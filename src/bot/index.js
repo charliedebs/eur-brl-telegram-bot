@@ -937,42 +937,52 @@ bot.action(/^payment:method:(.+):(.+)$/, async (ctx) => {
     const lang = ctx.state.lang || 'en';
 
     if (method === 'pix_manual') {
-      // Manual Pix payment - show Pix key
+      // Manual Pix payment - show QR code with instructions
       const text = {
         pt: `🏦 <b>Pagamento via Pix</b>\n\n` +
             `💰 <b>Valor: R$ ${paymentData.amount.toFixed(2)}</b>\n\n` +
-            `🔑 <b>Chave Pix:</b>\n<code>${paymentData.pix_key}</code>\n\n` +
             `📱 <b>Como pagar:</b>\n` +
             `1️⃣ Abra o app do seu banco\n` +
-            `2️⃣ Escolha "Pix" → "Pagar"\n` +
-            `3️⃣ Cole a chave Pix acima\n` +
-            `4️⃣ Confirme o valor: R$ ${paymentData.amount.toFixed(2)}\n` +
-            `5️⃣ Finalize o pagamento\n\n` +
-            `⚠️ <b>Importante:</b> Após o pagamento, envie o comprovante aqui para ativação manual do Premium.`,
+            `2️⃣ Escolha "Pix" → "Ler QR Code"\n` +
+            `3️⃣ Escaneie o QR code abaixo\n` +
+            `4️⃣ Confirme o pagamento\n\n` +
+            `💡 <b>Ou use Pix Copia e Cola:</b>\n` +
+            `<code>${paymentData.pix_copy_paste || ''}</code>\n\n` +
+            `⚠️ <b>Importante:</b> Envie o comprovante aqui após o pagamento para ativação do Premium.`,
         fr: `🏦 <b>Paiement via Pix</b>\n\n` +
             `💰 <b>Montant: R$ ${paymentData.amount.toFixed(2)}</b>\n\n` +
-            `🔑 <b>Clé Pix:</b>\n<code>${paymentData.pix_key}</code>\n\n` +
             `📱 <b>Comment payer:</b>\n` +
             `1️⃣ Ouvrez l'app de votre banque\n` +
-            `2️⃣ Choisissez "Pix" → "Payer"\n` +
-            `3️⃣ Collez la clé Pix ci-dessus\n` +
-            `4️⃣ Confirmez le montant: R$ ${paymentData.amount.toFixed(2)}\n` +
-            `5️⃣ Finalisez le paiement\n\n` +
-            `⚠️ <b>Important:</b> Après le paiement, envoyez le reçu ici pour activation manuelle du Premium.`,
+            `2️⃣ Choisissez "Pix" → "Lire QR Code"\n` +
+            `3️⃣ Scannez le QR code ci-dessous\n` +
+            `4️⃣ Confirmez le paiement\n\n` +
+            `💡 <b>Ou utilisez Pix Copier-Coller:</b>\n` +
+            `<code>${paymentData.pix_copy_paste || ''}</code>\n\n` +
+            `⚠️ <b>Important:</b> Envoyez le reçu ici après paiement pour activation Premium.`,
         en: `🏦 <b>Payment via Pix</b>\n\n` +
             `💰 <b>Amount: R$ ${paymentData.amount.toFixed(2)}</b>\n\n` +
-            `🔑 <b>Pix Key:</b>\n<code>${paymentData.pix_key}</code>\n\n` +
             `📱 <b>How to pay:</b>\n` +
             `1️⃣ Open your bank app\n` +
-            `2️⃣ Select "Pix" → "Pay"\n` +
-            `3️⃣ Paste the Pix key above\n` +
-            `4️⃣ Confirm the amount: R$ ${paymentData.amount.toFixed(2)}\n` +
-            `5️⃣ Complete the payment\n\n` +
-            `⚠️ <b>Important:</b> After payment, send the receipt here for manual Premium activation.`
+            `2️⃣ Select "Pix" → "Read QR Code"\n` +
+            `3️⃣ Scan the QR code below\n` +
+            `4️⃣ Confirm payment\n\n` +
+            `💡 <b>Or use Pix Copy-Paste:</b>\n` +
+            `<code>${paymentData.pix_copy_paste || ''}</code>\n\n` +
+            `⚠️ <b>Important:</b> Send receipt here after payment for Premium activation.`
       };
 
-      // Send text only (no QR code for now - needs proper Pix EMV format)
-      await ctx.reply(text[lang] || text.en, { parse_mode: 'HTML' });
+      // Send QR code image with caption
+      try {
+        const qrCodeBuffer = Buffer.from(paymentData.qr_code_base64.replace(/^data:image\/png;base64,/, ''), 'base64');
+        await ctx.replyWithPhoto(
+          { source: qrCodeBuffer },
+          { caption: text[lang] || text.en, parse_mode: 'HTML' }
+        );
+      } catch (qrError) {
+        // Fallback to text if QR code fails
+        logger.error('[BOT] Error sending QR code:', { error: qrError.message });
+        await ctx.reply(text[lang] || text.en, { parse_mode: 'HTML' });
+      }
 
 
     } else if (method === 'mercadopago') {
