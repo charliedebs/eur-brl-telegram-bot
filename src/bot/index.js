@@ -986,6 +986,15 @@ bot.action(/^payment:method:(.+):(.+)$/, async (ctx) => {
 
     } else if (method === 'mercadopago') {
       // Mercado Pago - send payment link
+
+      // Debug: Check if init_point exists in paymentData
+      logger.info('[BOT] Mercado Pago payment data:', {
+        has_init_point: !!paymentData.init_point,
+        init_point: paymentData.init_point,
+        payment_id: paymentData.payment_id,
+        all_keys: Object.keys(paymentData)
+      });
+
       const text = {
         pt: `💳 <b>Pagamento Mercado Pago</b>\n\n` +
             `💰 Valor: R$ ${paymentData.amount || paymentData.plan_info.prices.BRL}\n` +
@@ -1002,6 +1011,13 @@ bot.action(/^payment:method:(.+):(.+)$/, async (ctx) => {
       };
 
       const { Markup } = await import('telegraf');
+
+      if (!paymentData.init_point) {
+        logger.error('[BOT] ERROR: init_point is missing from paymentData!');
+        await ctx.reply('❌ Erreur: Lien de paiement non généré. Réessayez.', { parse_mode: 'HTML' });
+        return;
+      }
+
       await ctx.reply(text[lang] || text.en, {
         parse_mode: 'HTML',
         reply_markup: Markup.inlineKeyboard([
