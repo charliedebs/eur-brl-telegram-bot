@@ -517,6 +517,29 @@ case 'what_exchange':
         [Markup.button.callback(msg.btn.back, 'action:back_main')]
       ]);
 
+    // Error fallback - for error messages
+    case 'error_fallback':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback('❓ ' + msg.btn.help, 'action:about')],
+        [Markup.button.callback('💎 ' + msg.btn.premium, 'premium:pricing')],
+        [Markup.button.callback('🏠 ' + msg.btn.mainMenu, 'action:back_main')]
+      ]);
+
+    // Premium suggestion - for free users
+    case 'premium_suggestion':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback('💎 ' + msg.btn.seePremium, 'premium:pricing')],
+        [Markup.button.callback('🏠 ' + msg.btn.mainMenu, 'action:back_main')]
+      ]);
+
+    // Status info - for status/info messages
+    case 'status_info':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback('💱 ' + msg.btn.compare, 'route:eurbrl:1000')],
+        [Markup.button.callback('💎 ' + msg.btn.premium, 'premium:pricing')],
+        [Markup.button.callback('🏠 ' + msg.btn.mainMenu, 'action:back_main')]
+      ]);
+
     default:
       return Markup.inlineKeyboard([[Markup.button.callback(msg.btn.back, 'action:back_main')]]);
   }
