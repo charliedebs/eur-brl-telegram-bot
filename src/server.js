@@ -146,9 +146,63 @@ app.post('/webhook/mercadopago', async (req, res) => {
 
       // Notify user via bot (only if they've started the bot)
       try {
+        // Get user's language preference
+        const { DatabaseService } = await import('./services/database.js');
+        const db = new DatabaseService();
+        const user = await db.getUser(paymentInfo.telegram_id);
+        const lang = user?.language || 'pt'; // Default to Portuguese for Brazilian payments
+
+        // Multi-language confirmation messages
+        const confirmationMessage = {
+          pt: `🎉 <b>Pagamento aprovado!</b>\n\n` +
+              `✅ Seu plano Premium foi ativado por ${paymentInfo.duration_days} dias.\n` +
+              `💰 Valor: R$ ${paymentInfo.amount}\n\n` +
+              `Agora você pode aproveitar todas as funcionalidades Premium! 🚀`,
+          fr: `🎉 <b>Paiement approuvé!</b>\n\n` +
+              `✅ Votre plan Premium a été activé pour ${paymentInfo.duration_days} jours.\n` +
+              `💰 Montant: R$ ${paymentInfo.amount}\n\n` +
+              `Vous pouvez maintenant profiter de toutes les fonctionnalités Premium! 🚀`,
+          en: `🎉 <b>Payment approved!</b>\n\n` +
+              `✅ Your Premium plan has been activated for ${paymentInfo.duration_days} days.\n` +
+              `💰 Amount: R$ ${paymentInfo.amount}\n\n` +
+              `You can now enjoy all Premium features! 🚀`
+        };
+
+        // Action buttons in user's language
+        const actionButtons = {
+          pt: {
+            inline_keyboard: [[
+              { text: '🔔 Criar Alerta', callback_data: 'alert:choose_pair' },
+              { text: '💱 Conversão', callback_data: 'action:convert' }
+            ], [
+              { text: '📊 Ver Status Premium', callback_data: 'action:premium_status' }
+            ]]
+          },
+          fr: {
+            inline_keyboard: [[
+              { text: '🔔 Créer Alerte', callback_data: 'alert:choose_pair' },
+              { text: '💱 Conversion', callback_data: 'action:convert' }
+            ], [
+              { text: '📊 Voir Statut Premium', callback_data: 'action:premium_status' }
+            ]]
+          },
+          en: {
+            inline_keyboard: [[
+              { text: '🔔 Create Alert', callback_data: 'alert:choose_pair' },
+              { text: '💱 Conversion', callback_data: 'action:convert' }
+            ], [
+              { text: '📊 View Premium Status', callback_data: 'action:premium_status' }
+            ]]
+          }
+        };
+
         await bot.telegram.sendMessage(
           paymentInfo.telegram_id,
-          `🎉 Pagamento aprovado! Seu plano Premium ${paymentInfo.plan} foi ativado por ${paymentInfo.duration_days} dias.`
+          confirmationMessage[lang] || confirmationMessage.pt,
+          {
+            parse_mode: 'HTML',
+            reply_markup: actionButtons[lang] || actionButtons.pt
+          }
         );
       } catch (sendError) {
         // User hasn't started the bot yet - this is OK, they'll see Premium when they do

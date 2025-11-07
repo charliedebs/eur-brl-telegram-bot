@@ -83,8 +83,51 @@ bot.command('help', async (ctx) => {
 
 bot.command('premium', async (ctx) => {
   const msg = getMsg(ctx);
-  const kb = buildKeyboards(msg, 'premium_pricing');
-  await ctx.reply(msg.PREMIUM_PRICING, { parse_mode: 'HTML', ...kb });
+  const telegram_id = ctx.from.id;
+
+  try {
+    // Check if user has premium
+    const { getPremiumDetails } = await import('../services/payments/index.js');
+    const premiumInfo = await getPremiumDetails(telegram_id);
+
+    let statusMessage = '';
+
+    if (premiumInfo) {
+      // User has premium - show status at the top
+      const expiryDate = premiumInfo.expires_at.toLocaleDateString(
+        ctx.state.lang === 'pt' ? 'pt-BR' : ctx.state.lang === 'fr' ? 'fr-FR' : 'en-US'
+      );
+
+      const statusText = {
+        pt: `✅ <b>Você é Premium!</b>\n` +
+            `⏰ Expira em: ${expiryDate}\n` +
+            `📅 Dias restantes: ${premiumInfo.days_remaining}\n\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`,
+        fr: `✅ <b>Vous êtes Premium!</b>\n` +
+            `⏰ Expire le: ${expiryDate}\n` +
+            `📅 Jours restants: ${premiumInfo.days_remaining}\n\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`,
+        en: `✅ <b>You are Premium!</b>\n` +
+            `⏰ Expires: ${expiryDate}\n` +
+            `📅 Days remaining: ${premiumInfo.days_remaining}\n\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`
+      };
+
+      const lang = ctx.state.lang || 'en';
+      statusMessage = statusText[lang] || statusText.en;
+    }
+
+    // Show pricing with status at the top
+    const fullMessage = statusMessage + msg.PREMIUM_PRICING;
+    const kb = buildKeyboards(msg, 'premium_pricing');
+    await ctx.reply(fullMessage, { parse_mode: 'HTML', ...kb });
+
+  } catch (error) {
+    logger.error('[BOT] Premium command failed:', { error: error.message, telegram_id });
+    // Fallback to simple premium message
+    const kb = buildKeyboards(msg, 'premium_pricing');
+    await ctx.reply(msg.PREMIUM_PRICING, { parse_mode: 'HTML', ...kb });
+  }
 });
 
 // Commande /lang (et alias /language)
