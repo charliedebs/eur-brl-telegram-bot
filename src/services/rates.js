@@ -1,5 +1,5 @@
 // src/services/rates.js
-// Yahoo Finance (référence officielle EUR/BRL) + CoinGecko/CMC (on-chain via USDC)
+// Yahoo Finance (référence officielle EUR/BRL) + Coinpaprika/CryptoCompare (on-chain via USDC)
 
 import { FEES } from '../config/constants.js';
 
@@ -44,7 +44,104 @@ async function fetchYahooRate() {
 }
 
 // ==========================================
-// COINGECKO - Source principale pour on-chain (USDC)
+// COINPAPRIKA - Source principale (gratuit, illimité)
+// ==========================================
+
+async function fetchCoinpaprikaRates() {
+  try {
+    // Coinpaprika: free, unlimited, no API key needed
+    const response = await fetch(
+      'https://api.coinpaprika.com/v1/tickers/usdc-usd-coin',
+      {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'EUR-BRL-Bot/1.0'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Coinpaprika API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Coinpaprika returns quotes in various currencies
+    const usdcBRL = data.quotes?.BRL?.price;
+    const usdcEUR = data.quotes?.EUR?.price;
+
+    if (!usdcBRL || !usdcEUR) {
+      throw new Error('Missing BRL or EUR quotes from Coinpaprika');
+    }
+
+    console.log(`[RATES-COINPAPRIKA] ✅ USDC/BRL = ${usdcBRL.toFixed(4)}, USDC/EUR = ${usdcEUR.toFixed(4)}`);
+
+    return {
+      usdcBRL,
+      usdcEUR,
+      source: 'coinpaprika'
+    };
+
+  } catch (error) {
+    console.error('[RATES-COINPAPRIKA] ❌ Error:', error.message);
+    throw error;
+  }
+}
+
+// ==========================================
+// CRYPTOCOMPARE - Fallback 1 (100k appels/mois gratuits)
+// ==========================================
+
+async function fetchCryptoCompareRates() {
+  try {
+    const apiKey = process.env.CRYPTOCOMPARE_API_KEY; // Optional but recommended
+
+    const headers = {
+      'Accept': 'application/json'
+    };
+
+    if (apiKey) {
+      headers['authorization'] = `Apikey ${apiKey}`;
+    }
+
+    const response = await fetch(
+      'https://min-api.cryptocompare.com/data/price?fsym=USDC&tsyms=BRL,EUR',
+      { headers }
+    );
+
+    if (!response.ok) {
+      throw new Error(`CryptoCompare API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (data.Response === 'Error') {
+      throw new Error(`CryptoCompare error: ${data.Message}`);
+    }
+
+    const usdcBRL = data.BRL;
+    const usdcEUR = data.EUR;
+
+    if (!usdcBRL || !usdcEUR) {
+      throw new Error('Missing BRL or EUR data from CryptoCompare');
+    }
+
+    console.log(`[RATES-CRYPTOCOMPARE] ✅ USDC/BRL = ${usdcBRL.toFixed(4)}, USDC/EUR = ${usdcEUR.toFixed(4)}`);
+
+    return {
+      usdcBRL,
+      usdcEUR,
+      source: 'cryptocompare'
+    };
+
+  } catch (error) {
+    console.error('[RATES-CRYPTOCOMPARE] ❌ Error:', error.message);
+    throw error;
+  }
+}
+
+// ==========================================
+// COINGECKO - Fallback 2 (en dernier recours)
 // ==========================================
 
 async function fetchCoinGeckoRates() {
@@ -91,68 +188,6 @@ async function fetchCoinGeckoRates() {
 }
 
 // ==========================================
-// COINMARKETCAP - Fallback pour on-chain (USDC)
-// ==========================================
-
-async function fetchCoinMarketCapRates() {
-  try {
-    const apiKey = process.env.CMC_API_KEY;
-
-    if (!apiKey) {
-      throw new Error('CMC_API_KEY not configured');
-    }
-
-    // CMC Free tier: cryptocurrency/quotes/latest
-    const response = await fetch(
-      'https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol=USDC&convert=BRL,EUR',
-      {
-        headers: {
-          'X-CMC_PRO_API_KEY': apiKey,
-          'Accept': 'application/json'
-        }
-      }
-    );
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`CoinMarketCap API error: ${response.status} - ${errorText}`);
-    }
-
-    const data = await response.json();
-
-    if (data.status?.error_code) {
-      throw new Error(`CMC error: ${data.status.error_message}`);
-    }
-
-    // CMC returns data by symbol
-    const usdcData = data.data?.USDC;
-
-    if (!usdcData) {
-      throw new Error('USDC data not found in CMC response');
-    }
-
-    const usdcBRL = usdcData.quote?.BRL?.price;
-    const usdcEUR = usdcData.quote?.EUR?.price;
-
-    if (!usdcBRL || !usdcEUR) {
-      throw new Error('Missing BRL or EUR quote from CoinMarketCap');
-    }
-
-    console.log(`[RATES-CMC] ✅ USDC/BRL = ${usdcBRL.toFixed(4)}, USDC/EUR = ${usdcEUR.toFixed(4)}`);
-
-    return {
-      usdcBRL,
-      usdcEUR,
-      source: 'coinmarketcap'
-    };
-
-  } catch (error) {
-    console.error('[RATES-CMC] ❌ Error:', error.message);
-    throw error;
-  }
-}
-
-// ==========================================
 // FONCTION PRINCIPALE
 // ==========================================
 
@@ -178,35 +213,44 @@ export async function getRates() {
     yahooFrozen = true;
   }
 
-  // 3. CoinGecko pour on-chain (USDC bridge) - source principale
+  // 3. Coinpaprika pour on-chain (USDC bridge) - source principale (gratuit illimité)
   let usdcBRL, usdcEUR, onchainSource;
 
   try {
-    console.log('[RATES] 📡 Fetching CoinGecko for on-chain rates...');
-    const geckoData = await fetchCoinGeckoRates();
-    usdcBRL = geckoData.usdcBRL;
-    usdcEUR = geckoData.usdcEUR;
-    onchainSource = geckoData.source;
-  } catch (geckoError) {
-    console.warn('[RATES] ⚠️ CoinGecko failed, trying CoinMarketCap fallback...');
+    console.log('[RATES] 📡 Fetching Coinpaprika for on-chain rates...');
+    const paprikaData = await fetchCoinpaprikaRates();
+    usdcBRL = paprikaData.usdcBRL;
+    usdcEUR = paprikaData.usdcEUR;
+    onchainSource = paprikaData.source;
+  } catch (paprikaError) {
+    console.warn('[RATES] ⚠️ Coinpaprika failed, trying CryptoCompare fallback...');
 
     try {
-      const cmcData = await fetchCoinMarketCapRates();
-      usdcBRL = cmcData.usdcBRL;
-      usdcEUR = cmcData.usdcEUR;
-      onchainSource = cmcData.source;
-    } catch (cmcError) {
-      console.error('[RATES] ❌ Both CoinGecko and CMC failed for on-chain rates');
+      const compareData = await fetchCryptoCompareRates();
+      usdcBRL = compareData.usdcBRL;
+      usdcEUR = compareData.usdcEUR;
+      onchainSource = compareData.source;
+    } catch (compareError) {
+      console.warn('[RATES] ⚠️ CryptoCompare failed, trying CoinGecko fallback...');
 
-      // Fallback au cache stale si disponible
-      if (ratesCache) {
-        const age = Date.now() - cacheTimestamp;
-        console.warn(`[RATES] ⚠️ Using stale cache (age: ${Math.round(age/1000)}s)`);
-        return ratesCache;
+      try {
+        const geckoData = await fetchCoinGeckoRates();
+        usdcBRL = geckoData.usdcBRL;
+        usdcEUR = geckoData.usdcEUR;
+        onchainSource = geckoData.source;
+      } catch (geckoError) {
+        console.error('[RATES] ❌ All crypto sources failed (Coinpaprika, CryptoCompare, CoinGecko)');
+
+        // Fallback au cache stale si disponible
+        if (ratesCache) {
+          const age = Date.now() - cacheTimestamp;
+          console.warn(`[RATES] ⚠️ Using stale cache (age: ${Math.round(age/1000)}s)`);
+          return ratesCache;
+        }
+
+        console.error('[RATES] 💥 All sources failed, no cache available');
+        return null;
       }
-
-      console.error('[RATES] 💥 All sources failed, no cache available');
-      return null;
     }
   }
 

@@ -207,7 +207,7 @@ Service gratuit, financé par des liens de parrainage.`,
 Taux de référence EUR/BRL : Yahoo Finance (taux officiel du marché FX)
 
 Calcul on-chain:
-• Taux crypto : CoinGecko ou CoinMarketCap (USDC/EUR, USDC/BRL)
+• Taux crypto : Coinpaprika (principal), CryptoCompare, ou CoinGecko (USDC/EUR, USDC/BRL)
 • Frais réels inclus :
   - Trading ~0,1%
   - Réseau Polygon ~1 USDC

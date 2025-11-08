@@ -204,14 +204,14 @@ export const messagesPt = {
     Taxa de referência EUR/BRL: Yahoo Finance (taxa oficial do mercado FX)
 
     Cálculo on-chain:
-    • Taxas crypto: CoinGecko ou CoinMarketCap (USDC/EUR, USDC/BRL)
+    • Taxas crypto: Coinpaprika (principal), CryptoCompare, ou CoinGecko (USDC/EUR, USDC/BRL)
     • Taxas reais incluídas:
       - Trading ~0,1%
       - Rede Polygon ~1 USDC
       - Saque Pix ~R$3,50
-    
+
     Taxas off-chain: API Wise Comparisons (taxas ao vivo dos provedores)
-    
+
     Links de indicação: gratuitos para você, financiam o serviço.`,
     
       // ✅ TELA 5: buildOffChain

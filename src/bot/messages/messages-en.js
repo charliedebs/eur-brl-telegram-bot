@@ -204,7 +204,7 @@ export const messagesEn = {
     EUR/BRL reference rate: Yahoo Finance (official FX market rate)
 
     On-chain calculation:
-    • Crypto rates: CoinGecko or CoinMarketCap (USDC/EUR, USDC/BRL)
+    • Crypto rates: Coinpaprika (primary), CryptoCompare, or CoinGecko (USDC/EUR, USDC/BRL)
     • Real fees included:
       - Trading ~0.1%
       - Polygon network ~1 USDC
