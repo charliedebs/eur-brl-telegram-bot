@@ -1079,54 +1079,7 @@ bot.action(/^payment:method:(.+):(.+)$/, async (ctx) => {
 
     const lang = ctx.state.lang || 'pt';
 
-    if (method === 'pix_manual') {
-      // Manual Pix payment - simple Pix key display
-      const text = {
-        pt: `🏦 <b>Pagamento via Pix</b>\n\n` +
-            `💰 <b>Valor: R$ ${paymentData.amount.toFixed(2)}</b>\n` +
-            `📅 <b>Plano:</b> ${paymentData.plan}\n\n` +
-            `📱 <b>Chave Pix:</b>\n` +
-            `<code>${paymentData.pix_key}</code>\n\n` +
-            `<b>Como pagar:</b>\n` +
-            `1️⃣ Abra o app do seu banco\n` +
-            `2️⃣ Escolha "Pix" → "Pix Copia e Cola" ou "Chave Pix"\n` +
-            `3️⃣ Cole a chave acima\n` +
-            `4️⃣ Insira o valor: <b>R$ ${paymentData.amount.toFixed(2)}</b>\n` +
-            `5️⃣ Confirme o pagamento\n\n` +
-            `⚠️ <b>Importante:</b> Envie o comprovante aqui após o pagamento para ativarmos seu Premium.\n\n` +
-            `💡 O Premium será ativado manualmente em até 24h após confirmação.`,
-        fr: `🏦 <b>Paiement via Pix</b>\n\n` +
-            `💰 <b>Montant: R$ ${paymentData.amount.toFixed(2)}</b>\n` +
-            `📅 <b>Formule:</b> ${paymentData.plan}\n\n` +
-            `📱 <b>Clé Pix:</b>\n` +
-            `<code>${paymentData.pix_key}</code>\n\n` +
-            `<b>Comment payer:</b>\n` +
-            `1️⃣ Ouvrez l'app de votre banque\n` +
-            `2️⃣ Choisissez "Pix" → "Pix Copier-Coller" ou "Clé Pix"\n` +
-            `3️⃣ Collez la clé ci-dessus\n` +
-            `4️⃣ Entrez le montant: <b>R$ ${paymentData.amount.toFixed(2)}</b>\n` +
-            `5️⃣ Confirmez le paiement\n\n` +
-            `⚠️ <b>Important:</b> Envoyez le reçu ici après paiement pour activer Premium.\n\n` +
-            `💡 Le Premium sera activé manuellement sous 24h après confirmation.`,
-        en: `🏦 <b>Payment via Pix</b>\n\n` +
-            `💰 <b>Amount: R$ ${paymentData.amount.toFixed(2)}</b>\n` +
-            `📅 <b>Plan:</b> ${paymentData.plan}\n\n` +
-            `📱 <b>Pix Key:</b>\n` +
-            `<code>${paymentData.pix_key}</code>\n\n` +
-            `<b>How to pay:</b>\n` +
-            `1️⃣ Open your bank app\n` +
-            `2️⃣ Select "Pix" → "Pix Copy-Paste" or "Pix Key"\n` +
-            `3️⃣ Paste the key above\n` +
-            `4️⃣ Enter amount: <b>R$ ${paymentData.amount.toFixed(2)}</b>\n` +
-            `5️⃣ Confirm payment\n\n` +
-            `⚠️ <b>Important:</b> Send receipt here after payment to activate Premium.\n\n` +
-            `💡 Premium will be manually activated within 24h after confirmation.`
-      };
-
-      await ctx.reply(text[lang] || text.en, { parse_mode: 'HTML' });
-
-
-    } else if (method === 'mercadopago') {
+    if (method === 'mercadopago') {
       // Mercado Pago - send payment link
 
       // Debug: Check if init_point exists in paymentData

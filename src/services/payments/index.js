@@ -32,20 +32,6 @@ export function getAvailablePaymentMethods(userCountry = null) {
     });
   }
 
-  // Manual Pix always available (requires manual confirmation)
-  methods.push({
-    id: 'pix_manual',
-    name: 'Pix Manual',
-    currency: 'BRL',
-    icon: '🏦',
-    manual: true,
-    description: {
-      pt: 'Pagamento via Pix com confirmação manual',
-      fr: 'Paiement via Pix avec confirmation manuelle',
-      en: 'Pix payment with manual confirmation'
-    }
-  });
-
   // PayPal for international users
   if (PayPal.isPayPalAvailable()) {
     methods.push({
@@ -132,7 +118,7 @@ export function getPremiumPlans() {
  * @param {Object} params - Payment parameters
  * @param {string} params.telegram_id - User's Telegram ID
  * @param {string} params.plan - Plan type (monthly, quarterly, annual)
- * @param {string} params.method - Payment method (mercadopago, pix_manual, paypal)
+ * @param {string} params.method - Payment method (mercadopago, paypal)
  * @param {string} params.email - User's email (optional)
  * @returns {Promise<Object>} Payment initiation data
  */
@@ -164,17 +150,6 @@ export async function initiatePayment({ telegram_id, plan, method, email }) {
         });
         paymentData.method = 'mercadopago';
         paymentData.currency = 'BRL';
-        break;
-
-      case 'pix_manual':
-        paymentData = await MercadoPago.createManualPixPayment({
-          amount: planInfo.prices.BRL,
-          plan,
-          telegram_id
-        });
-        paymentData.method = 'pix_manual';
-        paymentData.currency = 'BRL';
-        paymentData.manual = true;
         break;
 
       case 'paypal':
