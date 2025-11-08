@@ -18,8 +18,8 @@ export const messagesEn = {
       ERROR_INVALID_AMOUNT: `⚠️ Invalid amount. Enter a number (e.g. 1000)`,
       ERROR_UPDATE_FAILED: `❌ Update failed.`,
     
-      // ✅ SCREEN 2
-      promptAmt: `💬 Send an amount or choose:`,
+      // ✅ MAIN MENU
+      promptAmt: `🏠 <b>Main Menu</b>\n\n💱 Compare best EUR↔BRL rates live\n\n<b>💎 Premium:</b>\n🔔 Custom alerts\n⏰ Notifications at the best time to convert\n\n━━━━━━━━━━━━━━━━━━\n\n👉 <i>Choose below or send an amount (e.g. 1000)</i>`,
       
       askAmount: `✏️ Enter an amount (e.g. 1000)`,
       
@@ -28,9 +28,7 @@ export const messagesEn = {
       // ✅ SCREEN 3: buildComparison
       buildComparison: ({ route, amount, rates, onchain, bestBank, others, delta, locale, isTargetMode = false }) => {
         const now = new Date();
-        const dayOfWeek = now.getDay();
-        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-        
+
         let title;
         if (isTargetMode) {
           if (route === 'eurbrl') {
@@ -39,18 +37,22 @@ export const messagesEn = {
             title = `💱 To receive ${formatAmount(amount, 0, locale)} EUR\nYou need ~${formatAmount(onchain.in, 0, locale)} BRL`;
           }
         } else {
-          title = route === 'eurbrl' 
+          title = route === 'eurbrl'
             ? `💱 ${formatAmount(amount, 0, locale)} EUR → BRL`
             : `💱 ${formatAmount(amount, 0, locale)} BRL → EUR`;
         }
-        
+
         const timeStr = now.toLocaleTimeString(locale, {hour: '2-digit', minute: '2-digit'});
         const tzAbbr = new Date().toLocaleTimeString('en-US', {timeZoneName: 'short'}).split(' ')[2];
-        
-        // ✅ Reference line
-        let ref = `📊 Reference rate ${formatRate(rates.cross, locale)} • ${timeStr} ${tzAbbr}`;
-        if (isWeekend) {
-          ref += `\n⚠️ Weekend: rate frozen until Monday`;
+
+        // ✅ Reference line - Yahoo Finance only
+        let ref;
+        if (rates.yahooFrozen) {
+          // Yahoo unavailable (weekend/market closed) - showing crypto cross rate instead
+          ref = `📊 Reference rate ${formatRate(rates.cross, locale)} • ${timeStr} ${tzAbbr}\n⚠️ Official rate frozen (weekend) - showing ${rates.referenceSource} rate`;
+        } else {
+          // Yahoo available - official reference
+          ref = `📊 Official rate ${formatRate(rates.cross, locale)} (Yahoo Finance) • ${timeStr} ${tzAbbr}`;
         }
         
         let onchainLine, bankLine;
@@ -198,18 +200,18 @@ export const messagesEn = {
       },
     
       SOURCES_TEXT: `📊 Data sources
-    
-    EUR/BRL reference rate: Yahoo Finance (official exchange rate)
-    
+
+    EUR/BRL reference rate: Yahoo Finance (official FX market rate)
+
     On-chain calculation:
-    • Crypto rates: CoinGecko (USDC/EUR, USDC/BRL)
+    • Crypto rates: Coinpaprika (primary), CryptoCompare, or CoinGecko (USDC/EUR, USDC/BRL)
     • Real fees included:
       - Trading ~0.1%
       - Polygon network ~1 USDC
       - Pix withdrawal ~R$3.50
-    
+
     Off-chain rates: Wise Comparisons API (live provider rates)
-    
+
     Referral links: free for you, fund the service.`,
     
       // ✅ SCREEN 5: buildOffChain
@@ -563,16 +565,16 @@ export const messagesEn = {
     [ℹ️ See all Premium features]
     
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    
-    📱 15 R$ / 3 months
-       That's 5 R$/month
-    
-    📱 27 R$ / 6 months
-       That's 4.50 R$/month • Save 10%
-    
-    📱 50 R$ / 12 months
-       That's 4.17 R$/month • Save 17%
-    
+
+    📱 R$ 15.00 / 3 months
+       That's R$ 5.00/month
+
+    📱 R$ 28.00 / 6 months
+       That's R$ 4.67/month • Save 7%
+
+    📱 R$ 50.00 / 12 months
+       That's R$ 4.17/month • Save 17%
+
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     
     🔜 International credit card coming soon`,

@@ -17,13 +17,25 @@ export function buildKeyboards(msg, type, options = {}) {
         ],
       ]);
     
-    // Écran 1 : Choix route/montant
-    case 'main':
-      return Markup.inlineKeyboard([
+    // Écran 1 : Menu Principal
+    case 'main': {
+      const isPremium = options.isPremium || false;
+      const buttons = [
         [Markup.button.callback(msg.btn.eurbrl(DEFAULTS.EUR, locale), `route:eurbrl:${DEFAULTS.EUR}`)],
         [Markup.button.callback(msg.btn.brleur(DEFAULTS.BRL, locale), `route:brleur:${DEFAULTS.BRL}`)],
-        [Markup.button.callback(msg.btn.about, 'action:about')],
-      ]);
+      ];
+
+      // Add alerts button for premium users
+      if (isPremium) {
+        buttons.push([Markup.button.callback(msg.btn.myAlerts, 'alert:list')]);
+      } else {
+        buttons.push([Markup.button.callback(msg.btn.seePremium, 'premium:pricing')]);
+      }
+
+      buttons.push([Markup.button.callback(msg.btn.about, 'action:about')]);
+
+      return Markup.inlineKeyboard(buttons);
+    }
     
     // Écran "À propos"
     case 'about':
@@ -275,9 +287,9 @@ case 'what_exchange':
  case 'premium_pricing':
     return Markup.inlineKeyboard([
       [Markup.button.callback(msg.btn.premiumDetails, 'premium:details')],
-      [Markup.button.callback(msg.btn.subscribe3m, 'premium:subscribe:3')],
-      [Markup.button.callback(msg.btn.subscribe6m, 'premium:subscribe:6')],
-      [Markup.button.callback(msg.btn.subscribe12m, 'premium:subscribe:12')],
+      [Markup.button.callback('📅 3 meses - R$ 15,00', 'premium:subscribe:quarterly')],
+      [Markup.button.callback('📅 6 meses - R$ 28,00 (-7%)', 'premium:subscribe:semiannual')],
+      [Markup.button.callback('📅 12 meses - R$ 50,00 (-17%)', 'premium:subscribe:annual')],
       [Markup.button.callback(msg.btn.back, 'action:back_main')],
     ]);
 
@@ -285,11 +297,51 @@ case 'what_exchange':
   case 'premium_details':
     return Markup.inlineKeyboard([
       [Markup.button.callback(msg.btn.backToPricing, 'premium:pricing')],
-      [Markup.button.callback(msg.btn.subscribe3m, 'premium:subscribe:3')],
-      [Markup.button.callback(msg.btn.subscribe6m, 'premium:subscribe:6')],
-      [Markup.button.callback(msg.btn.subscribe12m, 'premium:subscribe:12')],
+      [Markup.button.callback('📅 3 meses - R$ 15,00', 'premium:subscribe:quarterly')],
+      [Markup.button.callback('📅 6 meses - R$ 28,00 (-7%)', 'premium:subscribe:semiannual')],
+      [Markup.button.callback('📅 12 meses - R$ 50,00 (-17%)', 'premium:subscribe:annual')],
       [Markup.button.callback(msg.btn.back, 'premium:pricing')]
     ]);
+
+  // Écran Premium Pricing pour utilisateurs déjà premium (renew)
+  case 'premium_pricing_renew': {
+    const lang = options.lang || 'pt';
+
+    const buttonTexts = {
+      pt: {
+        details: 'ℹ️ Ver detalhes',
+        renew3: '🔄 Prolongar 3 meses - R$ 15,00',
+        renew6: '🔄 Prolongar 6 meses - R$ 28,00 (-7%)',
+        renew12: '🔄 Prolongar 12 meses - R$ 50,00 (-17%)',
+        createAlert: '🔔 Criar Alerta'
+      },
+      fr: {
+        details: 'ℹ️ Voir détails',
+        renew3: '🔄 Prolonger 3 mois - R$ 15,00',
+        renew6: '🔄 Prolonger 6 mois - R$ 28,00 (-7%)',
+        renew12: '🔄 Prolonger 12 mois - R$ 50,00 (-17%)',
+        createAlert: '🔔 Créer Alerte'
+      },
+      en: {
+        details: 'ℹ️ See details',
+        renew3: '🔄 Extend 3 months - R$ 15,00',
+        renew6: '🔄 Extend 6 months - R$ 28,00 (-7%)',
+        renew12: '🔄 Extend 12 months - R$ 50,00 (-17%)',
+        createAlert: '🔔 Create Alert'
+      }
+    };
+
+    const texts = buttonTexts[lang] || buttonTexts.en;
+
+    return Markup.inlineKeyboard([
+      [Markup.button.callback(texts.details, 'premium:details')],
+      [Markup.button.callback(texts.renew3, 'premium:subscribe:quarterly')],
+      [Markup.button.callback(texts.renew6, 'premium:subscribe:semiannual')],
+      [Markup.button.callback(texts.renew12, 'premium:subscribe:annual')],
+      [Markup.button.callback(texts.createAlert, 'alert:choose_pair')],
+      [Markup.button.callback(msg.btn.back, 'action:back_main')]
+    ]);
+  }
 
    // 👇 NOUVEAUX CASES ALERTES
     
@@ -460,7 +512,46 @@ case 'what_exchange':
         [Markup.button.callback('🗑️ Supprimer cette alerte', `alert:delete:${alertId}`)],
         [Markup.button.callback('🔔 Mes alertes', 'alert:list')]
       ]);
-    
+
+    // Alerte déclenchée manuellement (admin)
+    case 'triggered_alert':
+      const triggeredPair = options.pair || 'eurbrl';
+      const triggeredAmount = options.amount || 1000;
+      return Markup.inlineKeyboard([
+        [Markup.button.callback('🚀 Comparer maintenant', `route:${triggeredPair}:${triggeredAmount}`)],
+        [Markup.button.callback(msg.btn.back, 'action:back_main')]
+      ]);
+
+    // User n'est pas premium
+    case 'not_premium':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback(msg.btn.seePremium, 'premium:pricing')],
+        [Markup.button.callback(msg.btn.back, 'action:back_main')]
+      ]);
+
+    // Error fallback - for error messages
+    case 'error_fallback':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback('❓ ' + msg.btn.help, 'action:about')],
+        [Markup.button.callback('💎 ' + msg.btn.premium, 'premium:pricing')],
+        [Markup.button.callback('🏠 ' + msg.btn.mainMenu, 'action:back_main')]
+      ]);
+
+    // Premium suggestion - for free users
+    case 'premium_suggestion':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback('💎 ' + msg.btn.seePremium, 'premium:pricing')],
+        [Markup.button.callback('🏠 ' + msg.btn.mainMenu, 'action:back_main')]
+      ]);
+
+    // Status info - for status/info messages
+    case 'status_info':
+      return Markup.inlineKeyboard([
+        [Markup.button.callback('💱 ' + msg.btn.compare, 'route:eurbrl:1000')],
+        [Markup.button.callback('💎 ' + msg.btn.premium, 'premium:pricing')],
+        [Markup.button.callback('🏠 ' + msg.btn.mainMenu, 'action:back_main')]
+      ]);
+
     default:
       return Markup.inlineKeyboard([[Markup.button.callback(msg.btn.back, 'action:back_main')]]);
   }

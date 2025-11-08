@@ -18,8 +18,8 @@ Service gratuit, financé par des liens de parrainage.`,
   ERROR_INVALID_AMOUNT: `⚠️ Montant invalide. Entre un nombre (ex. 1000)`,
   ERROR_UPDATE_FAILED: `❌ Erreur lors de la mise à jour.`,
 
-  // ✅ ÉCRAN 2 : Changement "le" → "un"
-  promptAmt: `💬 Envoie un montant ou choisis :`,
+  // ✅ MENU PRINCIPAL
+  promptAmt: `🏠 <b>Menu Principal</b>\n\n💱 Compare les meilleurs taux EUR↔BRL en direct\n\n<b>💎 Premium:</b>\n🔔 Alertes personnalisées\n⏰ Notifications au meilleur moment pour convertir\n\n━━━━━━━━━━━━━━━━━━\n\n👉 <i>Choisis ci-dessous ou envoie un montant (ex: 1000)</i>`,
   
   askAmount: `✏️ Entre un montant (ex. 1000)`,
   
@@ -28,9 +28,7 @@ Service gratuit, financé par des liens de parrainage.`,
   // ✅ ÉCRAN 3 : buildComparison (ref, delta, autres)
   buildComparison: ({ route, amount, rates, onchain, bestBank, others, delta, locale, isTargetMode = false }) => {
     const now = new Date();
-    const dayOfWeek = now.getDay();
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    
+
     let title;
     if (isTargetMode) {
       if (route === 'eurbrl') {
@@ -39,18 +37,22 @@ Service gratuit, financé par des liens de parrainage.`,
         title = `💱 Pour recevoir ${formatAmount(amount, 0, locale)} EUR\nIl faut ~${formatAmount(onchain.in, 0, locale)} BRL`;
       }
     } else {
-      title = route === 'eurbrl' 
+      title = route === 'eurbrl'
         ? `💱 ${formatAmount(amount, 0, locale)} EUR → BRL`
         : `💱 ${formatAmount(amount, 0, locale)} BRL → EUR`;
     }
-    
+
     const timeStr = now.toLocaleTimeString(locale, {hour: '2-digit', minute: '2-digit'});
     const tzAbbr = new Date().toLocaleTimeString('en-US', {timeZoneName: 'short'}).split(' ')[2];
-    
-    // ✅ Ligne référence modifiée
-    let ref = `📊 Taux de référence ${formatRate(rates.cross, locale)} • ${timeStr} ${tzAbbr}`;
-    if (isWeekend) {
-      ref += `\n⚠️ Week-end : taux figé jusqu'à lundi`;
+
+    // ✅ Ligne référence - Yahoo Finance uniquement
+    let ref;
+    if (rates.yahooFrozen) {
+      // Yahoo indisponible (week-end/marché fermé) - affichage du taux crypto
+      ref = `📊 Taux de référence ${formatRate(rates.cross, locale)} • ${timeStr} ${tzAbbr}\n⚠️ Taux officiel figé (week-end) - affichage du taux ${rates.referenceSource}`;
+    } else {
+      // Yahoo disponible - référence officielle
+      ref = `📊 Taux officiel ${formatRate(rates.cross, locale)} (Yahoo Finance) • ${timeStr} ${tzAbbr}`;
     }
     
     let onchainLine, bankLine;
@@ -202,10 +204,10 @@ Service gratuit, financé par des liens de parrainage.`,
 
   SOURCES_TEXT: `📊 Sources des données
 
-Taux de référence EUR/BRL : Yahoo Finance (taux de change officiel)
+Taux de référence EUR/BRL : Yahoo Finance (taux officiel du marché FX)
 
-Calcul on-chain : 
-• Taux crypto : CoinGecko (USDC/EUR, USDC/BRL)
+Calcul on-chain:
+• Taux crypto : Coinpaprika (principal), CryptoCompare, ou CoinGecko (USDC/EUR, USDC/BRL)
 • Frais réels inclus :
   - Trading ~0,1%
   - Réseau Polygon ~1 USDC
@@ -569,14 +571,14 @@ Ce que tu as appris aujourd'hui sera de plus en plus utilisé dans le futur : tu
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📱 15 R$ / 3 mois
-   Soit 5 R$/mois
+📱 R$ 15,00 / 3 mois
+   Soit R$ 5,00/mois
 
-📱 27 R$ / 6 mois
-   Soit 4,50 R$/mois • Économie de 10%
+📱 R$ 28,00 / 6 mois
+   Soit R$ 4,67/mois • Économie de 7%
 
-📱 50 R$ / 12 mois
-   Soit 4,17 R$/mois • Économie de 17%
+📱 R$ 50,00 / 12 mois
+   Soit R$ 4,17/mois • Économie de 17%
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

@@ -8,6 +8,7 @@ import { DatabaseService } from '../services/database.js';
 import { messages } from '../bot/messages/messages-loader.js';
 import { buildKeyboards } from '../bot/keyboards.js';
 import { getLocale, formatRate, formatAmount } from '../services/rates.js';
+import { logger } from '../utils/logger.js';
 
 const db = new DatabaseService();
 
@@ -17,17 +18,17 @@ const db = new DatabaseService();
 // ==========================================
 
 export async function checkProgrammedAlerts() {
-  console.log('[CRON-PROGRAMMED] 🔔 Checking programmed alerts...');
-  
+  logger.info('[CRON-PROGRAMMED] 🔔 Checking programmed alerts...');
+
   try {
     const rates = await getRates();
     if (!rates) {
-      console.error('[CRON-PROGRAMMED] ❌ Failed to fetch rates');
+      logger.error('[CRON-PROGRAMMED] ❌ Failed to fetch rates');
       return;
     }
-    
+
     const alerts = await db.getActiveAlerts();
-    console.log(`[CRON-PROGRAMMED] Found ${alerts.length} active alerts`);
+    logger.info(`[CRON-PROGRAMMED] Found ${alerts.length} active alerts`);
     
     for (const alert of alerts) {
       // Vérifier cooldown personnalisé
@@ -53,7 +54,11 @@ export async function checkProgrammedAlerts() {
       } else if (alert.threshold_type === 'relative') {
         // Seuil relatif : calculer selon référence
         if (alert.reference_type === 'current') {
-          refValue = currentRate;
+          // ❌ This should never happen - bot/index.js converts these to absolute
+          // If we find one, it's a data corruption issue - skip it
+          logger.error(`[CRON-PROGRAMMED] ❌ Invalid alert ${alert.id}: reference_type='current' should be absolute`);
+          logger.error(`[CRON-PROGRAMMED] Skipping alert. User: ${alert.users.telegram_id}, Pair: ${alert.pair}`);
+          continue;
         } else if (alert.reference_type === 'avg7d') {
           refValue = await db.getAverage(alert.pair, 7);
         } else if (alert.reference_type === 'avg30d') {
@@ -61,19 +66,19 @@ export async function checkProgrammedAlerts() {
         } else if (alert.reference_type === 'avg90d') {
           refValue = await db.getAverage(alert.pair, 90);
         }
-        
+
         if (!refValue) {
-          console.log(`[CRON-PROGRAMMED] ⚠️ No reference data for ${alert.pair} (${alert.reference_type})`);
+          logger.warn(`[CRON-PROGRAMMED] ⚠️ No reference data for ${alert.pair} (${alert.reference_type})`);
           continue;
         }
-        
+
         threshold = refValue * (1 + alert.threshold_value / 100);
       }
-      
+
       // Déclencher si seuil atteint
       if (currentRate >= threshold) {
-        console.log(`[CRON-PROGRAMMED] 🎯 Alert triggered for user ${alert.users.telegram_id}`);
-        console.log(`  Current: ${currentRate.toFixed(4)} >= Threshold: ${threshold.toFixed(4)}`);
+        logger.info(`[CRON-PROGRAMMED] 🎯 Alert triggered for user ${alert.users.telegram_id}`);
+        logger.info(`  Current: ${currentRate.toFixed(4)} >= Threshold: ${threshold.toFixed(4)}`);
         
         await sendProgrammedAlert(alert, currentRate, threshold, refValue);
         
@@ -83,11 +88,11 @@ export async function checkProgrammedAlerts() {
         });
       }
     }
-    
-    console.log('[CRON-PROGRAMMED] ✅ Check complete');
-    
+
+    logger.info('[CRON-PROGRAMMED] ✅ Check complete');
+
   } catch (error) {
-    console.error('[CRON-PROGRAMMED] ❌ Error:', error);
+    logger.error('[CRON-PROGRAMMED] ❌ Error:', { error: error.message, stack: error.stack });
   }
 }
 
@@ -162,11 +167,11 @@ ${typeLabel}`;
       parse_mode: 'HTML',
       ...kb
     });
-    
-    console.log(`[CRON-PROGRAMMED] ✅ Alert sent to user ${user.telegram_id}`);
-    
+
+    logger.info(`[CRON-PROGRAMMED] ✅ Alert sent to user ${user.telegram_id}`);
+
   } catch (error) {
-    console.error(`[CRON-PROGRAMMED] Failed to send alert:`, error.message);
+    logger.error(`[CRON-PROGRAMMED] Failed to send alert:`, { error: error.message });
   }
 }
 

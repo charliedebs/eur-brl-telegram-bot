@@ -18,8 +18,8 @@ export const messagesPt = {
       ERROR_INVALID_AMOUNT: `⚠️ Valor inválido. Digite um número (ex. 1000)`,
       ERROR_UPDATE_FAILED: `❌ Erro ao atualizar.`,
     
-      // ✅ TELA 2
-      promptAmt: `💬 Envie um valor ou escolha:`,
+      // ✅ MENU PRINCIPAL
+      promptAmt: `🏠 <b>Menu Principal</b>\n\n💱 Compare as melhores taxas EUR↔BRL ao vivo\n\n<b>💎 Premium:</b>\n🔔 Alertas personalizados\n⏰ Notificações no melhor momento para converter\n\n━━━━━━━━━━━━━━━━━━\n\n👉 <i>Escolha abaixo ou envie um valor (ex: 1000)</i>`,
       
       askAmount: `✏️ Digite um valor (ex. 1000)`,
       
@@ -28,9 +28,7 @@ export const messagesPt = {
       // ✅ TELA 3: buildComparison
       buildComparison: ({ route, amount, rates, onchain, bestBank, others, delta, locale, isTargetMode = false }) => {
         const now = new Date();
-        const dayOfWeek = now.getDay();
-        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-        
+
         let title;
         if (isTargetMode) {
           if (route === 'eurbrl') {
@@ -39,18 +37,22 @@ export const messagesPt = {
             title = `💱 Para receber ${formatAmount(amount, 0, locale)} EUR\nPrecisa ~${formatAmount(onchain.in, 0, locale)} BRL`;
           }
         } else {
-          title = route === 'eurbrl' 
+          title = route === 'eurbrl'
             ? `💱 ${formatAmount(amount, 0, locale)} EUR → BRL`
             : `💱 ${formatAmount(amount, 0, locale)} BRL → EUR`;
         }
-        
+
         const timeStr = now.toLocaleTimeString(locale, {hour: '2-digit', minute: '2-digit'});
         const tzAbbr = new Date().toLocaleTimeString('en-US', {timeZoneName: 'short'}).split(' ')[2];
-        
-        // ✅ Linha referência
-        let ref = `📊 Taxa de referência ${formatRate(rates.cross, locale)} • ${timeStr} ${tzAbbr}`;
-        if (isWeekend) {
-          ref += `\n⚠️ Fim de semana: taxa congelada até segunda`;
+
+        // ✅ Linha referência - Yahoo Finance apenas
+        let ref;
+        if (rates.yahooFrozen) {
+          // Yahoo indisponível (fim de semana/mercado fechado) - mostrando taxa crypto
+          ref = `📊 Taxa de referência ${formatRate(rates.cross, locale)} • ${timeStr} ${tzAbbr}\n⚠️ Taxa oficial congelada (fim de semana) - mostrando taxa ${rates.referenceSource}`;
+        } else {
+          // Yahoo disponível - referência oficial
+          ref = `📊 Taxa oficial ${formatRate(rates.cross, locale)} (Yahoo Finance) • ${timeStr} ${tzAbbr}`;
         }
         
         let onchainLine, bankLine;
@@ -198,18 +200,18 @@ export const messagesPt = {
       },
     
       SOURCES_TEXT: `📊 Fontes dos dados
-    
-    Taxa de referência EUR/BRL: Yahoo Finance (taxa oficial de câmbio)
-    
+
+    Taxa de referência EUR/BRL: Yahoo Finance (taxa oficial do mercado FX)
+
     Cálculo on-chain:
-    • Taxas crypto: CoinGecko (USDC/EUR, USDC/BRL)
+    • Taxas crypto: Coinpaprika (principal), CryptoCompare, ou CoinGecko (USDC/EUR, USDC/BRL)
     • Taxas reais incluídas:
       - Trading ~0,1%
       - Rede Polygon ~1 USDC
       - Saque Pix ~R$3,50
-    
+
     Taxas off-chain: API Wise Comparisons (taxas ao vivo dos provedores)
-    
+
     Links de indicação: gratuitos para você, financiam o serviço.`,
     
       // ✅ TELA 5: buildOffChain
@@ -563,16 +565,16 @@ export const messagesPt = {
     [ℹ️ Ver todas as funcionalidades Premium]
     
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    
-    📱 15 R$ / 3 meses
-       Ou seja 5 R$/mês
-    
-    📱 27 R$ / 6 meses
-       Ou seja 4,50 R$/mês • Economia de 10%
-    
-    📱 50 R$ / 12 meses
-       Ou seja 4,17 R$/mês • Economia de 17%
-    
+
+    📱 R$ 15,00 / 3 meses
+       Ou seja R$ 5,00/mês
+
+    📱 R$ 28,00 / 6 meses
+       Ou seja R$ 4,67/mês • Economia de 7%
+
+    📱 R$ 50,00 / 12 meses
+       Ou seja R$ 4,17/mês • Economia de 17%
+
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     
     🔜 Cartão de crédito internacional em breve`,
