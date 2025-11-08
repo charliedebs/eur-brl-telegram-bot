@@ -560,7 +560,11 @@ export async function verifyWebhookSignature(headers, body) {
  * @returns {boolean} Whether PayPal is configured
  */
 export function isPayPalAvailable() {
-  return !!(process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET);
+  // Check if PayPal is explicitly enabled (set PAYPAL_ENABLED=true to enable)
+  const isEnabled = process.env.PAYPAL_ENABLED === 'true';
+  const hasCredentials = !!(process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET);
+
+  return isEnabled && hasCredentials;
 }
 
 export default {

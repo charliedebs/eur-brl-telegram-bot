@@ -296,6 +296,13 @@ app.post('/webhook/paypal', async (req, res) => {
   try {
     const paymentsModule = await import('./services/payments/index.js');
     const PayPal = paymentsModule.default.PayPal;
+
+    // Check if PayPal is enabled
+    if (!PayPal.isPayPalAvailable()) {
+      logger.info('[WEBHOOK] PayPal notification received but PayPal is disabled - ignoring');
+      return res.sendStatus(200); // Return 200 to avoid PayPal retries
+    }
+
     const { DatabaseService } = await import('./services/database.js');
     const db = new DatabaseService();
 
