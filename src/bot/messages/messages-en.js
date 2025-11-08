@@ -555,33 +555,65 @@ export const messagesEn = {
     
     🙌 We hope you enjoyed the experience!`,
     
-      // Premium and alerts (kept same)
+      // Premium and alerts
       PREMIUM_PRICING: `💎 GO PREMIUM
-    
-    ✨ With Premium:
-    • 🔔 Unlimited custom alerts
-    • 📢 Regular spontaneous alerts
-    • 🎯 Multi-pairs (EUR→BRL + BRL→EUR)
-    • 📊 Advanced analytics
-    • 🌍 Multi-currency coming soon
-    • ⚡ Priority access to new features
-    
-    [ℹ️ See all Premium features]
-    
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-    📱 R$ 15.00 / 3 months
-       That's R$ 5.00/month
+✨ With Premium:
+• 🔔 Unlimited custom alerts
+• 📢 Regular spontaneous alerts
+• 🎯 Multi-pairs (EUR→BRL + BRL→EUR)
+• 📊 Advanced analytics
+• 🌍 Multi-currency coming soon
+• ⚡ Priority access to new features
 
-    📱 R$ 28.00 / 6 months
-       That's R$ 4.67/month • Save 7%
+[ℹ️ See all Premium features]
 
-    📱 R$ 50.00 / 12 months
-       That's R$ 4.17/month • Save 17%
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    
-    🔜 International credit card coming soon`,
+🔄 <b>SUBSCRIPTIONS (Cancel anytime)</b>
+
+💳 <b>Mercado Pago (BRL)</b>
+• R$ 6/month
+• R$ 15/3 months (-17%)
+• R$ 28/6 months (-22%)
+• R$ 50/12 months (-31%)
+
+💳 <b>PayPal (EUR)</b>
+• €4/3 months
+• €7/6 months
+• €12/12 months
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 Subscriptions renew automatically. You can cancel anytime.`,
+
+  PREMIUM_ONESHOT_PRICING: `💎 GO PREMIUM
+
+✨ With Premium:
+• 🔔 Unlimited custom alerts
+• 📢 Regular spontaneous alerts
+• 🎯 Multi-pairs (EUR→BRL + BRL→EUR)
+• 📊 Advanced analytics
+• 🌍 Multi-currency coming soon
+• ⚡ Priority access to new features
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💰 <b>ONE-TIME PAYMENT (no subscription)</b>
+
+💳 <b>Mercado Pago (BRL)</b>
+• R$ 18 - 3 months
+• R$ 32 - 6 months
+• R$ 60 - 12 months
+
+💳 <b>PayPal (USD)</b>
+• $4.50 - 3 months
+• $8 - 6 months
+• $15 - 12 months
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 One-time payment, Premium access for the chosen duration, no automatic renewal.`,
     
       PREMIUM_DETAILS: `💎 PREMIUM FEATURES
     
@@ -1104,9 +1136,26 @@ export const messagesEn = {
         premium: '🚀 Discover Premium',
         giveFeedback: '💬 Give feedback',
         seePremium: '💎 See Premium',
-        subscribe3m: '📱 15 R$ - 3 months',
-        subscribe6m: '📱 27 R$ - 6 months',
-        subscribe12m: '📱 50 R$ - 12 months',
+        seeOneshot: '💰 Or try without subscription →',
+        backToSubscriptions: '⬅️ Back to subscriptions',
+
+        // Subscription plans (recurring)
+        subMPMonthly: '💳 R$ 6/month',
+        subMPQuarterly: '💳 R$ 15/3 months (-17%)',
+        subMPSemiannual: '💳 R$ 28/6 months (-22%)',
+        subMPAnnual: '💳 R$ 50/12 months (-31%)',
+        subPPQuarterly: '💳 €4/3 months',
+        subPPSemiannual: '💳 €7/6 months',
+        subPPAnnual: '💳 €12/12 months',
+
+        // One-shot plans
+        oneshot3m: '💰 R$ 18 - 3 months',
+        oneshot6m: '💰 R$ 32 - 6 months',
+        oneshot12m: '💰 R$ 60 - 12 months',
+        oneshotPP3m: '💰 $4.50 - 3 months',
+        oneshotPP6m: '💰 $8 - 6 months',
+        oneshotPP12m: '💰 $15 - 12 months',
+
         premiumDetails: 'ℹ️ See all features',
         createAlert: '➕ Create an alert',
         myAlerts: '🔔 My alerts',

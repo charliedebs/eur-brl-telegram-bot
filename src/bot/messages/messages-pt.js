@@ -555,33 +555,65 @@ export const messagesPt = {
     
     🙌 Esperamos que você tenha curtido a experiência!`,
     
-      // Premium e alertas (mantidos iguais)
+      // Premium e alertas
       PREMIUM_PRICING: `💎 ASSINAR PREMIUM
-    
-    ✨ Com Premium:
-    • 🔔 Alertas personalizados ilimitados
-    • 📢 Alertas espontâneos regulares
-    • 🎯 Multi-pares (EUR→BRL + BRL→EUR)
-    • 📊 Análises mais avançadas
-    • 🌍 Multi-moedas em breve
-    • ⚡ Acesso prioritário às novas funcionalidades
-    
-    [ℹ️ Ver todas as funcionalidades Premium]
-    
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-    📱 R$ 15,00 / 3 meses
-       Ou seja R$ 5,00/mês
+✨ Com Premium:
+• 🔔 Alertas personalizados ilimitados
+• 📢 Alertas espontâneos regulares
+• 🎯 Multi-pares (EUR→BRL + BRL→EUR)
+• 📊 Análises mais avançadas
+• 🌍 Multi-moedas em breve
+• ⚡ Acesso prioritário às novas funcionalidades
 
-    📱 R$ 28,00 / 6 meses
-       Ou seja R$ 4,67/mês • Economia de 7%
+[ℹ️ Ver todas as funcionalidades Premium]
 
-    📱 R$ 50,00 / 12 meses
-       Ou seja R$ 4,17/mês • Economia de 17%
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    
-    🔜 Cartão de crédito internacional em breve`,
+🔄 <b>ASSINATURAS (Cancelável a qualquer momento)</b>
+
+💳 <b>Mercado Pago (BRL)</b>
+• R$ 6/mês
+• R$ 15/3 meses (-17%)
+• R$ 28/6 meses (-22%)
+• R$ 50/12 meses (-31%)
+
+💳 <b>PayPal (EUR)</b>
+• €4/3 meses
+• €7/6 meses
+• €12/12 meses
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 As assinaturas se renovam automaticamente. Você pode cancelar quando quiser.`,
+
+  PREMIUM_ONESHOT_PRICING: `💎 ASSINAR PREMIUM
+
+✨ Com Premium:
+• 🔔 Alertas personalizados ilimitados
+• 📢 Alertas espontâneos regulares
+• 🎯 Multi-pares (EUR→BRL + BRL→EUR)
+• 📊 Análises mais avançadas
+• 🌍 Multi-moedas em breve
+• ⚡ Acesso prioritário às novas funcionalidades
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💰 <b>PAGAMENTO ÚNICO (sem assinatura)</b>
+
+💳 <b>Mercado Pago (BRL)</b>
+• R$ 18 - 3 meses
+• R$ 32 - 6 meses
+• R$ 60 - 12 meses
+
+💳 <b>PayPal (USD)</b>
+• $4.50 - 3 meses
+• $8 - 6 meses
+• $15 - 12 meses
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 Pagamento único, acesso Premium pela duração escolhida, sem renovação automática.`,
     
       PREMIUM_DETAILS: `💎 FUNCIONALIDADES PREMIUM
     
@@ -1105,9 +1137,26 @@ export const messagesPt = {
         premium: '🚀 Descobrir Premium',
         giveFeedback: '💬 Dar uma sugestão',
         seePremium: '💎 Ver Premium',
-        subscribe3m: '📱 15 R$ - 3 meses',
-        subscribe6m: '📱 27 R$ - 6 meses',
-        subscribe12m: '📱 50 R$ - 12 meses',
+        seeOneshot: '💰 Ou experimente sem assinatura →',
+        backToSubscriptions: '⬅️ Voltar às assinaturas',
+
+        // Subscription plans (recurring)
+        subMPMonthly: '💳 R$ 6/mês',
+        subMPQuarterly: '💳 R$ 15/3 meses (-17%)',
+        subMPSemiannual: '💳 R$ 28/6 meses (-22%)',
+        subMPAnnual: '💳 R$ 50/12 meses (-31%)',
+        subPPQuarterly: '💳 €4/3 meses',
+        subPPSemiannual: '💳 €7/6 meses',
+        subPPAnnual: '💳 €12/12 meses',
+
+        // One-shot plans
+        oneshot3m: '💰 R$ 18 - 3 meses',
+        oneshot6m: '💰 R$ 32 - 6 meses',
+        oneshot12m: '💰 R$ 60 - 12 meses',
+        oneshotPP3m: '💰 $4.50 - 3 meses',
+        oneshotPP6m: '💰 $8 - 6 meses',
+        oneshotPP12m: '💰 $15 - 12 meses',
+
         premiumDetails: 'ℹ️ Ver todas as funcionalidades',
         createAlert: '➕ Criar um alerta',
         myAlerts: '🔔 Meus alertas',

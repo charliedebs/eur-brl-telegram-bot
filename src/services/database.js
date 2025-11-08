@@ -610,7 +610,7 @@ async createAlert(userId, alertData) {
   async getExpiredPendingPayments(hours = 24) {
     const cutoffTime = new Date(Date.now() - hours * 60 * 60 * 1000);
 
-    const { data, error } = await supabase
+    const { data, error} = await supabase
       .from('payments')
       .select('*')
       .eq('status', 'pending')
@@ -618,6 +618,148 @@ async createAlert(userId, alertData) {
 
     if (error) {
       console.error('[DB] Failed to get expired pending payments:', error);
+      return [];
+    }
+
+    return data || [];
+  }
+
+  // ==========================================
+  // SUBSCRIPTIONS (recurring payments)
+  // ==========================================
+
+  async createSubscription(subscriptionData) {
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .insert([{
+        telegram_id: subscriptionData.telegram_id,
+        provider: subscriptionData.provider, // 'mercadopago' | 'paypal'
+        provider_subscription_id: subscriptionData.provider_subscription_id,
+        plan: subscriptionData.plan,
+        status: subscriptionData.status || 'active',
+        price: subscriptionData.price,
+        currency: subscriptionData.currency,
+        frequency: subscriptionData.frequency,
+        frequency_type: subscriptionData.frequency_type,
+        next_billing_date: subscriptionData.next_billing_date,
+        subscription_data: subscriptionData.data || {},
+        created_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[DB] Failed to create subscription:', error);
+      return null;
+    }
+
+    console.log(`[DB] ✅ Subscription created: ${subscriptionData.provider_subscription_id} (${subscriptionData.provider})`);
+    return data;
+  }
+
+  async getActiveSubscription(telegram_id) {
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('telegram_id', telegram_id)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('[DB] Failed to get active subscription:', error);
+      return null;
+    }
+
+    return data;
+  }
+
+  async getSubscriptionByProvider(provider, provider_subscription_id) {
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('provider', provider)
+      .eq('provider_subscription_id', provider_subscription_id)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('[DB] Failed to get subscription by provider:', error);
+      return null;
+    }
+
+    return data;
+  }
+
+  async updateSubscription(subscription_id, updates) {
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', subscription_id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[DB] Failed to update subscription:', error);
+      return null;
+    }
+
+    console.log(`[DB] ✅ Subscription updated: ${subscription_id}`);
+    return data;
+  }
+
+  async cancelUserSubscription(telegram_id) {
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .update({
+        status: 'cancelled',
+        cancelled_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('telegram_id', telegram_id)
+      .eq('status', 'active')
+      .select();
+
+    if (error) {
+      console.error('[DB] Failed to cancel subscription:', error);
+      return null;
+    }
+
+    console.log(`[DB] ✅ Subscription cancelled for user: ${telegram_id}`);
+    return data && data.length > 0 ? data[0] : null;
+  }
+
+  async getAllActiveSubscriptions() {
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('status', 'active')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[DB] Failed to get active subscriptions:', error);
+      return [];
+    }
+
+    return data || [];
+  }
+
+  async getExpiringSubscriptions(days = 3) {
+    const targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() + days);
+
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('status', 'active')
+      .gte('next_billing_date', new Date().toISOString())
+      .lte('next_billing_date', targetDate.toISOString());
+
+    if (error) {
+      console.error('[DB] Failed to get expiring subscriptions:', error);
       return [];
     }
 

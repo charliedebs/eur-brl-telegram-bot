@@ -560,9 +560,9 @@ Ce que tu as appris aujourd'hui sera de plus en plus utilisé dans le futur : tu
 
 🙌 On espère que tu as kiffé l'expérience !`,
 
-  // Premium et alertes (inchangés, déjà dans le code)
+  // Premium et alertes
   PREMIUM_PRICING: `💎 PASSER À PREMIUM
-  
+
 ✨ Avec Premium :
 • 🔔 Alertes personnalisées illimitées
 • 📢 Alertes spontanées régulières
@@ -575,18 +575,50 @@ Ce que tu as appris aujourd'hui sera de plus en plus utilisé dans le futur : tu
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📱 R$ 15,00 / 3 mois
-   Soit R$ 5,00/mois
+🔄 <b>ABONNEMENTS (Annulable à tout moment)</b>
 
-📱 R$ 28,00 / 6 mois
-   Soit R$ 4,67/mois • Économie de 7%
+💳 <b>Mercado Pago (BRL)</b>
+• R$ 6/mois
+• R$ 15/3 mois (-17%)
+• R$ 28/6 mois (-22%)
+• R$ 50/12 mois (-31%)
 
-📱 R$ 50,00 / 12 mois
-   Soit R$ 4,17/mois • Économie de 17%
+💳 <b>PayPal (EUR)</b>
+• €4/3 mois
+• €7/6 mois
+• €12/12 mois
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🔜 Carte bancaire internationale bientôt disponible`,
+💡 Les abonnements se renouvellent automatiquement. Tu peux annuler quand tu veux.`,
+
+  PREMIUM_ONESHOT_PRICING: `💎 PASSER À PREMIUM
+
+✨ Avec Premium :
+• 🔔 Alertes personnalisées illimitées
+• 📢 Alertes spontanées régulières
+• 🎯 Multi-paires (EUR→BRL + BRL→EUR)
+• 📊 Analyses plus poussées
+• 🌍 Multi-devises à venir
+• ⚡ Accès prioritaire aux nouvelles fonctionnalités
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💰 <b>PAIEMENT UNIQUE (sans abonnement)</b>
+
+💳 <b>Mercado Pago (BRL)</b>
+• R$ 18 - 3 mois
+• R$ 32 - 6 mois
+• R$ 60 - 12 mois
+
+💳 <b>PayPal (USD)</b>
+• $4.50 - 3 mois
+• $8 - 6 mois
+• $15 - 12 mois
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 Paiement unique, accès Premium pour la durée choisie, pas de renouvellement automatique.`,
   
     PREMIUM_DETAILS: `💎 FONCTIONNALITÉS PREMIUM
   
@@ -1118,9 +1150,26 @@ btn: {
   premium: '🚀 Découvrir Premium',
   giveFeedback: '💬 Donner une suggestion',
   seePremium: '💎 Voir Premium',
-  subscribe3m: '📱 15 R$ - 3 mois',
-  subscribe6m: '📱 27 R$ - 6 mois',
-  subscribe12m: '📱 50 R$ - 12 mois',
+  seeOneshot: '💰 Ou essaie sans abonnement →',
+  backToSubscriptions: '⬅️ Retour aux abonnements',
+
+  // Subscription plans (recurring)
+  subMPMonthly: '💳 R$ 6/mois',
+  subMPQuarterly: '💳 R$ 15/3 mois (-17%)',
+  subMPSemiannual: '💳 R$ 28/6 mois (-22%)',
+  subMPAnnual: '💳 R$ 50/12 mois (-31%)',
+  subPPQuarterly: '💳 €4/3 mois',
+  subPPSemiannual: '💳 €7/6 mois',
+  subPPAnnual: '💳 €12/12 mois',
+
+  // One-shot plans
+  oneshot3m: '💰 R$ 18 - 3 mois',
+  oneshot6m: '💰 R$ 32 - 6 mois',
+  oneshot12m: '💰 R$ 60 - 12 mois',
+  oneshotPP3m: '💰 $4.50 - 3 mois',
+  oneshotPP6m: '💰 $8 - 6 mois',
+  oneshotPP12m: '💰 $15 - 12 mois',
+
   premiumDetails: 'ℹ️ Voir toutes les fonctionnalités',
   createAlert: '➕ Créer une alerte',
   myAlerts: '🔔 Mes alertes',

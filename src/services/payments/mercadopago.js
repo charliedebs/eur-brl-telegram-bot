@@ -18,12 +18,47 @@ if (process.env.MERCADOPAGO_ACCESS_TOKEN) {
   logger.info('[MERCADOPAGO] Client initialized successfully');
 }
 
-// Premium plans configuration
+// Premium plans configuration (ONE-SHOT payments)
 export const PREMIUM_PLANS = {
+  '3months': {
+    duration: 90,
+    price_brl: 18,
+    price_usd: 4.50,
+    name: {
+      pt: '3 Meses',
+      fr: '3 Mois',
+      en: '3 Months'
+    }
+  },
+  '6months': {
+    duration: 180,
+    price_brl: 32,
+    price_usd: 8,
+    name: {
+      pt: '6 Meses',
+      fr: '6 Mois',
+      en: '6 Months'
+    }
+  },
+  '12months': {
+    duration: 365,
+    price_brl: 60,
+    price_usd: 15,
+    name: {
+      pt: '12 Meses',
+      fr: '12 Mois',
+      en: '12 Months'
+    }
+  }
+};
+
+// Subscription plans configuration (RECURRING payments)
+export const SUBSCRIPTION_PLANS = {
   monthly: {
-    duration: 30,
-    price_brl: 29.90,
-    price_usd: 5.99,
+    plan_id: process.env.MERCADOPAGO_PLAN_MONTHLY,
+    frequency: 1,
+    frequency_type: 'months',
+    price_brl: 6,
     name: {
       pt: 'Mensal',
       fr: 'Mensuel',
@@ -31,26 +66,40 @@ export const PREMIUM_PLANS = {
     }
   },
   quarterly: {
-    duration: 90,
-    price_brl: 79.90,
-    price_usd: 15.99,
+    plan_id: process.env.MERCADOPAGO_PLAN_QUARTERLY,
+    frequency: 3,
+    frequency_type: 'months',
+    price_brl: 15,
     name: {
       pt: 'Trimestral',
       fr: 'Trimestriel',
       en: 'Quarterly'
     },
-    discount: '11%'
+    discount: '17%'
+  },
+  semiannual: {
+    plan_id: process.env.MERCADOPAGO_PLAN_SEMIANNUAL,
+    frequency: 6,
+    frequency_type: 'months',
+    price_brl: 28,
+    name: {
+      pt: 'Semestral',
+      fr: 'Semestriel',
+      en: '6-Month'
+    },
+    discount: '22%'
   },
   annual: {
-    duration: 365,
-    price_brl: 299.90,
-    price_usd: 59.99,
+    plan_id: process.env.MERCADOPAGO_PLAN_ANNUAL,
+    frequency: 12,
+    frequency_type: 'months',
+    price_brl: 50,
     name: {
       pt: 'Anual',
       fr: 'Annuel',
       en: 'Annual'
     },
-    discount: '17%'
+    discount: '31%'
   }
 };
 
@@ -143,6 +192,152 @@ export async function createPixPayment({ amount, plan, email, telegram_id, descr
 }
 
 /**
+ * Get subscription checkout URL for Mercado Pago
+ * @param {Object} params - Subscription parameters
+ * @param {string} params.plan - Plan type (monthly, quarterly, semiannual, annual)
+ * @param {string} params.telegram_id - User's Telegram ID
+ * @param {string} params.email - User's email
+ * @returns {Object} Subscription checkout URL and metadata
+ */
+export function getSubscriptionCheckoutUrl({ plan, telegram_id, email }) {
+  const planConfig = SUBSCRIPTION_PLANS[plan];
+
+  if (!planConfig || !planConfig.plan_id) {
+    throw new Error(`Invalid subscription plan: ${plan}`);
+  }
+
+  const checkoutUrl = `https://www.mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=${planConfig.plan_id}`;
+
+  logger.info('[MERCADOPAGO] Subscription checkout URL generated:', {
+    plan,
+    telegram_id,
+    plan_id: planConfig.plan_id,
+    price: planConfig.price_brl
+  });
+
+  return {
+    checkout_url: checkoutUrl,
+    plan_id: planConfig.plan_id,
+    plan_name: planConfig.name,
+    price_brl: planConfig.price_brl,
+    frequency: planConfig.frequency,
+    frequency_type: planConfig.frequency_type,
+    metadata: {
+      telegram_id: telegram_id.toString(),
+      plan: plan,
+      email: email
+    }
+  };
+}
+
+/**
+ * Get subscription details from Mercado Pago
+ * @param {string} preapproval_id - Subscription ID (preapproval_id)
+ * @returns {Promise<Object>} Subscription details
+ */
+export async function getSubscription(preapproval_id) {
+  try {
+    if (!process.env.MERCADOPAGO_ACCESS_TOKEN) {
+      throw new Error('MERCADOPAGO_ACCESS_TOKEN not configured');
+    }
+
+    const response = await fetch(
+      `https://api.mercadopago.com/preapproval/${preapproval_id}`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to get subscription: ${response.statusText}`);
+    }
+
+    const subscription = await response.json();
+
+    logger.info('[MERCADOPAGO] Subscription retrieved:', {
+      preapproval_id,
+      status: subscription.status,
+      payer_id: subscription.payer_id
+    });
+
+    return {
+      id: subscription.id,
+      status: subscription.status, // authorized, paused, cancelled
+      payer_email: subscription.payer_email,
+      preapproval_plan_id: subscription.preapproval_plan_id,
+      reason: subscription.reason,
+      external_reference: subscription.external_reference,
+      next_payment_date: subscription.next_payment_date,
+      date_created: subscription.date_created,
+      auto_recurring: subscription.auto_recurring,
+      active: subscription.status === 'authorized'
+    };
+
+  } catch (error) {
+    logger.error('[MERCADOPAGO] Failed to get subscription:', {
+      error: error.message,
+      preapproval_id
+    });
+    throw error;
+  }
+}
+
+/**
+ * Cancel a subscription
+ * @param {string} preapproval_id - Subscription ID to cancel
+ * @returns {Promise<Object>} Cancellation result
+ */
+export async function cancelSubscription(preapproval_id) {
+  try {
+    if (!process.env.MERCADOPAGO_ACCESS_TOKEN) {
+      throw new Error('MERCADOPAGO_ACCESS_TOKEN not configured');
+    }
+
+    const response = await fetch(
+      `https://api.mercadopago.com/preapproval/${preapproval_id}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          status: 'cancelled'
+        })
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to cancel subscription: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+
+    logger.info('[MERCADOPAGO] Subscription cancelled:', {
+      preapproval_id,
+      status: result.status
+    });
+
+    return {
+      id: result.id,
+      status: result.status,
+      cancelled: result.status === 'cancelled'
+    };
+
+  } catch (error) {
+    logger.error('[MERCADOPAGO] Failed to cancel subscription:', {
+      error: error.message,
+      preapproval_id
+    });
+    throw error;
+  }
+}
+
+/**
  * Create a manual Pix payment (without Mercado Pago, using your Pix key)
  * Generates a valid BR Code (EMV format) QR code that can be scanned by any bank app
  * @param {Object} params - Payment parameters
@@ -225,30 +420,52 @@ export async function checkPaymentStatus(payment_id) {
 /**
  * Process webhook notification from Mercado Pago
  * @param {Object} notification - Webhook notification data
- * @returns {Promise<Object>} Processed payment info
+ * @returns {Promise<Object>} Processed payment or subscription info
  */
 export async function processWebhook(notification) {
   try {
     logger.info('[MERCADOPAGO] Webhook received:', { notification });
 
-    if (notification.type !== 'payment') {
-      return null;
-    }
+    // Handle subscription events
+    if (notification.type === 'subscription_preapproval' || notification.type === 'subscription') {
+      const preapprovalId = notification.data.id;
+      const subscription = await getSubscription(preapprovalId);
 
-    const paymentId = notification.data.id;
-    const paymentInfo = await checkPaymentStatus(paymentId);
-
-    if (paymentInfo.approved) {
-      const metadata = paymentInfo.metadata;
+      logger.info('[MERCADOPAGO] Subscription webhook processed:', {
+        preapproval_id: preapprovalId,
+        status: subscription.status,
+        action: notification.action
+      });
 
       return {
-        telegram_id: metadata.telegram_id,
-        plan: metadata.plan,
-        duration_days: metadata.duration_days,
-        amount: paymentInfo.amount,
-        payment_id: paymentId,
-        approved: true
+        type: 'subscription',
+        subscription_id: preapprovalId,
+        status: subscription.status,
+        action: notification.action, // created, updated, cancelled
+        payer_email: subscription.payer_email,
+        external_reference: subscription.external_reference,
+        active: subscription.active
       };
+    }
+
+    // Handle payment events
+    if (notification.type === 'payment') {
+      const paymentId = notification.data.id;
+      const paymentInfo = await checkPaymentStatus(paymentId);
+
+      if (paymentInfo.approved) {
+        const metadata = paymentInfo.metadata;
+
+        return {
+          type: 'payment',
+          telegram_id: metadata.telegram_id,
+          plan: metadata.plan,
+          duration_days: metadata.duration_days,
+          amount: paymentInfo.amount,
+          payment_id: paymentId,
+          approved: true
+        };
+      }
     }
 
     return null;
@@ -275,5 +492,9 @@ export default {
   checkPaymentStatus,
   processWebhook,
   isMercadoPagoAvailable,
-  PREMIUM_PLANS
+  getSubscriptionCheckoutUrl,
+  getSubscription,
+  cancelSubscription,
+  PREMIUM_PLANS,
+  SUBSCRIPTION_PLANS
 };

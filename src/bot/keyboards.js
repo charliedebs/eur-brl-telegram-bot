@@ -283,14 +283,37 @@ case 'what_exchange':
         [Markup.button.callback(msg.btn.back, 'action:back_context')],
       ]);
     
- // Écran Premium Pricing
+ // Écran Premium Pricing (Subscriptions - recurring)
  case 'premium_pricing':
     return Markup.inlineKeyboard([
       [Markup.button.callback(msg.btn.premiumDetails, 'premium:details')],
-      [Markup.button.callback(msg.btn.plan3months, 'premium:subscribe:quarterly')],
-      [Markup.button.callback(msg.btn.plan6months, 'premium:subscribe:semiannual')],
-      [Markup.button.callback(msg.btn.plan12months, 'premium:subscribe:annual')],
+      // Mercado Pago subscriptions (BRL)
+      [Markup.button.callback(msg.btn.subMPMonthly, 'premium:sub:mp:monthly')],
+      [Markup.button.callback(msg.btn.subMPQuarterly, 'premium:sub:mp:quarterly')],
+      [Markup.button.callback(msg.btn.subMPSemiannual, 'premium:sub:mp:semiannual')],
+      [Markup.button.callback(msg.btn.subMPAnnual, 'premium:sub:mp:annual')],
+      // PayPal subscriptions (EUR)
+      [Markup.button.callback(msg.btn.subPPQuarterly, 'premium:sub:pp:quarterly')],
+      [Markup.button.callback(msg.btn.subPPSemiannual, 'premium:sub:pp:semiannual')],
+      [Markup.button.callback(msg.btn.subPPAnnual, 'premium:sub:pp:annual')],
+      // One-shot option
+      [Markup.button.callback(msg.btn.seeOneshot, 'premium:oneshot_pricing')],
       [Markup.button.callback(msg.btn.back, 'action:back_main')],
+    ]);
+
+  // Écran Premium One-Shot Pricing (one-time payments)
+  case 'premium_oneshot_pricing':
+    return Markup.inlineKeyboard([
+      // Mercado Pago one-shot (BRL)
+      [Markup.button.callback(msg.btn.oneshot3m, 'premium:oneshot:mp:3months')],
+      [Markup.button.callback(msg.btn.oneshot6m, 'premium:oneshot:mp:6months')],
+      [Markup.button.callback(msg.btn.oneshot12m, 'premium:oneshot:mp:12months')],
+      // PayPal one-shot (USD)
+      [Markup.button.callback(msg.btn.oneshotPP3m, 'premium:oneshot:pp:3months')],
+      [Markup.button.callback(msg.btn.oneshotPP6m, 'premium:oneshot:pp:6months')],
+      [Markup.button.callback(msg.btn.oneshotPP12m, 'premium:oneshot:pp:12months')],
+      // Back to subscriptions
+      [Markup.button.callback(msg.btn.backToSubscriptions, 'premium:pricing')],
     ]);
 
   // Écran Premium Details
