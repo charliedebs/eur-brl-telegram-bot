@@ -135,6 +135,25 @@ CREATE INDEX IF NOT EXISTS idx_nlu_logs_intent ON nlu_logs(intent);
 CREATE INDEX IF NOT EXISTS idx_nlu_logs_created_at ON nlu_logs(created_at DESC);
 
 -- ==========================================
+-- SUPPORT TICKETS TABLE
+-- ==========================================
+-- Support messages sent by users
+CREATE TABLE IF NOT EXISTS support_tickets (
+    id BIGSERIAL PRIMARY KEY,
+    telegram_id BIGINT NOT NULL,
+    message_type VARCHAR(50) NOT NULL, -- 'predefined' or 'custom'
+    message TEXT NOT NULL,
+    status VARCHAR(20) DEFAULT 'open', -- 'open', 'closed'
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    FOREIGN KEY (telegram_id) REFERENCES users(telegram_id) ON DELETE CASCADE
+);
+
+-- Indexes for support_tickets table
+CREATE INDEX IF NOT EXISTS idx_support_tickets_telegram_id ON support_tickets(telegram_id);
+CREATE INDEX IF NOT EXISTS idx_support_tickets_status ON support_tickets(status);
+CREATE INDEX IF NOT EXISTS idx_support_tickets_created_at ON support_tickets(created_at DESC);
+
+-- ==========================================
 -- ROW LEVEL SECURITY (RLS)
 -- ==========================================
 -- Enable RLS on all tables for security
@@ -144,6 +163,7 @@ ALTER TABLE rates_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE free_alerts_sent ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pix_payments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE nlu_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE support_tickets ENABLE ROW LEVEL SECURITY;
 
 -- ==========================================
 -- SAMPLE QUERIES

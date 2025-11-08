@@ -1007,61 +1007,100 @@ bot.action('premium:oneshot_pricing', async (ctx) => {
   await ctx.answerCbQuery();
 });
 
-// Payment help/support handler
+// Payment help/support handler - show predefined options
 bot.action('premium:payment_help', async (ctx) => {
   const lang = ctx.state.lang || 'pt';
 
   const helpMessage = {
-    pt: `💬 <b>Ajuda com Pagamento</b>\n\n` +
-        `Estamos aqui para ajudar! Se você está tendo problemas com o pagamento:\n\n` +
-        `📱 <b>Problema com Mercado Pago?</b>\n` +
-        `• Verifique se você tem saldo ou cartão vinculado\n` +
-        `• Tente usar outro método de pagamento no Mercado Pago\n` +
-        `• Entre em contato com o suporte do Mercado Pago: 4020-7700\n\n` +
-        `❓ <b>Dúvidas sobre planos ou assinatura?</b>\n` +
-        `• As assinaturas são recorrentes e renováveis automaticamente\n` +
-        `• Você pode cancelar a qualquer momento pelo app do Mercado Pago\n` +
-        `• O acesso Premium é ativado imediatamente após o pagamento\n\n` +
-        `📧 <b>Precisa de ajuda personalizada?</b>\n` +
-        `Envie um e-mail para: <code>support@eurbrlbot.com</code>\n\n` +
-        `Inclua seu username do Telegram e descreva o problema. Responderemos em até 24h.`,
-    fr: `💬 <b>Aide pour le Paiement</b>\n\n` +
-        `Nous sommes là pour vous aider ! Si vous rencontrez des problèmes de paiement:\n\n` +
-        `📱 <b>Problème avec Mercado Pago?</b>\n` +
-        `• Vérifiez que vous avez un solde ou une carte liée\n` +
-        `• Essayez une autre méthode de paiement sur Mercado Pago\n` +
-        `• Contactez le support Mercado Pago: 4020-7700\n\n` +
-        `❓ <b>Questions sur les plans ou l'abonnement?</b>\n` +
-        `• Les abonnements sont récurrents et se renouvellent automatiquement\n` +
-        `• Vous pouvez annuler à tout moment via l'app Mercado Pago\n` +
-        `• L'accès Premium est activé immédiatement après le paiement\n\n` +
-        `📧 <b>Besoin d'aide personnalisée?</b>\n` +
-        `Envoyez un e-mail à: <code>support@eurbrlbot.com</code>\n\n` +
-        `Incluez votre username Telegram et décrivez le problème. Nous répondrons sous 24h.`,
-    en: `💬 <b>Payment Support</b>\n\n` +
-        `We're here to help! If you're having payment issues:\n\n` +
-        `📱 <b>Problem with Mercado Pago?</b>\n` +
-        `• Check that you have balance or a linked card\n` +
-        `• Try another payment method on Mercado Pago\n` +
-        `• Contact Mercado Pago support: 4020-7700\n\n` +
-        `❓ <b>Questions about plans or subscription?</b>\n` +
-        `• Subscriptions are recurring and renew automatically\n` +
-        `• You can cancel anytime via the Mercado Pago app\n` +
-        `• Premium access is activated immediately after payment\n\n` +
-        `📧 <b>Need personalized help?</b>\n` +
-        `Send an email to: <code>support@eurbrlbot.com</code>\n\n` +
-        `Include your Telegram username and describe the issue. We'll respond within 24h.`
+    pt: `💬 <b>Ajuda com Pagamento</b>\n\nSelecione sua situação ou escreva uma mensagem personalizada:`,
+    fr: `💬 <b>Aide pour le Paiement</b>\n\nSélectionnez votre situation ou écrivez un message personnalisé:`,
+    en: `💬 <b>Payment Support</b>\n\nSelect your situation or write a custom message:`
+  };
+
+  const buttons = {
+    pt: [
+      [{ text: 'Não tenho Mercado Pago', callback_data: 'support:no_mercadopago' }],
+      [{ text: 'Quero pagar em outra moeda', callback_data: 'support:other_currency' }],
+      [{ text: 'O pagamento não funciona', callback_data: 'support:payment_failed' }],
+      [{ text: '✍️ Escrever mensagem personalizada', callback_data: 'support:custom_message' }],
+      [{ text: '⬅️ Voltar', callback_data: 'premium:pricing' }]
+    ],
+    fr: [
+      [{ text: 'Je n\'ai pas Mercado Pago', callback_data: 'support:no_mercadopago' }],
+      [{ text: 'Je veux payer dans une autre devise', callback_data: 'support:other_currency' }],
+      [{ text: 'Le paiement ne marche pas', callback_data: 'support:payment_failed' }],
+      [{ text: '✍️ Écrire un message personnalisé', callback_data: 'support:custom_message' }],
+      [{ text: '⬅️ Retour', callback_data: 'premium:pricing' }]
+    ],
+    en: [
+      [{ text: 'I don\'t have Mercado Pago', callback_data: 'support:no_mercadopago' }],
+      [{ text: 'I want to pay in another currency', callback_data: 'support:other_currency' }],
+      [{ text: 'Payment doesn\'t work', callback_data: 'support:payment_failed' }],
+      [{ text: '✍️ Write a custom message', callback_data: 'support:custom_message' }],
+      [{ text: '⬅️ Back', callback_data: 'premium:pricing' }]
+    ]
   };
 
   await ctx.answerCbQuery();
-  await ctx.reply(helpMessage[lang] || helpMessage.en, {
+  await ctx.reply(helpMessage[lang] || helpMessage.pt, {
     parse_mode: 'HTML',
-    reply_markup: {
-      inline_keyboard: [[
-        { text: lang === 'pt' ? '⬅️ Voltar' : lang === 'fr' ? '⬅️ Retour' : '⬅️ Back', callback_data: 'premium:pricing' }
-      ]]
-    }
+    reply_markup: { inline_keyboard: buttons[lang] || buttons.pt }
   });
+});
+
+// Handle predefined support messages
+bot.action(/^support:(no_mercadopago|other_currency|payment_failed)$/, async (ctx) => {
+  const type = ctx.match[1];
+  const lang = ctx.state.lang || 'pt';
+  const telegram_id = ctx.from.id;
+
+  const messages = {
+    no_mercadopago: {
+      pt: 'Não tenho Mercado Pago',
+      fr: 'Je n\'ai pas Mercado Pago',
+      en: 'I don\'t have Mercado Pago'
+    },
+    other_currency: {
+      pt: 'Quero pagar em outra moeda',
+      fr: 'Je veux payer dans une autre devise',
+      en: 'I want to pay in another currency'
+    },
+    payment_failed: {
+      pt: 'O pagamento não funciona',
+      fr: 'Le paiement ne marche pas',
+      en: 'Payment doesn\'t work'
+    }
+  };
+
+  const confirmations = {
+    pt: '✅ Mensagem enviada! Obrigado pelo feedback.',
+    fr: '✅ Message envoyé ! Merci pour le retour.',
+    en: '✅ Message sent! Thanks for the feedback.'
+  };
+
+  try {
+    await db.createSupportTicket(telegram_id, 'predefined', messages[type][lang]);
+    await ctx.answerCbQuery(confirmations[lang]);
+    await ctx.reply(confirmations[lang]);
+  } catch (error) {
+    logger.error('[BOT] Failed to create support ticket:', { error: error.message, telegram_id });
+    await ctx.answerCbQuery('Erro / Erreur / Error');
+  }
+});
+
+// Handle custom message request
+bot.action('support:custom_message', async (ctx) => {
+  const lang = ctx.state.lang || 'pt';
+
+  const prompts = {
+    pt: '✍️ Escreva sua mensagem abaixo:',
+    fr: '✍️ Écrivez votre message ci-dessous:',
+    en: '✍️ Write your message below:'
+  };
+
+  ctx.session.awaitingSupportMessage = true;
+  await ctx.answerCbQuery();
+  await ctx.reply(prompts[lang]);
 });
 
 // Mercado Pago Subscription handler
@@ -2106,7 +2145,29 @@ bot.on('text', async (ctx) => {
     
     if (text.startsWith('/')) return;
     
-    // PRIORITÉ 1: Montant attendu
+    // PRIORITÉ 1: Support message attendu
+    if (ctx.session?.awaitingSupportMessage) {
+      const lang = ctx.state.lang || 'pt';
+      const telegram_id = ctx.from.id;
+
+      const confirmations = {
+        pt: '✅ Mensagem enviada! Obrigado pelo feedback.',
+        fr: '✅ Message envoyé ! Merci pour le retour.',
+        en: '✅ Message sent! Thanks for the feedback.'
+      };
+
+      try {
+        await db.createSupportTicket(telegram_id, 'custom', text);
+        await ctx.reply(confirmations[lang]);
+        delete ctx.session.awaitingSupportMessage;
+      } catch (error) {
+        logger.error('[BOT] Failed to create custom support ticket:', { error: error.message, telegram_id });
+        await ctx.reply('❌ Erro / Erreur / Error');
+      }
+      return;
+    }
+
+    // PRIORITÉ 2: Montant attendu
     if (ctx.session?.awaitingAmount) {
       const amount = parseAndValidateAmount(text);
       if (amount) {
@@ -2120,8 +2181,8 @@ bot.on('text', async (ctx) => {
       }
       return;
     }
-    
-    // PRIORITÉ 2: Custom alert threshold
+
+    // PRIORITÉ 3: Custom alert threshold
     if (ctx.session?.awaitingCustomPercent) {
       const { pair, refType } = ctx.session.awaitingCustomPercent;
       const msg = getMsg(ctx);

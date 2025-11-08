@@ -771,6 +771,67 @@ async createAlert(userId, alertData) {
 
     return data || [];
   }
+
+  // ==========================================
+  // SUPPORT TICKETS METHODS
+  // ==========================================
+
+  async createSupportTicket(telegram_id, message_type, message) {
+    const { data, error } = await this.supabase
+      .from('support_tickets')
+      .insert([{
+        telegram_id,
+        message_type, // 'predefined' or 'custom'
+        message,
+        status: 'open'
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      logger.error('[DB] Failed to create support ticket:', { error, telegram_id });
+      throw new Error('Failed to create support ticket');
+    }
+
+    logger.info('[DB] Support ticket created:', { telegram_id, message_type });
+    return data;
+  }
+
+  async getSupportTickets(status = null) {
+    let query = this.supabase
+      .from('support_tickets')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      logger.error('[DB] Failed to get support tickets:', { error });
+      return [];
+    }
+
+    return data || [];
+  }
+
+  async closeSupportTicket(ticket_id) {
+    const { data, error } = await this.supabase
+      .from('support_tickets')
+      .update({ status: 'closed' })
+      .eq('id', ticket_id)
+      .select()
+      .single();
+
+    if (error) {
+      logger.error('[DB] Failed to close support ticket:', { error, ticket_id });
+      throw new Error('Failed to close support ticket');
+    }
+
+    return data;
+  }
 }
 
 export default DatabaseService;

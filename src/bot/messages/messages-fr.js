@@ -604,20 +604,16 @@ Tu peux annuler quand tu veux, directement dans l'app Mercado Pago.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 💰 <b>PAIEMENT UNIQUE (sans abonnement)</b>
+Payez une fois, utilisez pour la période choisie, sans renouvellement automatique.
 
-💳 <b>Mercado Pago (BRL)</b>
+💳 <b>Plans disponibles :</b>
 • R$ 18 - 3 mois
 • R$ 32 - 6 mois
 • R$ 60 - 12 mois
 
-💳 <b>PayPal (USD)</b>
-• $4.50 - 3 mois
-• $8 - 6 mois
-• $15 - 12 mois
-
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-💡 Paiement unique, accès Premium pour la durée choisie, pas de renouvellement automatique.`,
+❓ Problème avec le paiement ? Utilise le bouton "Aide" ci-dessous.`,
   
     PREMIUM_DETAILS: `💎 FONCTIONNALITÉS PREMIUM
   

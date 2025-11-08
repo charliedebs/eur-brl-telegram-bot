@@ -593,26 +593,21 @@ Você pode cancelar quando quiser, direto no app do Mercado Pago.
 • 📢 Alertas espontâneos regulares
 • 🎯 Multi-pares (EUR→BRL + BRL→EUR)
 • 📊 Análises mais avançadas
-• 🌍 Multi-moedas em breve
 • ⚡ Acesso prioritário às novas funcionalidades
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 💰 <b>PAGAMENTO ÚNICO (sem assinatura)</b>
+Pague uma vez, use pelo período escolhido, sem renovação automática.
 
-💳 <b>Mercado Pago (BRL)</b>
+💳 <b>Planos disponíveis:</b>
 • R$ 18 - 3 meses
 • R$ 32 - 6 meses
 • R$ 60 - 12 meses
 
-💳 <b>PayPal (USD)</b>
-• $4.50 - 3 meses
-• $8 - 6 meses
-• $15 - 12 meses
-
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-💡 Pagamento único, acesso Premium pela duração escolhida, sem renovação automática.`,
+❓ Problemas com o pagamento? Use o botão "Ajuda" abaixo.`,
     
       PREMIUM_DETAILS: `💎 FUNCIONALIDADES PREMIUM
     

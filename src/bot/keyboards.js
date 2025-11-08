@@ -292,6 +292,8 @@ case 'what_exchange':
       [Markup.button.callback(msg.btn.subMPQuarterly, 'premium:sub:mp:quarterly')],
       [Markup.button.callback(msg.btn.subMPSemiannual, 'premium:sub:mp:semiannual')],
       [Markup.button.callback(msg.btn.subMPAnnual, 'premium:sub:mp:annual')],
+      // One-shot option
+      [Markup.button.callback(msg.btn.seeOneshot, 'premium:oneshot_pricing')],
       // Help button for payment issues
       [Markup.button.callback(msg.btn.paymentHelp, 'premium:payment_help')],
       [Markup.button.callback(msg.btn.back, 'action:back_main')],
@@ -300,14 +302,12 @@ case 'what_exchange':
   // Écran Premium One-Shot Pricing (one-time payments)
   case 'premium_oneshot_pricing':
     return Markup.inlineKeyboard([
-      // Mercado Pago one-shot (BRL)
+      // Mercado Pago one-shot (BRL) - only BRL now
       [Markup.button.callback(msg.btn.oneshot3m, 'premium:oneshot:mp:3months')],
       [Markup.button.callback(msg.btn.oneshot6m, 'premium:oneshot:mp:6months')],
       [Markup.button.callback(msg.btn.oneshot12m, 'premium:oneshot:mp:12months')],
-      // PayPal one-shot (USD)
-      [Markup.button.callback(msg.btn.oneshotPP3m, 'premium:oneshot:pp:3months')],
-      [Markup.button.callback(msg.btn.oneshotPP6m, 'premium:oneshot:pp:6months')],
-      [Markup.button.callback(msg.btn.oneshotPP12m, 'premium:oneshot:pp:12months')],
+      // Help button for payment issues
+      [Markup.button.callback(msg.btn.paymentHelp, 'premium:payment_help')],
       // Back to subscriptions
       [Markup.button.callback(msg.btn.backToSubscriptions, 'premium:pricing')],
     ]);
