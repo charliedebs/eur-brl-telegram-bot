@@ -55,6 +55,43 @@ const REGEX_PATTERNS = [
       confidence: 0.98
     })
   },
+  // Language change requests
+  {
+    pattern: /(change|mudar|changer|switch|alterar|modifier).*(language|langue|idioma|língua)/i,
+    extract: (match, fullText) => {
+      // Detect target language
+      let targetLang = null;
+      if (/\b(french|français|francês|fr)\b/i.test(fullText)) targetLang = 'fr';
+      else if (/\b(portuguese|português|portugues|pt|br)\b/i.test(fullText)) targetLang = 'pt';
+      else if (/\b(english|inglês|ingles|anglais|en)\b/i.test(fullText)) targetLang = 'en';
+
+      return {
+        intent: 'change_language',
+        entities: {
+          language: targetLang
+        },
+        confidence: 0.95
+      };
+    }
+  },
+  {
+    pattern: /^(french|français|francês|portuguese|português|portugues|english|inglês|ingles|anglais|pt|fr|en)$/i,
+    extract: (match) => {
+      const langMap = {
+        'french': 'fr', 'français': 'fr', 'francês': 'fr', 'fr': 'fr',
+        'portuguese': 'pt', 'português': 'pt', 'portugues': 'pt', 'pt': 'pt', 'br': 'pt',
+        'english': 'en', 'inglês': 'en', 'ingles': 'en', 'anglais': 'en', 'en': 'en'
+      };
+
+      return {
+        intent: 'change_language',
+        entities: {
+          language: langMap[match[0].toLowerCase()]
+        },
+        confidence: 0.98
+      };
+    }
+  },
   // Premium status queries
   {
     pattern: /^(meu premium|minha assinatura|sou premium|premium status|statut premium|mon premium|ma souscription|am i premium|my premium|my subscription)$/i,
@@ -89,15 +126,15 @@ function parseAmount(str) {
 
 function tryRegexMatch(text) {
   const normalized = text.trim().toLowerCase();
-  
+
   for (const { pattern, extract } of REGEX_PATTERNS) {
     const match = normalized.match(pattern);
     if (match) {
       logger.info('[NLU] ⚡ Regex match:', { pattern: pattern.source });
-      return extract(match);
+      return extract(match, normalized);
     }
   }
-  
+
   return null;
 }
 
@@ -160,6 +197,7 @@ INTENTIONS POSSIBLES :
 - compare : demande de comparaison EUR↔BRL
 - help : demande d'aide
 - about : demande d'info sur le bot
+- change_language : demande explicite de changement de langue (change language, mudar idioma, changer langue, etc.)
 - premium_status : demande de statut premium/assinatura (sou premium?, minha assinatura, premium status, etc.)
 - clarification : référence à un résultat précédent
 - unknown : message incompréhensible
@@ -228,6 +266,18 @@ Context: {language: "en"}
 User: "ma souscription est active?"
 Context: {language: "fr"}
 → {"intent":"premium_status","entities":{"language":"fr"},"confidence":0.93,"reasoning":"Question sur l'état de l'abonnement premium"}
+
+User: "change my language to french"
+Context: {language: "en"}
+→ {"intent":"change_language","entities":{"language":"fr"},"confidence":0.98,"reasoning":"Demande explicite de changement de langue vers le français"}
+
+User: "mudar para português"
+Context: {language: "en"}
+→ {"intent":"change_language","entities":{"language":"pt"},"confidence":0.97,"reasoning":"Demande explicite de changement de langue vers le portugais"}
+
+User: "en français s'il vous plait"
+Context: {language: "en"}
+→ {"intent":"change_language","entities":{"language":"fr"},"confidence":0.96,"reasoning":"Demande polie de passer en français"}
 
 Maintenant, analyse ce message avec le contexte fourni.`;
 }

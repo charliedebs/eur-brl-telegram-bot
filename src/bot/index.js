@@ -2057,7 +2057,9 @@ if (ctx.session?.awaitingConvertRoute) {
     }
     
     switch (intent.intent) {
-      case 'greeting':
+      case 'greeting': {
+        let languageChanged = false;
+
         if (intent.entities.language && intent.entities.language !== ctx.state.lang) {
           if (intent.confidence >= 0.85) {
             logger.info('[LANG] Language changed via NLU greeting:', {
@@ -2069,6 +2071,7 @@ if (ctx.session?.awaitingConvertRoute) {
             });
             await db.updateUser(ctx.from.id, { language: intent.entities.language });
             ctx.state.lang = intent.entities.language;
+            languageChanged = true;
           } else {
             logger.info('[LANG] Language change blocked (low confidence):', {
               userId: ctx.from.id,
@@ -2078,12 +2081,26 @@ if (ctx.session?.awaitingConvertRoute) {
             });
           }
         }
-        
+
         const greetingMsg = getMsg(ctx);
         const greetingKb = buildKeyboards(greetingMsg, 'lang_select');
+
+        // If language changed, show subtle notification first
+        if (languageChanged) {
+          const confirmationMessages = {
+            pt: '🌐 <i>Idioma alterado para Português</i>',
+            fr: '🌐 <i>Langue changée en Français</i>',
+            en: '🌐 <i>Language changed to English</i>'
+          };
+          await ctx.reply(confirmationMessages[ctx.state.lang], { parse_mode: 'HTML' });
+        }
+
         return ctx.reply(greetingMsg.INTRO_TEXT, { parse_mode: 'HTML', ...greetingKb });
+      }
         
-        case 'compare':
+        case 'compare': {
+          let languageChangedInCompare = false;
+
           if (intent.entities.language && intent.entities.language !== ctx.state.lang) {
             const isFirstMessage = ctx.session.messageHistory.length <= 1;
             const isHighConfidence = intent.confidence >= 0.85;
@@ -2099,6 +2116,7 @@ if (ctx.session?.awaitingConvertRoute) {
               });
               await db.updateUser(ctx.from.id, { language: intent.entities.language });
               ctx.state.lang = intent.entities.language;
+              languageChangedInCompare = true;
             } else {
               logger.info('[LANG] Language change blocked (not first message and low confidence):', {
                 userId: ctx.from.id,
@@ -2108,6 +2126,16 @@ if (ctx.session?.awaitingConvertRoute) {
                 isFirstMessage
               });
             }
+          }
+
+          // Show subtle notification if language changed
+          if (languageChangedInCompare) {
+            const confirmationMessages = {
+              pt: '🌐 <i>Idioma alterado para Português</i>',
+              fr: '🌐 <i>Langue changée en Français</i>',
+              en: '🌐 <i>Language changed to English</i>'
+            };
+            await ctx.reply(confirmationMessages[ctx.state.lang], { parse_mode: 'HTML' });
           }
           
           const currentMsg = getMsg(ctx);
@@ -2174,7 +2202,8 @@ if (ctx.session?.awaitingConvertRoute) {
           fallbackMsg[ctx.state.lang] || fallbackMsg.pt,
           { parse_mode: 'HTML', ...kb }
         );
-        
+      }
+
       case 'help':
         const helpMsg = getMsg(ctx);
         return ctx.reply(helpMsg.ABOUT_TEXT, { parse_mode: 'HTML' });
@@ -2183,6 +2212,47 @@ if (ctx.session?.awaitingConvertRoute) {
         const aboutMsg = getMsg(ctx);
         const aboutKb = buildKeyboards(aboutMsg, 'about');
         return ctx.reply(aboutMsg.ABOUT_TEXT, { parse_mode: 'HTML', ...aboutKb });
+
+      case 'change_language': {
+        const targetLang = intent.entities.language;
+
+        if (!targetLang || !['fr', 'pt', 'en'].includes(targetLang)) {
+          // Language not detected or invalid - show language selector
+          const langSelectMsg = getMsg(ctx);
+          const langSelectKb = buildKeyboards(langSelectMsg, 'lang_select');
+          return ctx.reply(langSelectMsg.INTRO_TEXT, { parse_mode: 'HTML', ...langSelectKb });
+        }
+
+        // Change user language in database
+        await db.updateUser(ctx.from.id, { language: targetLang });
+        const oldLang = ctx.state.lang;
+        ctx.state.lang = targetLang;
+
+        logger.info('[LANG] Language changed via explicit request:', {
+          userId: ctx.from.id,
+          from: oldLang,
+          to: targetLang,
+          message: text
+        });
+
+        // Subtle confirmation message in the NEW language
+        const confirmationMessages = {
+          pt: '🌐 <i>Idioma alterado para Português</i>',
+          fr: '🌐 <i>Langue changée en Français</i>',
+          en: '🌐 <i>Language changed to English</i>'
+        };
+
+        // Get message object in NEW language
+        const newMsg = getMsg(ctx);
+        const mainKb = buildKeyboards(newMsg, 'main', {
+          locale: getLocale(targetLang),
+          isPremium: ctx.state.isPremium
+        });
+
+        // Send confirmation + main menu in new language
+        await ctx.reply(confirmationMessages[targetLang], { parse_mode: 'HTML' });
+        return ctx.reply(newMsg.INTRO_TEXT, { parse_mode: 'HTML', ...mainKb });
+      }
 
       case 'premium_status':
         const telegram_id = ctx.from.id;
