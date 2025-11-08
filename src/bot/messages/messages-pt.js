@@ -19,7 +19,7 @@ export const messagesPt = {
       ERROR_UPDATE_FAILED: `❌ Erro ao atualizar.`,
     
       // ✅ MENU PRINCIPAL
-      promptAmt: `🏠 <b>Menu Principal</b>\n\n💱 Compare as melhores taxas EUR↔BRL em tempo real\n🔔 Configure alertas personalizados (Premium)\n📊 Veja análises e tendências\n\n<b>O que você quer fazer?</b>`,
+      promptAmt: `🏠 <b>Menu Principal</b>\n\n💱 Compare as melhores taxas EUR↔BRL ao vivo\n\n<b>💎 Premium:</b>\n🔔 Alertas personalizados\n⏰ Notificações no melhor momento para converter\n\n━━━━━━━━━━━━━━━━━━\n\n👉 <i>Escolha abaixo ou envie um valor (ex: 1000)</i>`,
       
       askAmount: `✏️ Digite um valor (ex. 1000)`,
       

@@ -19,7 +19,7 @@ Service gratuit, financé par des liens de parrainage.`,
   ERROR_UPDATE_FAILED: `❌ Erreur lors de la mise à jour.`,
 
   // ✅ MENU PRINCIPAL
-  promptAmt: `🏠 <b>Menu Principal</b>\n\n💱 Compare les meilleurs taux EUR↔BRL en temps réel\n🔔 Configure des alertes personnalisées (Premium)\n📊 Consulte analyses et tendances\n\n<b>Que veux-tu faire?</b>`,
+  promptAmt: `🏠 <b>Menu Principal</b>\n\n💱 Compare les meilleurs taux EUR↔BRL en direct\n\n<b>💎 Premium:</b>\n🔔 Alertes personnalisées\n⏰ Notifications au meilleur moment pour convertir\n\n━━━━━━━━━━━━━━━━━━\n\n👉 <i>Choisis ci-dessous ou envoie un montant (ex: 1000)</i>`,
   
   askAmount: `✏️ Entre un montant (ex. 1000)`,
   

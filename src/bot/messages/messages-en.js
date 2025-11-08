@@ -19,7 +19,7 @@ export const messagesEn = {
       ERROR_UPDATE_FAILED: `❌ Update failed.`,
     
       // ✅ MAIN MENU
-      promptAmt: `🏠 <b>Main Menu</b>\n\n💱 Compare best EUR↔BRL rates in real-time\n🔔 Set up custom alerts (Premium)\n📊 View analytics and trends\n\n<b>What would you like to do?</b>`,
+      promptAmt: `🏠 <b>Main Menu</b>\n\n💱 Compare best EUR↔BRL rates live\n\n<b>💎 Premium:</b>\n🔔 Custom alerts\n⏰ Notifications at the best time to convert\n\n━━━━━━━━━━━━━━━━━━\n\n👉 <i>Choose below or send an amount (e.g. 1000)</i>`,
       
       askAmount: `✏️ Enter an amount (e.g. 1000)`,
       
