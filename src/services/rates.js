@@ -373,3 +373,27 @@ export function fetchProviderRate(provider, from, to, amount) {
     };
   }
 }
+
+// ==========================================
+// FORMAT HELPERS
+// ==========================================
+
+export function formatAmount(amount, decimals = 2, locale = 'fr-FR') {
+  if (typeof amount !== 'number' || !isFinite(amount)) return '—';
+  return amount.toLocaleString(locale, {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals
+  });
+}
+
+export function formatRate(rate, locale = 'fr-FR') {
+  return formatAmount(rate, 4, locale);
+}
+
+export function getLocale(lang) {
+  switch (lang) {
+    case 'pt': return 'pt-BR';
+    case 'en': return 'en-US';
+    default: return 'fr-FR';
+  }
+}
