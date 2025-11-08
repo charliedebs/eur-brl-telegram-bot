@@ -110,8 +110,20 @@ bot.command('premium', async (ctx) => {
       const lang = ctx.state.lang || 'pt';
 
       let premiumMessage;
+      let keyboardType;
+
       if (activeSubscription) {
         // User has an active subscription
+        // Get subscription plan details
+        const planNames = {
+          monthly: { pt: 'Mensal', fr: 'Mensuel', en: 'Monthly', freq: { pt: 'todo mês', fr: 'chaque mois', en: 'every month' } },
+          quarterly: { pt: '3 Meses', fr: '3 Mois', en: '3 Months', freq: { pt: 'a cada 3 meses', fr: 'tous les 3 mois', en: 'every 3 months' } },
+          semiannual: { pt: '6 Meses', fr: '6 Mois', en: '6 Months', freq: { pt: 'a cada 6 meses', fr: 'tous les 6 mois', en: 'every 6 months' } },
+          annual: { pt: '12 Meses', fr: '12 Mois', en: '12 Months', freq: { pt: 'anualmente', fr: 'annuellement', en: 'annually' } }
+        };
+
+        const planInfo = planNames[activeSubscription.plan] || planNames.monthly;
+
         premiumMessage = {
           pt: `✅ <b>Você é Premium!</b>\n\n` +
               `⏰ Próxima renovação: ${expiryDate}\n` +
@@ -126,9 +138,9 @@ bot.command('premium', async (ctx) => {
               `• ⚡ Acesso prioritário às novas funcionalidades\n\n` +
               `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
               `🔄 <b>ASSINATURA ATIVA</b>\n\n` +
-              `Você tem uma assinatura recorrente ativa.\n` +
-              `Renovação automática todo mês.\n\n` +
-              `Para cancelar, acesse seu app Mercado Pago.`,
+              `📦 Plano: ${planInfo.pt}\n` +
+              `🔄 Renovação: ${planInfo.freq.pt}\n\n` +
+              `Para cancelar sua assinatura, acesse seu app <b>Mercado Pago</b> → Assinaturas.`,
           fr: `✅ <b>Vous êtes Premium!</b>\n\n` +
               `⏰ Prochain renouvellement: ${expiryDate}\n` +
               `📅 Jours restants: ${premiumInfo.days_remaining}\n\n` +
@@ -142,9 +154,9 @@ bot.command('premium', async (ctx) => {
               `• ⚡ Accès prioritaire aux nouvelles fonctionnalités\n\n` +
               `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
               `🔄 <b>ABONNEMENT ACTIF</b>\n\n` +
-              `Vous avez un abonnement récurrent actif.\n` +
-              `Renouvellement automatique chaque mois.\n\n` +
-              `Pour annuler, accédez à votre app Mercado Pago.`,
+              `📦 Plan: ${planInfo.fr}\n` +
+              `🔄 Renouvellement: ${planInfo.freq.fr}\n\n` +
+              `Pour annuler votre abonnement, accédez à votre app <b>Mercado Pago</b> → Abonnements.`,
           en: `✅ <b>You are Premium!</b>\n\n` +
               `⏰ Next renewal: ${expiryDate}\n` +
               `📅 Days remaining: ${premiumInfo.days_remaining}\n\n` +
@@ -158,10 +170,12 @@ bot.command('premium', async (ctx) => {
               `• ⚡ Priority access to new features\n\n` +
               `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
               `🔄 <b>ACTIVE SUBSCRIPTION</b>\n\n` +
-              `You have an active recurring subscription.\n` +
-              `Automatic renewal every month.\n\n` +
-              `To cancel, access your Mercado Pago app.`
+              `📦 Plan: ${planInfo.en}\n` +
+              `🔄 Renewal: ${planInfo.freq.en}\n\n` +
+              `To cancel your subscription, access your <b>Mercado Pago</b> app → Subscriptions.`
         };
+
+        keyboardType = 'premium_subscription_active';
       } else {
         // User has premium but no active subscription (one-shot payment)
         premiumMessage = {
@@ -177,8 +191,8 @@ bot.command('premium', async (ctx) => {
               `• 📊 Análises avançadas\n` +
               `• ⚡ Acesso prioritário às novas funcionalidades\n\n` +
               `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-              `🔄 <b>ADICIONAR MAIS TEMPO</b>\n\n` +
-              `Você pode adicionar mais meses ou passar para assinatura:`,
+              `💰 <b>RENOVAR SEU ACESSO</b>\n\n` +
+              `Escolha abaixo para adicionar mais tempo ou passar para assinatura recorrente:`,
           fr: `✅ <b>Vous êtes Premium!</b>\n\n` +
               `⏰ Expire le: ${expiryDate}\n` +
               `📅 Jours restants: ${premiumInfo.days_remaining}\n\n` +
@@ -191,8 +205,8 @@ bot.command('premium', async (ctx) => {
               `• 📊 Analyses avancées\n` +
               `• ⚡ Accès prioritaire aux nouvelles fonctionnalités\n\n` +
               `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-              `🔄 <b>AJOUTER PLUS DE TEMPS</b>\n\n` +
-              `Vous pouvez ajouter plus de mois ou passer en abonnement:`,
+              `💰 <b>RENOUVELER VOTRE ACCÈS</b>\n\n` +
+              `Choisissez ci-dessous pour ajouter plus de temps ou passer en abonnement récurrent:`,
           en: `✅ <b>You are Premium!</b>\n\n` +
               `⏰ Expires: ${expiryDate}\n` +
               `📅 Days remaining: ${premiumInfo.days_remaining}\n\n` +
@@ -205,12 +219,14 @@ bot.command('premium', async (ctx) => {
               `• 📊 Advanced analytics\n` +
               `• ⚡ Priority access to new features\n\n` +
               `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-              `🔄 <b>ADD MORE TIME</b>\n\n` +
-              `You can add more months or switch to subscription:`
+              `💰 <b>RENEW YOUR ACCESS</b>\n\n` +
+              `Choose below to add more time or switch to recurring subscription:`
         };
+
+        keyboardType = 'premium_oneshot_renew';
       }
 
-      const kb = buildKeyboards(msg, 'premium_pricing_renew', { lang });
+      const kb = buildKeyboards(msg, keyboardType, { lang });
       await ctx.reply(premiumMessage[lang] || premiumMessage.pt, { parse_mode: 'HTML', ...kb });
     } else {
       // User doesn't have premium - show regular pricing
@@ -1050,21 +1066,37 @@ bot.action('premium:pricing', async (ctx) => {
       const lang = ctx.state.lang || 'pt';
 
       let premiumMessage;
+      let keyboardType;
+
       if (activeSubscription) {
-        premiumMessage = {
-          pt: `✅ <b>Você é Premium!</b>\n\n⏰ Próxima renovação: ${expiryDate}\n📅 Dias restantes: ${premiumInfo.days_remaining}\n\n💎 <b>FUNCIONALIDADES ATIVAS</b>\n✨ Alertas personalizados ilimitados\n✨ Alertas espontâneos regulares\n\n🔄 <b>ASSINATURA ATIVA</b>\nVocê tem uma assinatura recorrente ativa.`,
-          fr: `✅ <b>Vous êtes Premium!</b>\n\n⏰ Prochain renouvellement: ${expiryDate}\n📅 Jours restants: ${premiumInfo.days_remaining}\n\n💎 <b>FONCTIONNALITÉS ACTIVES</b>\n✨ Alertes personnalisées illimitées\n✨ Alertes spontanées régulières\n\n🔄 <b>ABONNEMENT ACTIF</b>\nVous avez un abonnement récurrent actif.`,
-          en: `✅ <b>You are Premium!</b>\n\n⏰ Next renewal: ${expiryDate}\n📅 Days remaining: ${premiumInfo.days_remaining}\n\n💎 <b>ACTIVE FEATURES</b>\n✨ Unlimited custom alerts\n✨ Regular spontaneous alerts\n\n🔄 <b>ACTIVE SUBSCRIPTION</b>\nYou have an active recurring subscription.`
+        // Get subscription plan details
+        const planNames = {
+          monthly: { pt: 'Mensal', fr: 'Mensuel', en: 'Monthly', freq: { pt: 'todo mês', fr: 'chaque mois', en: 'every month' } },
+          quarterly: { pt: '3 Meses', fr: '3 Mois', en: '3 Months', freq: { pt: 'a cada 3 meses', fr: 'tous les 3 mois', en: 'every 3 months' } },
+          semiannual: { pt: '6 Meses', fr: '6 Mois', en: '6 Months', freq: { pt: 'a cada 6 meses', fr: 'tous les 6 mois', en: 'every 6 months' } },
+          annual: { pt: '12 Meses', fr: '12 Mois', en: '12 Months', freq: { pt: 'anualmente', fr: 'annuellement', en: 'annually' } }
         };
+
+        const planInfo = planNames[activeSubscription.plan] || planNames.monthly;
+
+        premiumMessage = {
+          pt: `✅ <b>Você é Premium!</b>\n\n⏰ Próxima renovação: ${expiryDate}\n📅 Dias restantes: ${premiumInfo.days_remaining}\n\n💎 <b>FUNCIONALIDADES ATIVAS</b>\n✨ Alertas personalizados ilimitados\n✨ Alertas espontâneos regulares\n\n🔄 <b>ASSINATURA ATIVA</b>\n📦 Plano: ${planInfo.pt}\n🔄 Renovação: ${planInfo.freq.pt}\n\nPara cancelar sua assinatura, acesse seu app <b>Mercado Pago</b> → Assinaturas.`,
+          fr: `✅ <b>Vous êtes Premium!</b>\n\n⏰ Prochain renouvellement: ${expiryDate}\n📅 Jours restants: ${premiumInfo.days_remaining}\n\n💎 <b>FONCTIONNALITÉS ACTIVES</b>\n✨ Alertes personnalisées illimitées\n✨ Alertes spontanées régulières\n\n🔄 <b>ABONNEMENT ACTIF</b>\n📦 Plan: ${planInfo.fr}\n🔄 Renouvellement: ${planInfo.freq.fr}\n\nPour annuler votre abonnement, accédez à votre app <b>Mercado Pago</b> → Abonnements.`,
+          en: `✅ <b>You are Premium!</b>\n\n⏰ Next renewal: ${expiryDate}\n📅 Days remaining: ${premiumInfo.days_remaining}\n\n💎 <b>ACTIVE FEATURES</b>\n✨ Unlimited custom alerts\n✨ Regular spontaneous alerts\n\n🔄 <b>ACTIVE SUBSCRIPTION</b>\n📦 Plan: ${planInfo.en}\n🔄 Renewal: ${planInfo.freq.en}\n\nTo cancel your subscription, access your <b>Mercado Pago</b> app → Subscriptions.`
+        };
+
+        keyboardType = 'premium_subscription_active';
       } else {
         premiumMessage = {
-          pt: `✅ <b>Você é Premium!</b>\n\n⏰ Expira em: ${expiryDate}\n📅 Dias restantes: ${premiumInfo.days_remaining}\n\n💎 <b>FUNCIONALIDADES ATIVAS</b>\n✨ Alertas personalizados ilimitados\n✨ Alertas espontâneos regulares\n\n🔄 <b>ADICIONAR MAIS TEMPO</b>\nVocê pode adicionar mais meses ou passar para assinatura:`,
-          fr: `✅ <b>Vous êtes Premium!</b>\n\n⏰ Expire le: ${expiryDate}\n📅 Jours restants: ${premiumInfo.days_remaining}\n\n💎 <b>FONCTIONNALITÉS ACTIVES</b>\n✨ Alertes personnalisées illimitées\n✨ Alertes spontanées régulières\n\n🔄 <b>AJOUTER PLUS DE TEMPS</b>\nVous pouvez ajouter plus de mois ou passer en abonnement:`,
-          en: `✅ <b>You are Premium!</b>\n\n⏰ Expires: ${expiryDate}\n📅 Days remaining: ${premiumInfo.days_remaining}\n\n💎 <b>ACTIVE FEATURES</b>\n✨ Unlimited custom alerts\n✨ Regular spontaneous alerts\n\n🔄 <b>ADD MORE TIME</b>\nYou can add more months or switch to subscription:`
+          pt: `✅ <b>Você é Premium!</b>\n\n⏰ Expira em: ${expiryDate}\n📅 Dias restantes: ${premiumInfo.days_remaining}\n\n💎 <b>FUNCIONALIDADES ATIVAS</b>\n✨ Alertas personalizados ilimitados\n✨ Alertas espontâneos regulares\n\n💰 <b>RENOVAR SEU ACESSO</b>\n\nEscolha abaixo para adicionar mais tempo ou passar para assinatura recorrente:`,
+          fr: `✅ <b>Vous êtes Premium!</b>\n\n⏰ Expire le: ${expiryDate}\n📅 Jours restants: ${premiumInfo.days_remaining}\n\n💎 <b>FONCTIONNALITÉS ACTIVES</b>\n✨ Alertes personnalisées illimitées\n✨ Alertes spontanées régulières\n\n💰 <b>RENOUVELER VOTRE ACCÈS</b>\n\nChoisissez ci-dessous pour ajouter plus de temps ou passer en abonnement récurrent:`,
+          en: `✅ <b>You are Premium!</b>\n\n⏰ Expires: ${expiryDate}\n📅 Days remaining: ${premiumInfo.days_remaining}\n\n💎 <b>ACTIVE FEATURES</b>\n✨ Unlimited custom alerts\n✨ Regular spontaneous alerts\n\n💰 <b>RENEW YOUR ACCESS</b>\n\nChoose below to add more time or switch to recurring subscription:`
         };
+
+        keyboardType = 'premium_oneshot_renew';
       }
 
-      const kb = buildKeyboards(msg, 'premium_pricing_renew', { lang });
+      const kb = buildKeyboards(msg, keyboardType, { lang });
       await ctx.editMessageText(premiumMessage[lang] || premiumMessage.pt, { parse_mode: 'HTML', ...kb });
     } else {
       // User not premium - show regular pricing
@@ -1094,6 +1126,11 @@ bot.action('premium:oneshot_pricing', async (ctx) => {
   const msg = getMsg(ctx);
   const kb = buildKeyboards(msg, 'premium_oneshot_pricing');
   await ctx.editMessageText(msg.PREMIUM_ONESHOT_PRICING, { parse_mode: 'HTML', ...kb });
+  await ctx.answerCbQuery();
+});
+
+// No-op handler for label buttons (buttons that are just labels, not clickable)
+bot.action('noop', async (ctx) => {
   await ctx.answerCbQuery();
 });
 
