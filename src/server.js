@@ -295,7 +295,7 @@ app.post('/webhook/mercadopago', async (req, res) => {
 app.post('/webhook/paypal', async (req, res) => {
   try {
     const paymentsModule = await import('./services/payments/index.js');
-    const { PayPal } = paymentsModule;
+    const PayPal = paymentsModule.default.PayPal;
     const { DatabaseService } = await import('./services/database.js');
     const db = new DatabaseService();
 
