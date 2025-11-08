@@ -1008,6 +1008,228 @@ bot.action('premium:details', async (ctx) => {
   await ctx.answerCbQuery();
 });
 
+// One-shot pricing screen
+bot.action('premium:oneshot_pricing', async (ctx) => {
+  const msg = getMsg(ctx);
+  const kb = buildKeyboards(msg, 'premium_oneshot_pricing');
+  await ctx.editMessageText(msg.PREMIUM_ONESHOT_PRICING, { parse_mode: 'HTML', ...kb });
+  await ctx.answerCbQuery();
+});
+
+// Mercado Pago Subscription handler
+bot.action(/^premium:sub:mp:(.+)$/, async (ctx) => {
+  const plan = ctx.match[1]; // 'monthly', 'quarterly', 'semiannual', 'annual'
+  const telegram_id = ctx.from.id;
+  const email = ctx.from.username ? `${ctx.from.username}@telegram.user` : null;
+
+  await ctx.answerCbQuery('Gerando link de pagamento... / Generating payment link...');
+
+  try {
+    const mercadopago = await import('../services/payments/mercadopago.js');
+    const checkoutData = mercadopago.getSubscriptionCheckoutUrl({ plan, telegram_id, email });
+
+    const lang = ctx.state.lang || 'pt';
+    const text = {
+      pt: `💳 <b>Assinatura Mercado Pago</b>\n\n` +
+          `📦 Plano: ${checkoutData.plan_name.pt}\n` +
+          `💰 Preço: R$ ${checkoutData.price_brl} a cada ${checkoutData.frequency} ${checkoutData.frequency === 1 ? 'mês' : 'meses'}\n\n` +
+          `🔄 Renovação automática (cancelável a qualquer momento)\n\n` +
+          `👇 Clique no link abaixo para finalizar:`,
+      fr: `💳 <b>Abonnement Mercado Pago</b>\n\n` +
+          `📦 Plan: ${checkoutData.plan_name.fr}\n` +
+          `💰 Prix: R$ ${checkoutData.price_brl} tous les ${checkoutData.frequency} mois\n\n` +
+          `🔄 Renouvellement automatique (annulable à tout moment)\n\n` +
+          `👇 Cliquez sur le lien ci-dessous pour finaliser:`,
+      en: `💳 <b>Mercado Pago Subscription</b>\n\n` +
+          `📦 Plan: ${checkoutData.plan_name.en}\n` +
+          `💰 Price: R$ ${checkoutData.price_brl} every ${checkoutData.frequency} month${checkoutData.frequency > 1 ? 's' : ''}\n\n` +
+          `🔄 Auto-renewal (cancel anytime)\n\n` +
+          `👇 Click the link below to complete:`
+    };
+
+    const { Markup } = await import('telegraf');
+    await ctx.editMessageText(text[lang] || text.en, {
+      parse_mode: 'HTML',
+      reply_markup: {
+        inline_keyboard: [
+          [Markup.button.url('💳 Assinar / Subscribe', checkoutData.checkout_url)],
+          [Markup.button.callback('⬅️ Voltar / Back', 'premium:pricing')]
+        ]
+      }
+    });
+
+  } catch (error) {
+    logger.error('[BOT] Failed to create Mercado Pago subscription:', error);
+    await ctx.reply('❌ Erro ao gerar link de pagamento / Error generating payment link');
+  }
+});
+
+// PayPal Subscription handler
+bot.action(/^premium:sub:pp:(.+)$/, async (ctx) => {
+  const plan = ctx.match[1]; // 'quarterly', 'semiannual', 'annual'
+  const telegram_id = ctx.from.id;
+
+  await ctx.answerCbQuery('Generating PayPal subscription link...');
+
+  try {
+    const paypal = await import('../services/payments/paypal.js');
+    const checkoutData = paypal.getSubscriptionCheckoutUrl({ plan, telegram_id });
+
+    const lang = ctx.state.lang || 'pt';
+    const text = {
+      pt: `💳 <b>Assinatura PayPal</b>\n\n` +
+          `📦 Plano: ${checkoutData.plan_name.pt}\n` +
+          `💰 Preço: €${checkoutData.price} a cada ${checkoutData.frequency} ${checkoutData.frequency === 1 ? 'mês' : 'meses'}\n\n` +
+          `🔄 Renovação automática (cancelável a qualquer momento)\n\n` +
+          `👇 Clique no link abaixo para finalizar:`,
+      fr: `💳 <b>Abonnement PayPal</b>\n\n` +
+          `📦 Plan: ${checkoutData.plan_name.fr}\n` +
+          `💰 Prix: €${checkoutData.price} tous les ${checkoutData.frequency} mois\n\n` +
+          `🔄 Renouvellement automatique (annulable à tout moment)\n\n` +
+          `👇 Cliquez sur le lien ci-dessous pour finaliser:`,
+      en: `💳 <b>PayPal Subscription</b>\n\n` +
+          `📦 Plan: ${checkoutData.plan_name.en}\n` +
+          `💰 Price: €${checkoutData.price} every ${checkoutData.frequency} month${checkoutData.frequency > 1 ? 's' : ''}\n\n` +
+          `🔄 Auto-renewal (cancel anytime)\n\n` +
+          `👇 Click the link below to complete:`
+    };
+
+    const { Markup } = await import('telegraf');
+    await ctx.editMessageText(text[lang] || text.en, {
+      parse_mode: 'HTML',
+      reply_markup: {
+        inline_keyboard: [
+          [Markup.button.url('💳 Subscribe', checkoutData.checkout_url)],
+          [Markup.button.callback('⬅️ Voltar / Back', 'premium:pricing')]
+        ]
+      }
+    });
+
+  } catch (error) {
+    logger.error('[BOT] Failed to create PayPal subscription:', error);
+    await ctx.reply('❌ Error generating PayPal subscription link');
+  }
+});
+
+// Mercado Pago One-shot payment handler
+bot.action(/^premium:oneshot:mp:(.+)$/, async (ctx) => {
+  const duration = ctx.match[1]; // '3months', '6months', '12months'
+  const telegram_id = ctx.from.id;
+  const email = ctx.from.username ? `${ctx.from.username}@telegram.user` : null;
+
+  await ctx.answerCbQuery('Gerando pagamento... / Generating payment...');
+
+  try {
+    const { initiatePayment } = await import('../services/payments/index.js');
+
+    const paymentData = await initiatePayment({
+      telegram_id,
+      plan: duration,
+      method: 'mercadopago',
+      email
+    });
+
+    const lang = ctx.state.lang || 'pt';
+    const mercadopago = await import('../services/payments/mercadopago.js');
+    const planInfo = mercadopago.PREMIUM_PLANS[duration];
+
+    const text = {
+      pt: `💳 <b>Pagamento Único Mercado Pago</b>\n\n` +
+          `📦 Plano: ${planInfo.name.pt}\n` +
+          `💰 Preço: R$ ${planInfo.price_brl}\n` +
+          `⏱ Duração: ${planInfo.duration} dias\n\n` +
+          `💡 Pagamento único, sem renovação automática\n\n` +
+          `👇 Clique no link abaixo para pagar:`,
+      fr: `💳 <b>Paiement Unique Mercado Pago</b>\n\n` +
+          `📦 Plan: ${planInfo.name.fr}\n` +
+          `💰 Prix: R$ ${planInfo.price_brl}\n` +
+          `⏱ Durée: ${planInfo.duration} jours\n\n` +
+          `💡 Paiement unique, pas de renouvellement automatique\n\n` +
+          `👇 Cliquez sur le lien ci-dessous pour payer:`,
+      en: `💳 <b>One-Time Payment Mercado Pago</b>\n\n` +
+          `📦 Plan: ${planInfo.name.en}\n` +
+          `💰 Price: R$ ${planInfo.price_brl}\n` +
+          `⏱ Duration: ${planInfo.duration} days\n\n` +
+          `💡 One-time payment, no automatic renewal\n\n` +
+          `👇 Click the link below to pay:`
+    };
+
+    const { Markup } = await import('telegraf');
+    await ctx.editMessageText(text[lang] || text.en, {
+      parse_mode: 'HTML',
+      reply_markup: {
+        inline_keyboard: [
+          [Markup.button.url('💳 Pagar / Pay', paymentData.init_point)],
+          [Markup.button.callback('⬅️ Voltar / Back', 'premium:oneshot_pricing')]
+        ]
+      }
+    });
+
+  } catch (error) {
+    logger.error('[BOT] Failed to create Mercado Pago one-shot payment:', error);
+    await ctx.reply('❌ Erro ao gerar pagamento / Error generating payment');
+  }
+});
+
+// PayPal One-shot payment handler
+bot.action(/^premium:oneshot:pp:(.+)$/, async (ctx) => {
+  const duration = ctx.match[1]; // '3months', '6months', '12months'
+  const telegram_id = ctx.from.id;
+
+  await ctx.answerCbQuery('Generating PayPal payment...');
+
+  try {
+    const { initiatePayment } = await import('../services/payments/index.js');
+
+    const paymentData = await initiatePayment({
+      telegram_id,
+      plan: duration,
+      method: 'paypal',
+      email: null
+    });
+
+    const lang = ctx.state.lang || 'pt';
+    const paypal = await import('../services/payments/paypal.js');
+    const planInfo = paypal.PAYPAL_PLANS[duration];
+
+    const text = {
+      pt: `💳 <b>Pagamento Único PayPal</b>\n\n` +
+          `📦 Plano: ${planInfo.name.pt}\n` +
+          `💰 Preço: $${planInfo.price}\n` +
+          `⏱ Duração: ${planInfo.duration} dias\n\n` +
+          `💡 Pagamento único, sem renovação automática\n\n` +
+          `👇 Clique no link abaixo para pagar:`,
+      fr: `💳 <b>Paiement Unique PayPal</b>\n\n` +
+          `📦 Plan: ${planInfo.name.fr}\n` +
+          `💰 Prix: $${planInfo.price}\n` +
+          `⏱ Durée: ${planInfo.duration} jours\n\n` +
+          `💡 Paiement unique, pas de renouvellement automatique\n\n` +
+          `👇 Cliquez sur le lien ci-dessous pour payer:`,
+      en: `💳 <b>One-Time Payment PayPal</b>\n\n` +
+          `📦 Plan: ${planInfo.name.en}\n` +
+          `💰 Price: $${planInfo.price}\n` +
+          `⏱ Duration: ${planInfo.duration} days\n\n` +
+          `💡 One-time payment, no automatic renewal\n\n` +
+          `👇 Click the link below to pay:`
+    };
+
+    const { Markup } = await import('telegraf');
+    await ctx.editMessageText(text[lang] || text.en, {
+      parse_mode: 'HTML',
+      reply_markup: {
+        inline_keyboard: [
+          [Markup.button.url('💳 Pay', paymentData.approval_url)],
+          [Markup.button.callback('⬅️ Voltar / Back', 'premium:oneshot_pricing')]
+        ]
+      }
+    });
+
+  } catch (error) {
+    logger.error('[BOT] Failed to create PayPal one-shot payment:', error);
+    await ctx.reply('❌ Error generating PayPal payment');
+  }
+});
+
 // Plan selection - show payment methods
 bot.action(/^premium:subscribe:(.+)$/, async (ctx) => {
   const plan = ctx.match[1]; // 'monthly', 'quarterly', 'annual'
