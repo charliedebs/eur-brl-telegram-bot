@@ -1,6 +1,6 @@
 import https from 'https';
 
-const RENDER_API_KEY = 'rnd_sHkjEv8cuhkP3pEs9DLkv6544Fp6';
+const RENDER_API_KEY = 'rnd_Cj3Ztk5ieCj84wPJY9vAOfSa7XFV';
 const RENDER_API_BASE = 'api.render.com';
 
 /**
