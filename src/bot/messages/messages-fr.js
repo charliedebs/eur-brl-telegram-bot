@@ -1095,6 +1095,8 @@ btn: {
   change: '✏️ Changer montant',
   
   back: '⬅️ Retour',
+  subscribe: '💳 S\'abonner',
+  pay: '💳 Payer',
   sources: '📊 Sources des données',
   openWise: '🔗 Ouvrir Wise',
   openRemitly: '🔗 Ouvrir Remitly',

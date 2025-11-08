@@ -1081,6 +1081,8 @@ Pay once, use for the chosen period, no automatic renewal.
         change: '✏️ Change amount',
         
         back: '⬅️ Back',
+        subscribe: '💳 Subscribe',
+        pay: '💳 Pay',
         sources: '📊 Data sources',
         openWise: '🔗 Open Wise',
         openRemitly: '🔗 Open Remitly',

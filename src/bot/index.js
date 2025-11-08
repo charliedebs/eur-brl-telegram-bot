@@ -1325,21 +1325,27 @@ bot.action(/^premium:sub:mp:(.+?)(?::renew)?$/, async (ctx) => {
     };
 
     const { Markup } = await import('telegraf');
+    const msg = getMsg(ctx);
     const backButton = isRenew ? 'premium:back_to_renew' : 'premium:pricing';
 
     await ctx.editMessageText(text[lang] || text.en, {
       parse_mode: 'HTML',
       reply_markup: {
         inline_keyboard: [
-          [Markup.button.url('💳 Assinar / Subscribe', checkoutData.checkout_url)],
-          [Markup.button.callback('⬅️ Voltar / Back', backButton)]
+          [Markup.button.url(msg.btn.subscribe, checkoutData.checkout_url)],
+          [Markup.button.callback(msg.btn.back, backButton)]
         ]
       }
     });
 
   } catch (error) {
     logger.error('[BOT] Failed to create Mercado Pago subscription:', error);
-    await ctx.reply('❌ Erro ao gerar link de pagamento / Error generating payment link');
+    const errorMsg = {
+      pt: '❌ Erro ao gerar link de pagamento',
+      fr: '❌ Erreur lors de la génération du lien de paiement',
+      en: '❌ Error generating payment link'
+    };
+    await ctx.reply(errorMsg[lang] || errorMsg.en);
   }
 });
 
@@ -1374,19 +1380,26 @@ bot.action(/^premium:sub:pp:(.+)$/, async (ctx) => {
     };
 
     const { Markup } = await import('telegraf');
+    const msg = getMsg(ctx);
+
     await ctx.editMessageText(text[lang] || text.en, {
       parse_mode: 'HTML',
       reply_markup: {
         inline_keyboard: [
-          [Markup.button.url('💳 Subscribe', checkoutData.checkout_url)],
-          [Markup.button.callback('⬅️ Voltar / Back', 'premium:pricing')]
+          [Markup.button.url(msg.btn.subscribe, checkoutData.checkout_url)],
+          [Markup.button.callback(msg.btn.back, 'premium:pricing')]
         ]
       }
     });
 
   } catch (error) {
     logger.error('[BOT] Failed to create PayPal subscription:', error);
-    await ctx.reply('❌ Error generating PayPal subscription link');
+    const errorMsg = {
+      pt: '❌ Erro ao gerar link de pagamento',
+      fr: '❌ Erreur lors de la génération du lien de paiement',
+      en: '❌ Error generating payment link'
+    };
+    await ctx.reply(errorMsg[lang] || errorMsg.en);
   }
 });
 
@@ -1450,21 +1463,27 @@ bot.action(/^premium:oneshot:mp:(.+?)(?::renew)?$/, async (ctx) => {
     };
 
     const { Markup } = await import('telegraf');
+    const msg = getMsg(ctx);
     const backButton = isRenew ? 'premium:back_to_renew' : 'premium:oneshot_pricing';
 
     await ctx.editMessageText(text[lang] || text.en, {
       parse_mode: 'HTML',
       reply_markup: {
         inline_keyboard: [
-          [Markup.button.url('💳 Pagar / Pay', paymentData.init_point)],
-          [Markup.button.callback('⬅️ Voltar / Back', backButton)]
+          [Markup.button.url(msg.btn.pay, paymentData.init_point)],
+          [Markup.button.callback(msg.btn.back, backButton)]
         ]
       }
     });
 
   } catch (error) {
     logger.error('[BOT] Failed to create Mercado Pago one-shot payment:', error);
-    await ctx.reply('❌ Erro ao gerar pagamento / Error generating payment');
+    const errorMsg = {
+      pt: '❌ Erro ao gerar pagamento',
+      fr: '❌ Erreur lors de la génération du paiement',
+      en: '❌ Error generating payment'
+    };
+    await ctx.reply(errorMsg[lang] || errorMsg.en);
   }
 });
 
@@ -1511,19 +1530,26 @@ bot.action(/^premium:oneshot:pp:(.+)$/, async (ctx) => {
     };
 
     const { Markup } = await import('telegraf');
+    const msg = getMsg(ctx);
+
     await ctx.editMessageText(text[lang] || text.en, {
       parse_mode: 'HTML',
       reply_markup: {
         inline_keyboard: [
-          [Markup.button.url('💳 Pay', paymentData.approval_url)],
-          [Markup.button.callback('⬅️ Voltar / Back', 'premium:oneshot_pricing')]
+          [Markup.button.url(msg.btn.pay, paymentData.approval_url)],
+          [Markup.button.callback(msg.btn.back, 'premium:oneshot_pricing')]
         ]
       }
     });
 
   } catch (error) {
     logger.error('[BOT] Failed to create PayPal one-shot payment:', error);
-    await ctx.reply('❌ Error generating PayPal payment');
+    const errorMsg = {
+      pt: '❌ Erro ao gerar pagamento',
+      fr: '❌ Erreur lors de la génération du paiement',
+      en: '❌ Error generating payment'
+    };
+    await ctx.reply(errorMsg[lang] || errorMsg.en);
   }
 });
 
@@ -1628,7 +1654,12 @@ bot.action(/^payment:method:(.+):(.+)$/, async (ctx) => {
 
       if (!paymentData.init_point) {
         logger.error('[BOT] ERROR: init_point is missing from paymentData!');
-        await ctx.reply('❌ Erreur: Lien de paiement non généré. Réessayez.', { parse_mode: 'HTML' });
+        const errorMsg = {
+          pt: '❌ Erro: Link de pagamento não gerado. Tente novamente.',
+          fr: '❌ Erreur: Lien de paiement non généré. Réessayez.',
+          en: '❌ Error: Payment link not generated. Try again.'
+        };
+        await ctx.reply(errorMsg[lang] || errorMsg.en, { parse_mode: 'HTML' });
         return;
       }
 
@@ -1639,7 +1670,7 @@ bot.action(/^payment:method:(.+):(.+)$/, async (ctx) => {
           parse_mode: 'HTML',
           reply_markup: {
             inline_keyboard: [[
-              { text: '💳 Pagar / Pay', url: paymentData.init_point }
+              { text: msg.btn.pay, url: paymentData.init_point }
             ]]
           }
         });
@@ -1676,7 +1707,7 @@ bot.action(/^payment:method:(.+):(.+)$/, async (ctx) => {
       await ctx.reply(text[lang] || text.en, {
         parse_mode: 'HTML',
         reply_markup: Markup.inlineKeyboard([
-          [Markup.button.url('💳 Pagar / Pay', paymentData.approval_url)]
+          [Markup.button.url(msg.btn.pay, paymentData.approval_url)]
         ])
       });
     }

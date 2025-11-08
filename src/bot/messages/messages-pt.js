@@ -1081,6 +1081,8 @@ Pague uma vez, use pelo período escolhido, sem renovação automática.
         change: '✏️ Alterar valor',
         
         back: '⬅️ Voltar',
+        subscribe: '💳 Assinar',
+        pay: '💳 Pagar',
         sources: '📊 Fontes dos dados',
         openWise: '🔗 Abrir Wise',
         openRemitly: '🔗 Abrir Remitly',
