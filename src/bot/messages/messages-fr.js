@@ -1147,6 +1147,8 @@ btn: {
   seePremium: '💎 Voir Premium',
   seeOneshot: '💰 Ou essaie sans abonnement →',
   backToSubscriptions: '⬅️ Retour aux abonnements',
+  addMoreTime: '💰 Ajouter plus de temps (paiement unique)',
+  switchToSubscription: '🔄 Passer en abonnement récurrent',
 
   // Subscription plans (recurring)
   subMPMonthly: '💳 R$ 6/mois',

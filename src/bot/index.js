@@ -1134,6 +1134,60 @@ bot.action('noop', async (ctx) => {
   await ctx.answerCbQuery();
 });
 
+// NEW: Premium users renewing - show one-shot pricing
+bot.action('premium:renew_oneshot', async (ctx) => {
+  const msg = getMsg(ctx);
+  const kb = buildKeyboards(msg, 'premium_oneshot_pricing_renew');
+  await ctx.editMessageText(msg.PREMIUM_ONESHOT_PRICING, { parse_mode: 'HTML', ...kb });
+  await ctx.answerCbQuery();
+});
+
+// NEW: Premium users switching to subscription - show subscription pricing
+bot.action('premium:renew_subscription', async (ctx) => {
+  const msg = getMsg(ctx);
+  const kb = buildKeyboards(msg, 'premium_subscription_pricing_renew');
+  await ctx.editMessageText(msg.PREMIUM_PRICING, { parse_mode: 'HTML', ...kb });
+  await ctx.answerCbQuery();
+});
+
+// NEW: Back to premium renew screen
+bot.action('premium:back_to_renew', async (ctx) => {
+  const telegram_id = ctx.from.id;
+  const msg = getMsg(ctx);
+
+  try {
+    // Re-fetch premium details to show current status
+    const { getPremiumDetails } = await import('../services/payments/index.js');
+    const premiumInfo = await getPremiumDetails(telegram_id);
+
+    if (!premiumInfo) {
+      // No longer premium, redirect to pricing
+      const kb = buildKeyboards(msg, 'premium_pricing');
+      await ctx.editMessageText(msg.PREMIUM_PRICING, { parse_mode: 'HTML', ...kb });
+      await ctx.answerCbQuery();
+      return;
+    }
+
+    const expiryDate = premiumInfo.expires_at.toLocaleDateString(
+      ctx.state.lang === 'pt' ? 'pt-BR' : ctx.state.lang === 'fr' ? 'fr-FR' : 'en-US'
+    );
+    const lang = ctx.state.lang || 'pt';
+
+    const premiumMessage = {
+      pt: `✅ <b>Você é Premium!</b>\n\n⏰ Expira em: ${expiryDate}\n📅 Dias restantes: ${premiumInfo.days_remaining}\n\n💎 <b>FUNCIONALIDADES ATIVAS</b>\n✨ Alertas personalizados ilimitados\n✨ Alertas espontâneos regulares\n\n💰 <b>RENOVAR SEU ACESSO</b>\n\nEscolha abaixo para adicionar mais tempo ou passar para assinatura recorrente:`,
+      fr: `✅ <b>Vous êtes Premium!</b>\n\n⏰ Expire le: ${expiryDate}\n📅 Jours restants: ${premiumInfo.days_remaining}\n\n💎 <b>FONCTIONNALITÉS ACTIVES</b>\n✨ Alertes personnalisées illimitées\n✨ Alertes spontanées régulières\n\n💰 <b>RENOUVELER VOTRE ACCÈS</b>\n\nChoisissez ci-dessous pour ajouter plus de temps ou passer en abonnement récurrent:`,
+      en: `✅ <b>You are Premium!</b>\n\n⏰ Expires: ${expiryDate}\n📅 Days remaining: ${premiumInfo.days_remaining}\n\n💎 <b>ACTIVE FEATURES</b>\n✨ Unlimited custom alerts\n✨ Regular spontaneous alerts\n\n💰 <b>RENEW YOUR ACCESS</b>\n\nChoose below to add more time or switch to recurring subscription:`
+    };
+
+    const kb = buildKeyboards(msg, 'premium_oneshot_renew', { lang });
+    await ctx.editMessageText(premiumMessage[lang] || premiumMessage.pt, { parse_mode: 'HTML', ...kb });
+    await ctx.answerCbQuery();
+  } catch (error) {
+    logger.error('[BOT] Back to renew failed:', { error: error.message, telegram_id });
+    await ctx.answerCbQuery();
+  }
+});
+
 // Payment help/support handler - show predefined options
 bot.action('premium:payment_help', async (ctx) => {
   const lang = ctx.state.lang || 'pt';
@@ -1231,8 +1285,10 @@ bot.action('support:custom_message', async (ctx) => {
 });
 
 // Mercado Pago Subscription handler
-bot.action(/^premium:sub:mp:(.+)$/, async (ctx) => {
+bot.action(/^premium:sub:mp:(.+?)(?::renew)?$/, async (ctx) => {
+  const match = ctx.match[0];
   const plan = ctx.match[1]; // 'monthly', 'quarterly', 'semiannual', 'annual'
+  const isRenew = match.includes(':renew');
   const telegram_id = ctx.from.id;
   const email = ctx.from.username ? `${ctx.from.username}@telegram.user` : null;
 
@@ -1243,31 +1299,40 @@ bot.action(/^premium:sub:mp:(.+)$/, async (ctx) => {
     const checkoutData = mercadopago.getSubscriptionCheckoutUrl({ plan, telegram_id, email });
 
     const lang = ctx.state.lang || 'pt';
+
+    const extendNote = isRenew ? {
+      pt: `\n💡 <i>Seu tempo premium atual será preservado e estendido.</i>\n`,
+      fr: `\n💡 <i>Votre temps premium actuel sera préservé et prolongé.</i>\n`,
+      en: `\n💡 <i>Your current premium time will be preserved and extended.</i>\n`
+    } : { pt: '', fr: '', en: '' };
+
     const text = {
       pt: `💳 <b>Assinatura Mercado Pago</b>\n\n` +
           `📦 Plano: ${checkoutData.plan_name.pt}\n` +
           `💰 Preço: R$ ${checkoutData.price_brl} a cada ${checkoutData.frequency} ${checkoutData.frequency === 1 ? 'mês' : 'meses'}\n\n` +
-          `🔄 Renovação automática (cancelável a qualquer momento)\n\n` +
+          `🔄 Renovação automática (cancelável a qualquer momento)${extendNote.pt}\n` +
           `👇 Clique no link abaixo para finalizar:`,
       fr: `💳 <b>Abonnement Mercado Pago</b>\n\n` +
           `📦 Plan: ${checkoutData.plan_name.fr}\n` +
           `💰 Prix: R$ ${checkoutData.price_brl} tous les ${checkoutData.frequency} mois\n\n` +
-          `🔄 Renouvellement automatique (annulable à tout moment)\n\n` +
+          `🔄 Renouvellement automatique (annulable à tout moment)${extendNote.fr}\n` +
           `👇 Cliquez sur le lien ci-dessous pour finaliser:`,
       en: `💳 <b>Mercado Pago Subscription</b>\n\n` +
           `📦 Plan: ${checkoutData.plan_name.en}\n` +
           `💰 Price: R$ ${checkoutData.price_brl} every ${checkoutData.frequency} month${checkoutData.frequency > 1 ? 's' : ''}\n\n` +
-          `🔄 Auto-renewal (cancel anytime)\n\n` +
+          `🔄 Auto-renewal (cancel anytime)${extendNote.en}\n` +
           `👇 Click the link below to complete:`
     };
 
     const { Markup } = await import('telegraf');
+    const backButton = isRenew ? 'premium:back_to_renew' : 'premium:pricing';
+
     await ctx.editMessageText(text[lang] || text.en, {
       parse_mode: 'HTML',
       reply_markup: {
         inline_keyboard: [
           [Markup.button.url('💳 Assinar / Subscribe', checkoutData.checkout_url)],
-          [Markup.button.callback('⬅️ Voltar / Back', 'premium:pricing')]
+          [Markup.button.callback('⬅️ Voltar / Back', backButton)]
         ]
       }
     });
@@ -1326,8 +1391,10 @@ bot.action(/^premium:sub:pp:(.+)$/, async (ctx) => {
 });
 
 // Mercado Pago One-shot payment handler
-bot.action(/^premium:oneshot:mp:(.+)$/, async (ctx) => {
+bot.action(/^premium:oneshot:mp:(.+?)(?::renew)?$/, async (ctx) => {
+  const match = ctx.match[0];
   const duration = ctx.match[1]; // '3months', '6months', '12months'
+  const isRenew = match.includes(':renew');
   const telegram_id = ctx.from.id;
   const email = ctx.from.username ? `${ctx.from.username}@telegram.user` : null;
 
@@ -1355,34 +1422,42 @@ bot.action(/^premium:oneshot:mp:(.+)$/, async (ctx) => {
     const mercadopago = await import('../services/payments/mercadopago.js');
     const planInfo = mercadopago.PREMIUM_PLANS[duration];
 
+    const extendNote = isRenew ? {
+      pt: `\n💡 <i>Seu tempo premium atual será estendido.</i>\n`,
+      fr: `\n💡 <i>Votre temps premium actuel sera prolongé.</i>\n`,
+      en: `\n💡 <i>Your current premium time will be extended.</i>\n`
+    } : { pt: '', fr: '', en: '' };
+
     const text = {
       pt: `💳 <b>Pagamento Único Mercado Pago</b>\n\n` +
           `📦 Plano: ${planInfo.name.pt}\n` +
           `💰 Preço: R$ ${planInfo.price_brl}\n` +
           `⏱ Duração: ${planInfo.duration} dias\n\n` +
-          `💡 Pagamento único, sem renovação automática\n\n` +
+          `💡 Pagamento único, sem renovação automática${extendNote.pt}\n` +
           `👇 Clique no link abaixo para pagar:`,
       fr: `💳 <b>Paiement Unique Mercado Pago</b>\n\n` +
           `📦 Plan: ${planInfo.name.fr}\n` +
           `💰 Prix: R$ ${planInfo.price_brl}\n` +
           `⏱ Durée: ${planInfo.duration} jours\n\n` +
-          `💡 Paiement unique, pas de renouvellement automatique\n\n` +
+          `💡 Paiement unique, pas de renouvellement automatique${extendNote.fr}\n` +
           `👇 Cliquez sur le lien ci-dessous pour payer:`,
       en: `💳 <b>One-Time Payment Mercado Pago</b>\n\n` +
           `📦 Plan: ${planInfo.name.en}\n` +
           `💰 Price: R$ ${planInfo.price_brl}\n` +
           `⏱ Duration: ${planInfo.duration} days\n\n` +
-          `💡 One-time payment, no automatic renewal\n\n` +
+          `💡 One-time payment, no automatic renewal${extendNote.en}\n` +
           `👇 Click the link below to pay:`
     };
 
     const { Markup } = await import('telegraf');
+    const backButton = isRenew ? 'premium:back_to_renew' : 'premium:oneshot_pricing';
+
     await ctx.editMessageText(text[lang] || text.en, {
       parse_mode: 'HTML',
       reply_markup: {
         inline_keyboard: [
           [Markup.button.url('💳 Pagar / Pay', paymentData.init_point)],
-          [Markup.button.callback('⬅️ Voltar / Back', 'premium:oneshot_pricing')]
+          [Markup.button.callback('⬅️ Voltar / Back', backButton)]
         ]
       }
     });

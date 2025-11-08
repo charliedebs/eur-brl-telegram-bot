@@ -343,38 +343,33 @@ case 'what_exchange':
 
   // NEW: Écran pour utilisateurs avec one-shot premium qui veulent renouveler
   case 'premium_oneshot_renew':
-    const lang = options?.lang || 'pt';
-
-    // Section: Ajouter plus de temps (one-shot)
-    const addTimeLabel = {
-      pt: '💰 ADICIONAR MAIS TEMPO (pagamento único)',
-      fr: '💰 AJOUTER PLUS DE TEMPS (paiement unique)',
-      en: '💰 ADD MORE TIME (one-time payment)'
-    };
-
-    const subscriptionLabel = {
-      pt: '🔄 OU PASSAR PARA ASSINATURA RECORRENTE',
-      fr: '🔄 OU PASSER EN ABONNEMENT RÉCURRENT',
-      en: '🔄 OR SWITCH TO RECURRING SUBSCRIPTION'
-    };
-
     return Markup.inlineKeyboard([
-      // Label: Add more time
-      [Markup.button.callback(addTimeLabel[lang], 'noop')],
-      // One-shot options
-      [Markup.button.callback(msg.btn.oneshot3m, 'premium:oneshot:mp:3months')],
-      [Markup.button.callback(msg.btn.oneshot6m, 'premium:oneshot:mp:6months')],
-      [Markup.button.callback(msg.btn.oneshot12m, 'premium:oneshot:mp:12months')],
-      // Label: Switch to subscription
-      [Markup.button.callback(subscriptionLabel[lang], 'noop')],
-      // Subscription options
-      [Markup.button.callback(msg.btn.subMPMonthly, 'premium:sub:mp:monthly')],
-      [Markup.button.callback(msg.btn.subMPQuarterly, 'premium:sub:mp:quarterly')],
-      [Markup.button.callback(msg.btn.subMPSemiannual, 'premium:sub:mp:semiannual')],
-      [Markup.button.callback(msg.btn.subMPAnnual, 'premium:sub:mp:annual')],
-      // Help & Back
+      [Markup.button.callback(msg.btn.addMoreTime, 'premium:renew_oneshot')],
+      [Markup.button.callback(msg.btn.switchToSubscription, 'premium:renew_subscription')],
+      [Markup.button.callback(msg.btn.createAlert, 'alert:choose_pair')],
       [Markup.button.callback(msg.btn.paymentHelp, 'premium:payment_help')],
       [Markup.button.callback(msg.btn.back, 'action:back_main')]
+    ]);
+
+  // NEW: Écran one-shot pricing for premium users renewing (back button goes to premium screen)
+  case 'premium_oneshot_pricing_renew':
+    return Markup.inlineKeyboard([
+      [Markup.button.callback(msg.btn.oneshot3m, 'premium:oneshot:mp:3months:renew')],
+      [Markup.button.callback(msg.btn.oneshot6m, 'premium:oneshot:mp:6months:renew')],
+      [Markup.button.callback(msg.btn.oneshot12m, 'premium:oneshot:mp:12months:renew')],
+      [Markup.button.callback(msg.btn.paymentHelp, 'premium:payment_help')],
+      [Markup.button.callback(msg.btn.back, 'premium:back_to_renew')]
+    ]);
+
+  // NEW: Écran subscription pricing for premium users switching to subscription
+  case 'premium_subscription_pricing_renew':
+    return Markup.inlineKeyboard([
+      [Markup.button.callback(msg.btn.subMPMonthly, 'premium:sub:mp:monthly:renew')],
+      [Markup.button.callback(msg.btn.subMPQuarterly, 'premium:sub:mp:quarterly:renew')],
+      [Markup.button.callback(msg.btn.subMPSemiannual, 'premium:sub:mp:semiannual:renew')],
+      [Markup.button.callback(msg.btn.subMPAnnual, 'premium:sub:mp:annual:renew')],
+      [Markup.button.callback(msg.btn.paymentHelp, 'premium:payment_help')],
+      [Markup.button.callback(msg.btn.back, 'premium:back_to_renew')]
     ]);
 
    // 👇 NOUVEAUX CASES ALERTES

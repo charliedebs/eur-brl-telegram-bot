@@ -1133,6 +1133,8 @@ Pay once, use for the chosen period, no automatic renewal.
         seePremium: '💎 See Premium',
         seeOneshot: '💰 Or try without subscription →',
         backToSubscriptions: '⬅️ Back to subscriptions',
+        addMoreTime: '💰 Add more time (one-time payment)',
+        switchToSubscription: '🔄 Switch to recurring subscription',
 
         // Subscription plans (recurring)
         subMPMonthly: '💳 R$ 6/month',

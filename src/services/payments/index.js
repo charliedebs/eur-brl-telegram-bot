@@ -264,9 +264,27 @@ export async function activatePremium(telegram_id, plan, amount = null, payment_
       throw new Error(`Invalid plan: ${plan}`);
     }
 
-    // Calculate expiration date
+    // Get current user to check if they already have premium
+    const user = await db.getUser(telegram_id);
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + planInfo.duration * 24 * 60 * 60 * 1000);
+    let startDate = now;
+
+    // If user already has premium that hasn't expired, extend from that date
+    if (user && user.premium_until) {
+      const existingExpiry = new Date(user.premium_until);
+      if (existingExpiry > now) {
+        startDate = existingExpiry;
+        logger.info('[PAYMENT] Extending existing premium:', {
+          telegram_id,
+          existing_expiry: existingExpiry.toISOString(),
+          plan,
+          duration_days: planInfo.duration
+        });
+      }
+    }
+
+    // Calculate expiration date (extend from existing premium or from now)
+    const expiresAt = new Date(startDate.getTime() + planInfo.duration * 24 * 60 * 60 * 1000);
 
     // Determine subscription amount
     const subscriptionAmount = amount || planInfo.prices.BRL;
@@ -288,7 +306,8 @@ export async function activatePremium(telegram_id, plan, amount = null, payment_
       telegram_id,
       plan,
       amount: subscriptionAmount,
-      expires_at: expiresAt.toISOString()
+      expires_at: expiresAt.toISOString(),
+      extended: startDate > now
     });
 
     return {
