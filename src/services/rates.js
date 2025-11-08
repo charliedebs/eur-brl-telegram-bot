@@ -1,5 +1,5 @@
 // src/services/rates.js
-// Version complète avec Yahoo + Binance + fallback CoinGecko
+// Version complète avec Yahoo + Kraken + CoinMarketCap + fallback CoinGecko
 
 import { FEES } from '../config/constants.js';
 
@@ -44,59 +44,147 @@ async function fetchYahooRate() {
 }
 
 // ==========================================
-// BINANCE - Pairs USDC directes
+// KRAKEN - Source principale (pas de clé API nécessaire)
 // ==========================================
 
-async function fetchBinanceRates() {
+async function fetchKrakenRates() {
   try {
-    const [usdcBrlResponse, eurUsdcResponse] = await Promise.all([
-      fetch('https://api.binance.com/api/v3/ticker/price?symbol=USDCBRL'),
-      fetch('https://api.binance.com/api/v3/ticker/price?symbol=EURUSDC')
-    ]);
-    
-    if (!usdcBrlResponse.ok) {
-      throw new Error(`Binance USDCBRL error: ${usdcBrlResponse.status}`);
-    }
-    
-    const usdcBrlData = await usdcBrlResponse.json();
-    const usdcBRL = parseFloat(usdcBrlData.price);
-    
-    let usdcEUR;
-    
-    if (eurUsdcResponse.ok) {
-      const eurUsdcData = await eurUsdcResponse.json();
-      const eurUsdc = parseFloat(eurUsdcData.price);
-      usdcEUR = 1 / eurUsdc;
-      console.log('[RATES-BINANCE] Using EURUSDC pair');
-    } else {
-      console.log('[RATES-BINANCE] EURUSDC not found, trying USDCEUR...');
-      const usdcEurResponse = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=USDCEUR');
-      
-      if (!usdcEurResponse.ok) {
-        throw new Error('Neither EURUSDC nor USDCEUR available on Binance');
+    // Kraken utilise des noms de pairs spéciaux
+    const response = await fetch('https://api.kraken.com/0/public/Ticker?pair=USDCBRL,EURUSDC', {
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'EUR-BRL-Bot/1.0'
       }
-      
-      const usdcEurData = await usdcEurResponse.json();
-      usdcEUR = parseFloat(usdcEurData.price);
-      console.log('[RATES-BINANCE] Using USDCEUR pair');
+    });
+
+    if (!response.ok) {
+      throw new Error(`Kraken API error: ${response.status}`);
     }
-    
-    if (!usdcBRL || !usdcEUR || isNaN(usdcBRL) || isNaN(usdcEUR)) {
-      throw new Error('Invalid rate data from Binance');
+
+    const data = await response.json();
+
+    if (data.error && data.error.length > 0) {
+      throw new Error(`Kraken error: ${data.error.join(', ')}`);
     }
-    
+
+    // Kraken renvoie les noms de pairs avec des préfixes variables
+    const result = data.result;
+
+    // Trouver USDC/BRL (peut être USDCBRL, XUSDCZBRL, etc.)
+    let usdcBRL = null;
+    for (const [pair, data] of Object.entries(result)) {
+      if (pair.includes('USDC') && pair.includes('BRL')) {
+        usdcBRL = parseFloat(data.c[0]); // c[0] = current price
+        console.log(`[RATES-KRAKEN] Found USDC/BRL pair: ${pair} = ${usdcBRL}`);
+        break;
+      }
+    }
+
+    // Trouver EUR/USDC
+    let eurUsdc = null;
+    for (const [pair, data] of Object.entries(result)) {
+      if (pair.includes('EUR') && pair.includes('USDC')) {
+        eurUsdc = parseFloat(data.c[0]);
+        console.log(`[RATES-KRAKEN] Found EUR/USDC pair: ${pair} = ${eurUsdc}`);
+        break;
+      }
+    }
+
+    // Si pas trouvé, essayer les pairs individuellement
+    if (!usdcBRL || !eurUsdc) {
+      console.log('[RATES-KRAKEN] Pairs not found in combined request, trying separately...');
+
+      if (!usdcBRL) {
+        const brlResp = await fetch('https://api.kraken.com/0/public/Ticker?pair=USDCBRL');
+        const brlData = await brlResp.json();
+        if (brlData.result) {
+          const firstPair = Object.values(brlData.result)[0];
+          usdcBRL = parseFloat(firstPair.c[0]);
+        }
+      }
+
+      if (!eurUsdc) {
+        const eurResp = await fetch('https://api.kraken.com/0/public/Ticker?pair=EURUSDC');
+        const eurData = await eurResp.json();
+        if (eurData.result) {
+          const firstPair = Object.values(eurData.result)[0];
+          eurUsdc = parseFloat(firstPair.c[0]);
+        }
+      }
+    }
+
+    if (!usdcBRL || !eurUsdc || isNaN(usdcBRL) || isNaN(eurUsdc)) {
+      throw new Error('Missing or invalid rate data from Kraken');
+    }
+
+    const usdcEUR = 1 / eurUsdc;
+
     return {
       usdcBRL,
       usdcEUR,
-      source: 'binance'
+      source: 'kraken'
     };
-    
+
   } catch (error) {
-    console.error('[RATES-BINANCE] ❌ Error:', error.message);
+    console.error('[RATES-KRAKEN] ❌ Error:', error.message);
     throw error;
   }
 }
 
+// ==========================================
+// COINMARKETCAP - Fallback 1 (nécessite clé API gratuite)
+// ==========================================
+
+async function fetchCoinMarketCapRates() {
+  try {
+    const apiKey = process.env.CMC_API_KEY;
+
+    if (!apiKey) {
+      throw new Error('CMC_API_KEY not configured');
+    }
+
+    // CMC utilise des IDs: USDC=3408
+    const response = await fetch(
+      'https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/latest?id=3408&convert=BRL,EUR',
+      {
+        headers: {
+          'X-CMC_PRO_API_KEY': apiKey,
+          'Accept': 'application/json'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`CoinMarketCap API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (data.status?.error_code) {
+      throw new Error(`CMC error: ${data.status.error_message}`);
+    }
+
+    const usdcData = data.data['3408']; // USDC ID
+    const usdcBRL = usdcData?.quote?.BRL?.price;
+    const usdcEUR = usdcData?.quote?.EUR?.price;
+
+    if (!usdcBRL || !usdcEUR) {
+      throw new Error('Missing rate data from CoinMarketCap');
+    }
+
+    console.log(`[RATES-CMC] ✅ USDC/BRL = ${usdcBRL.toFixed(4)}, USDC/EUR = ${usdcEUR.toFixed(4)}`);
+
+    return {
+      usdcBRL,
+      usdcEUR,
+      source: 'coinmarketcap'
+    };
+
+  } catch (error) {
+    console.error('[RATES-CMC] ❌ Error:', error.message);
+    throw error;
+  }
+}
 // ==========================================
 // COINGECKO - Fallback uniquement
 // ==========================================
@@ -153,17 +241,17 @@ export async function getRates() {
     }
   }
 
-  // 2. Binance (principal - pour calculs on-chain)
+  // 2. Kraken (principal - pas de clé API nécessaire)
   try {
-    console.log('[RATES] 📡 Fetching from Binance...');
-    const { usdcBRL, usdcEUR, source } = await fetchBinanceRates();
+    console.log('[RATES] 📡 Fetching from Kraken...');
+    const { usdcBRL, usdcEUR, source } = await fetchKrakenRates();
     
     const eurToUsdc = 1 / usdcEUR;
-    const crossBinance = eurToUsdc * usdcBRL;
-    
+    const crossKraken = eurToUsdc * usdcBRL;
+
     // 3. Yahoo Finance (référence FX officielle)
-    let crossReference = crossBinance; // Fallback
-    let referenceSource = 'binance';
+    let crossReference = crossKraken; // Fallback
+    let referenceSource = 'kraken';
     
     try {
       console.log('[RATES] 📡 Fetching Yahoo reference...');
@@ -172,15 +260,15 @@ export async function getRates() {
       referenceSource = 'yahoo';
       console.log(`[RATES] ✅ Yahoo: EUR/BRL = ${yahooRate.toFixed(4)}`);
     } catch (yahooError) {
-      console.warn('[RATES] ⚠️ Yahoo failed, using Binance cross as reference');
+      console.warn('[RATES] ⚠️ Yahoo failed, using Kraken cross as reference');
     }
-    
+
     const rates = {
       usdcBRL,
       usdcEUR,
       eurToUsdc,
       cross: crossReference,
-      crossBinance,
+      crossBinance: crossKraken, // Keep field name for compatibility
       timestamp: new Date().toISOString(),
       source,
       referenceSource
@@ -189,61 +277,101 @@ export async function getRates() {
     // Mettre à jour le cache
     ratesCache = rates;
     cacheTimestamp = Date.now();
-    
-    console.log(`[RATES] ✅ Complete: Ref=${crossReference.toFixed(4)} (${referenceSource}), Binance=${crossBinance.toFixed(4)}`);
+
+    console.log(`[RATES] ✅ Complete: Ref=${crossReference.toFixed(4)} (${referenceSource}), Kraken=${crossKraken.toFixed(4)}`);
     return rates;
-    
-  } catch (binanceError) {
-    console.warn('[RATES] ⚠️ Binance failed, trying CoinGecko fallback...');
-    
-    // 4. Fallback CoinGecko (uniquement si Binance fail)
+
+  } catch (krakenError) {
+    console.warn('[RATES] ⚠️ Kraken failed, trying CoinMarketCap fallback...');
+
+    // 4. Fallback CoinMarketCap (si Kraken fail)
     try {
-      const { usdcBRL, usdcEUR, source } = await fetchCoinGeckoRates();
-      
+      const { usdcBRL, usdcEUR, source } = await fetchCoinMarketCapRates();
+
       const eurToUsdc = 1 / usdcEUR;
-      const crossCoinGecko = eurToUsdc * usdcBRL;
-      
-      // Essayer Yahoo même si Binance a fail
-      let crossReference = crossCoinGecko;
-      let referenceSource = 'coingecko';
+      const crossCMC = eurToUsdc * usdcBRL;
+
+      // Essayer Yahoo même si Kraken a fail
+      let crossReference = crossCMC;
+      let referenceSource = 'coinmarketcap';
       
       try {
         const yahooRate = await fetchYahooRate();
         crossReference = yahooRate;
         referenceSource = 'yahoo';
       } catch {
-        console.warn('[RATES] ⚠️ Yahoo also failed, using CoinGecko cross');
+        console.warn('[RATES] ⚠️ Yahoo also failed, using CoinMarketCap cross');
       }
-      
+
       const rates = {
         usdcBRL,
         usdcEUR,
         eurToUsdc,
         cross: crossReference,
-        crossBinance: crossCoinGecko,
+        crossBinance: crossCMC, // Keep field name for compatibility
         timestamp: new Date().toISOString(),
         source,
         referenceSource
       };
-      
+
       ratesCache = rates;
       cacheTimestamp = Date.now();
-      
-      console.log(`[RATES] ✅ CoinGecko: EUR/BRL = ${crossReference.toFixed(4)}`);
+
+      console.log(`[RATES] ✅ CoinMarketCap: EUR/BRL = ${crossReference.toFixed(4)}`);
       return rates;
-      
-    } catch (coinGeckoError) {
-      console.error('[RATES] ❌ CoinGecko also failed');
-      
-      // 5. Cache stale en dernier recours
-      if (ratesCache) {
-        const age = Date.now() - cacheTimestamp;
-        console.warn(`[RATES] ⚠️ Using stale cache (age: ${Math.round(age/1000)}s)`);
-        return ratesCache;
+
+    } catch (cmcError) {
+      console.warn('[RATES] ⚠️ CoinMarketCap also failed, trying CoinGecko fallback...');
+
+      // 5. Fallback CoinGecko (dernier recours)
+      try {
+        const { usdcBRL, usdcEUR, source } = await fetchCoinGeckoRates();
+
+        const eurToUsdc = 1 / usdcEUR;
+        const crossCoinGecko = eurToUsdc * usdcBRL;
+
+        // Essayer Yahoo même si CMC a fail
+        let crossReference = crossCoinGecko;
+        let referenceSource = 'coingecko';
+
+        try {
+          const yahooRate = await fetchYahooRate();
+          crossReference = yahooRate;
+          referenceSource = 'yahoo';
+        } catch {
+          console.warn('[RATES] ⚠️ Yahoo also failed, using CoinGecko cross');
+        }
+
+        const rates = {
+          usdcBRL,
+          usdcEUR,
+          eurToUsdc,
+          cross: crossReference,
+          crossBinance: crossCoinGecko, // Keep field name for compatibility
+          timestamp: new Date().toISOString(),
+          source,
+          referenceSource
+        };
+
+        ratesCache = rates;
+        cacheTimestamp = Date.now();
+
+        console.log(`[RATES] ✅ CoinGecko: EUR/BRL = ${crossReference.toFixed(4)}`);
+        return rates;
+
+      } catch (coinGeckoError) {
+        console.error('[RATES] ❌ All sources failed (Kraken, CMC, CoinGecko)');
+
+        // 6. Cache stale en dernier recours
+        if (ratesCache) {
+          const age = Date.now() - cacheTimestamp;
+          console.warn(`[RATES] ⚠️ Using stale cache (age: ${Math.round(age/1000)}s)`);
+          return ratesCache;
+        }
+
+        console.error('[RATES] 💥 All sources failed, no cache available');
+        return null;
       }
-      
-      console.error('[RATES] 💥 All sources failed, no cache available');
-      return null;
     }
   }
 }
