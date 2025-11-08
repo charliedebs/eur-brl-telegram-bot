@@ -2083,9 +2083,8 @@ if (ctx.session?.awaitingConvertRoute) {
         }
 
         const greetingMsg = getMsg(ctx);
-        const greetingKb = buildKeyboards(greetingMsg, 'lang_select');
 
-        // If language changed, show subtle notification first
+        // If language changed, show main menu instead of language selector
         if (languageChanged) {
           const confirmationMessages = {
             pt: '🌐 <i>Idioma alterado para Português</i>',
@@ -2093,8 +2092,16 @@ if (ctx.session?.awaitingConvertRoute) {
             en: '🌐 <i>Language changed to English</i>'
           };
           await ctx.reply(confirmationMessages[ctx.state.lang], { parse_mode: 'HTML' });
+
+          const mainKb = buildKeyboards(greetingMsg, 'main', {
+            locale: getLocale(ctx.state.lang),
+            isPremium: ctx.state.isPremium
+          });
+          return ctx.reply(greetingMsg.promptAmt, { parse_mode: 'HTML', ...mainKb });
         }
 
+        // No language change - show language selector
+        const greetingKb = buildKeyboards(greetingMsg, 'lang_select');
         return ctx.reply(greetingMsg.INTRO_TEXT, { parse_mode: 'HTML', ...greetingKb });
       }
         
@@ -2249,9 +2256,9 @@ if (ctx.session?.awaitingConvertRoute) {
           isPremium: ctx.state.isPremium
         });
 
-        // Send confirmation + main menu in new language
+        // Send confirmation + main menu in new language (use promptAmt, not INTRO_TEXT)
         await ctx.reply(confirmationMessages[targetLang], { parse_mode: 'HTML' });
-        return ctx.reply(newMsg.INTRO_TEXT, { parse_mode: 'HTML', ...mainKb });
+        return ctx.reply(newMsg.promptAmt, { parse_mode: 'HTML', ...mainKb });
       }
 
       case 'premium_status':
