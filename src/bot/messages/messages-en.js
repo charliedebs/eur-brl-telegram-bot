@@ -28,9 +28,7 @@ export const messagesEn = {
       // ✅ SCREEN 3: buildComparison
       buildComparison: ({ route, amount, rates, onchain, bestBank, others, delta, locale, isTargetMode = false }) => {
         const now = new Date();
-        const dayOfWeek = now.getDay();
-        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-        
+
         let title;
         if (isTargetMode) {
           if (route === 'eurbrl') {
@@ -39,18 +37,22 @@ export const messagesEn = {
             title = `💱 To receive ${formatAmount(amount, 0, locale)} EUR\nYou need ~${formatAmount(onchain.in, 0, locale)} BRL`;
           }
         } else {
-          title = route === 'eurbrl' 
+          title = route === 'eurbrl'
             ? `💱 ${formatAmount(amount, 0, locale)} EUR → BRL`
             : `💱 ${formatAmount(amount, 0, locale)} BRL → EUR`;
         }
-        
+
         const timeStr = now.toLocaleTimeString(locale, {hour: '2-digit', minute: '2-digit'});
         const tzAbbr = new Date().toLocaleTimeString('en-US', {timeZoneName: 'short'}).split(' ')[2];
-        
-        // ✅ Reference line
-        let ref = `📊 Reference rate ${formatRate(rates.cross, locale)} • ${timeStr} ${tzAbbr}`;
-        if (isWeekend) {
-          ref += `\n⚠️ Weekend: rate frozen until Monday`;
+
+        // ✅ Reference line - Yahoo Finance only
+        let ref;
+        if (rates.yahooFrozen) {
+          // Yahoo unavailable (weekend/market closed) - showing crypto cross rate instead
+          ref = `📊 Reference rate ${formatRate(rates.cross, locale)} • ${timeStr} ${tzAbbr}\n⚠️ Official rate frozen (weekend) - showing ${rates.referenceSource} rate`;
+        } else {
+          // Yahoo available - official reference
+          ref = `📊 Official rate ${formatRate(rates.cross, locale)} (Yahoo Finance) • ${timeStr} ${tzAbbr}`;
         }
         
         let onchainLine, bankLine;
@@ -198,18 +200,18 @@ export const messagesEn = {
       },
     
       SOURCES_TEXT: `📊 Data sources
-    
-    EUR/BRL reference rate: Yahoo Finance (official exchange rate)
-    
+
+    EUR/BRL reference rate: Yahoo Finance (official FX market rate)
+
     On-chain calculation:
-    • Crypto rates: CoinGecko (USDC/EUR, USDC/BRL)
+    • Crypto rates: CoinGecko or CoinMarketCap (USDC/EUR, USDC/BRL)
     • Real fees included:
       - Trading ~0.1%
       - Polygon network ~1 USDC
       - Pix withdrawal ~R$3.50
-    
+
     Off-chain rates: Wise Comparisons API (live provider rates)
-    
+
     Referral links: free for you, fund the service.`,
     
       // ✅ SCREEN 5: buildOffChain

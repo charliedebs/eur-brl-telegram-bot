@@ -28,9 +28,7 @@ export const messagesPt = {
       // ✅ TELA 3: buildComparison
       buildComparison: ({ route, amount, rates, onchain, bestBank, others, delta, locale, isTargetMode = false }) => {
         const now = new Date();
-        const dayOfWeek = now.getDay();
-        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-        
+
         let title;
         if (isTargetMode) {
           if (route === 'eurbrl') {
@@ -39,18 +37,22 @@ export const messagesPt = {
             title = `💱 Para receber ${formatAmount(amount, 0, locale)} EUR\nPrecisa ~${formatAmount(onchain.in, 0, locale)} BRL`;
           }
         } else {
-          title = route === 'eurbrl' 
+          title = route === 'eurbrl'
             ? `💱 ${formatAmount(amount, 0, locale)} EUR → BRL`
             : `💱 ${formatAmount(amount, 0, locale)} BRL → EUR`;
         }
-        
+
         const timeStr = now.toLocaleTimeString(locale, {hour: '2-digit', minute: '2-digit'});
         const tzAbbr = new Date().toLocaleTimeString('en-US', {timeZoneName: 'short'}).split(' ')[2];
-        
-        // ✅ Linha referência
-        let ref = `📊 Taxa de referência ${formatRate(rates.cross, locale)} • ${timeStr} ${tzAbbr}`;
-        if (isWeekend) {
-          ref += `\n⚠️ Fim de semana: taxa congelada até segunda`;
+
+        // ✅ Linha referência - Yahoo Finance apenas
+        let ref;
+        if (rates.yahooFrozen) {
+          // Yahoo indisponível (fim de semana/mercado fechado) - mostrando taxa crypto
+          ref = `📊 Taxa de referência ${formatRate(rates.cross, locale)} • ${timeStr} ${tzAbbr}\n⚠️ Taxa oficial congelada (fim de semana) - mostrando taxa ${rates.referenceSource}`;
+        } else {
+          // Yahoo disponível - referência oficial
+          ref = `📊 Taxa oficial ${formatRate(rates.cross, locale)} (Yahoo Finance) • ${timeStr} ${tzAbbr}`;
         }
         
         let onchainLine, bankLine;
@@ -198,11 +200,11 @@ export const messagesPt = {
       },
     
       SOURCES_TEXT: `📊 Fontes dos dados
-    
-    Taxa de referência EUR/BRL: Yahoo Finance (taxa oficial de câmbio)
-    
+
+    Taxa de referência EUR/BRL: Yahoo Finance (taxa oficial do mercado FX)
+
     Cálculo on-chain:
-    • Taxas crypto: CoinGecko (USDC/EUR, USDC/BRL)
+    • Taxas crypto: CoinGecko ou CoinMarketCap (USDC/EUR, USDC/BRL)
     • Taxas reais incluídas:
       - Trading ~0,1%
       - Rede Polygon ~1 USDC

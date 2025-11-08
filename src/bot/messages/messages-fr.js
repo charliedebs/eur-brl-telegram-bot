@@ -28,9 +28,7 @@ Service gratuit, financé par des liens de parrainage.`,
   // ✅ ÉCRAN 3 : buildComparison (ref, delta, autres)
   buildComparison: ({ route, amount, rates, onchain, bestBank, others, delta, locale, isTargetMode = false }) => {
     const now = new Date();
-    const dayOfWeek = now.getDay();
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    
+
     let title;
     if (isTargetMode) {
       if (route === 'eurbrl') {
@@ -39,18 +37,22 @@ Service gratuit, financé par des liens de parrainage.`,
         title = `💱 Pour recevoir ${formatAmount(amount, 0, locale)} EUR\nIl faut ~${formatAmount(onchain.in, 0, locale)} BRL`;
       }
     } else {
-      title = route === 'eurbrl' 
+      title = route === 'eurbrl'
         ? `💱 ${formatAmount(amount, 0, locale)} EUR → BRL`
         : `💱 ${formatAmount(amount, 0, locale)} BRL → EUR`;
     }
-    
+
     const timeStr = now.toLocaleTimeString(locale, {hour: '2-digit', minute: '2-digit'});
     const tzAbbr = new Date().toLocaleTimeString('en-US', {timeZoneName: 'short'}).split(' ')[2];
-    
-    // ✅ Ligne référence modifiée
-    let ref = `📊 Taux de référence ${formatRate(rates.cross, locale)} • ${timeStr} ${tzAbbr}`;
-    if (isWeekend) {
-      ref += `\n⚠️ Week-end : taux figé jusqu'à lundi`;
+
+    // ✅ Ligne référence - Yahoo Finance uniquement
+    let ref;
+    if (rates.yahooFrozen) {
+      // Yahoo indisponible (week-end/marché fermé) - affichage du taux crypto
+      ref = `📊 Taux de référence ${formatRate(rates.cross, locale)} • ${timeStr} ${tzAbbr}\n⚠️ Taux officiel figé (week-end) - affichage du taux ${rates.referenceSource}`;
+    } else {
+      // Yahoo disponible - référence officielle
+      ref = `📊 Taux officiel ${formatRate(rates.cross, locale)} (Yahoo Finance) • ${timeStr} ${tzAbbr}`;
     }
     
     let onchainLine, bankLine;
@@ -202,10 +204,10 @@ Service gratuit, financé par des liens de parrainage.`,
 
   SOURCES_TEXT: `📊 Sources des données
 
-Taux de référence EUR/BRL : Yahoo Finance (taux de change officiel)
+Taux de référence EUR/BRL : Yahoo Finance (taux officiel du marché FX)
 
-Calcul on-chain : 
-• Taux crypto : CoinGecko (USDC/EUR, USDC/BRL)
+Calcul on-chain:
+• Taux crypto : CoinGecko ou CoinMarketCap (USDC/EUR, USDC/BRL)
 • Frais réels inclus :
   - Trading ~0,1%
   - Réseau Polygon ~1 USDC
