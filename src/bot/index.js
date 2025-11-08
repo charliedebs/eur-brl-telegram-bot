@@ -692,7 +692,8 @@ bot.action('action:sources', async (ctx) => {
 bot.action(/^action:back_comparison:(.+):(\d+)$/, async (ctx) => {
   const route = ctx.match[1];
   const amount = parseFloat(ctx.match[2]);
-  await showComparison(ctx, route, amount);
+  const isTargetMode = ctx.session.lastIsTargetMode || false;
+  await showComparison(ctx, route, amount, isTargetMode);
   await ctx.answerCbQuery();
 });
 
@@ -701,7 +702,8 @@ bot.action(/^action:calc_details:(.+):(\d+)$/, async (ctx) => {
   const amount = parseFloat(ctx.match[2]);
   const msg = getMsg(ctx);
   const locale = getLocale(ctx.state.lang);
-  
+  const isTargetMode = ctx.session.lastIsTargetMode || false;
+
   const rates = await getRates();
   if (!rates) {
     const msg = getMsg(ctx);
@@ -709,14 +711,24 @@ bot.action(/^action:calc_details:(.+):(\d+)$/, async (ctx) => {
     await ctx.answerCbQuery();
     return;
   }
-  
-  const onchain = calculateOnChain(route, amount, rates);
-  const text = msg.buildCalcDetails({ route, amount, rates, onchain, locale });
-  
+
+  // Use appropriate calculation based on mode
+  const onchain = isTargetMode
+    ? calculateOnChainReverse(route, amount, rates)
+    : calculateOnChain(route, amount, rates);
+
+  const text = msg.buildCalcDetails({
+    route,
+    amount: isTargetMode ? onchain.in : amount, // Show source amount for target mode
+    rates,
+    onchain: isTargetMode ? { ...onchain, out: amount } : onchain, // Adjust for display
+    locale
+  });
+
   const kb = Markup.inlineKeyboard([
     [Markup.button.callback(msg.btn.back, `action:back_comparison:${route}:${amount}`)]
   ]);
-  
+
   await ctx.editMessageText(text, { parse_mode: 'HTML', ...kb });
   await ctx.answerCbQuery();
 });
@@ -726,37 +738,43 @@ bot.action(/^action:stay_offchain:(.+):(\d+)$/, async (ctx) => {
   const amount = parseFloat(ctx.match[2]);
   const msg = getMsg(ctx);
   const locale = getLocale(ctx.state.lang);
-  
-  const [rates, wiseData] = await Promise.all([
-    getRates(),
-    getWiseComparison(route, amount)
-  ]);
+  const isTargetMode = ctx.session.lastIsTargetMode || false;
 
+  const rates = await getRates();
   if (!rates) {
     const msg = getMsg(ctx);
     await ctx.reply(msg.ERROR_RATES_UNAVAILABLE || "⚠️ Rates temporarily unavailable.");
     await ctx.answerCbQuery();
     return;
   }
-  
+
+  let wiseData, onchain;
+
+  if (isTargetMode) {
+    // Target mode: get reverse comparison
+    wiseData = await getWiseComparisonReverse(route, amount);
+    onchain = calculateOnChainReverse(route, amount, rates);
+  } else {
+    // Normal mode
+    wiseData = await getWiseComparison(route, amount);
+    onchain = calculateOnChain(route, amount, rates);
+  }
+
   const bestBank = wiseData?.providers?.[0] || null;
   const others = wiseData?.providers?.slice(1) || [];
-  
-  // ⚠️ NOUVEAU : Calculer montant on-chain pour comparaison
-  const onchain = calculateOnChain(route, amount, rates);
-  
+
   const text = msg.buildOffChain({
     route,
     amount,
     bestBank,
     others,
     locale,
-    onchainAmount: onchain.out // ← NOUVEAU paramètre
+    onchainAmount: isTargetMode ? onchain.in : onchain.out
   });
-  
+
   const displayProviders = wiseData?.providers || [];
   const kb = buildKeyboards(msg, 'offchain', { route, amount, locale, providers: displayProviders });
-  
+
   await ctx.editMessageText(text, { parse_mode: 'HTML', ...kb });
   await ctx.answerCbQuery();
 });
