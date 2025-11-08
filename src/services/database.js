@@ -625,24 +625,25 @@ async createAlert(userId, alertData) {
   }
 
   // ==========================================
-  // SUBSCRIPTIONS (recurring payments)
+  // SUBSCRIPTIONS (recurring payments - stored in payments table)
   // ==========================================
 
   async createSubscription(subscriptionData) {
     const { data, error } = await supabase
-      .from('subscriptions')
+      .from('payments')
       .insert([{
         telegram_id: subscriptionData.telegram_id,
-        provider: subscriptionData.provider, // 'mercadopago' | 'paypal'
-        provider_subscription_id: subscriptionData.provider_subscription_id,
+        payment_id: subscriptionData.provider_subscription_id, // Use subscription ID as payment_id
+        method: subscriptionData.provider, // 'mercadopago' | 'paypal'
         plan: subscriptionData.plan,
-        status: subscriptionData.status || 'active',
-        price: subscriptionData.price,
+        amount: subscriptionData.price,
         currency: subscriptionData.currency,
-        frequency: subscriptionData.frequency,
-        frequency_type: subscriptionData.frequency_type,
+        status: subscriptionData.status || 'active',
+        is_subscription: true,
+        subscription_id: subscriptionData.provider_subscription_id,
+        subscription_status: subscriptionData.status || 'active',
         next_billing_date: subscriptionData.next_billing_date,
-        subscription_data: subscriptionData.data || {},
+        payment_data: subscriptionData.data || {},
         created_at: new Date().toISOString()
       }])
       .select()
@@ -659,10 +660,11 @@ async createAlert(userId, alertData) {
 
   async getActiveSubscription(telegram_id) {
     const { data, error } = await supabase
-      .from('subscriptions')
+      .from('payments')
       .select('*')
       .eq('telegram_id', telegram_id)
-      .eq('status', 'active')
+      .eq('is_subscription', true)
+      .eq('subscription_status', 'active')
       .order('created_at', { ascending: false })
       .limit(1)
       .single();
@@ -677,10 +679,11 @@ async createAlert(userId, alertData) {
 
   async getSubscriptionByProvider(provider, provider_subscription_id) {
     const { data, error } = await supabase
-      .from('subscriptions')
+      .from('payments')
       .select('*')
-      .eq('provider', provider)
-      .eq('provider_subscription_id', provider_subscription_id)
+      .eq('method', provider)
+      .eq('subscription_id', provider_subscription_id)
+      .eq('is_subscription', true)
       .single();
 
     if (error && error.code !== 'PGRST116') {
@@ -693,12 +696,13 @@ async createAlert(userId, alertData) {
 
   async updateSubscription(subscription_id, updates) {
     const { data, error } = await supabase
-      .from('subscriptions')
+      .from('payments')
       .update({
         ...updates,
         updated_at: new Date().toISOString()
       })
-      .eq('id', subscription_id)
+      .eq('subscription_id', subscription_id)
+      .eq('is_subscription', true)
       .select()
       .single();
 
@@ -713,14 +717,14 @@ async createAlert(userId, alertData) {
 
   async cancelUserSubscription(telegram_id) {
     const { data, error } = await supabase
-      .from('subscriptions')
+      .from('payments')
       .update({
-        status: 'cancelled',
-        cancelled_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        subscription_status: 'cancelled',
+        cancelled_at: new Date().toISOString()
       })
       .eq('telegram_id', telegram_id)
-      .eq('status', 'active')
+      .eq('is_subscription', true)
+      .eq('subscription_status', 'active')
       .select();
 
     if (error) {
@@ -734,9 +738,10 @@ async createAlert(userId, alertData) {
 
   async getAllActiveSubscriptions() {
     const { data, error } = await supabase
-      .from('subscriptions')
+      .from('payments')
       .select('*')
-      .eq('status', 'active')
+      .eq('is_subscription', true)
+      .eq('subscription_status', 'active')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -752,9 +757,10 @@ async createAlert(userId, alertData) {
     targetDate.setDate(targetDate.getDate() + days);
 
     const { data, error } = await supabase
-      .from('subscriptions')
+      .from('payments')
       .select('*')
-      .eq('status', 'active')
+      .eq('is_subscription', true)
+      .eq('subscription_status', 'active')
       .gte('next_billing_date', new Date().toISOString())
       .lte('next_billing_date', targetDate.toISOString());
 
