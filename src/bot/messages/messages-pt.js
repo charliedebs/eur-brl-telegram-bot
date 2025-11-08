@@ -570,22 +570,21 @@ export const messagesPt = {
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🔄 <b>ASSINATURAS (Cancelável a qualquer momento)</b>
+🔄 <b>ASSINATURAS RECORRENTES</b>
+Cancelável a qualquer momento via Mercado Pago
 
-💳 <b>Mercado Pago (BRL)</b>
-• R$ 6/mês
-• R$ 15/3 meses (-17%)
-• R$ 28/6 meses (-22%)
-• R$ 50/12 meses (-31%)
-
-💳 <b>PayPal (EUR)</b>
-• €4/3 meses
-• €7/6 meses
-• €12/12 meses
+💳 <b>Planos disponíveis:</b>
+• R$ 6/mês (renovação mensal)
+• R$ 15/3 meses (economia de 17%)
+• R$ 28/6 meses (economia de 22%)
+• R$ 50/12 meses (economia de 31%)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-💡 As assinaturas se renovam automaticamente. Você pode cancelar quando quiser.`,
+💡 As assinaturas se renovam automaticamente via Mercado Pago.
+Você pode cancelar quando quiser, direto no app do Mercado Pago.
+
+❓ Problemas com o pagamento? Use o botão "Ajuda" abaixo.`,
 
   PREMIUM_ONESHOT_PRICING: `💎 ASSINAR PREMIUM
 
@@ -1190,6 +1189,7 @@ export const messagesPt = {
         editMyAlert: '⚙️ Editar meu alerta',
         deleteMyAlert: '🗑️ Apagar este alerta',
         help: '❓ Ajuda',
+        paymentHelp: '💬 Ajuda com pagamento',
         mainMenu: '🏠 Menu principal',
 
         // Botões Premium com preços (para keyboards.js)

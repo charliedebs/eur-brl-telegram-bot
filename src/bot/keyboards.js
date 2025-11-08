@@ -287,17 +287,13 @@ case 'what_exchange':
  case 'premium_pricing':
     return Markup.inlineKeyboard([
       [Markup.button.callback(msg.btn.premiumDetails, 'premium:details')],
-      // Mercado Pago subscriptions (BRL)
+      // Mercado Pago subscriptions (BRL) - only BRL now, PayPal disabled
       [Markup.button.callback(msg.btn.subMPMonthly, 'premium:sub:mp:monthly')],
       [Markup.button.callback(msg.btn.subMPQuarterly, 'premium:sub:mp:quarterly')],
       [Markup.button.callback(msg.btn.subMPSemiannual, 'premium:sub:mp:semiannual')],
       [Markup.button.callback(msg.btn.subMPAnnual, 'premium:sub:mp:annual')],
-      // PayPal subscriptions (EUR)
-      [Markup.button.callback(msg.btn.subPPQuarterly, 'premium:sub:pp:quarterly')],
-      [Markup.button.callback(msg.btn.subPPSemiannual, 'premium:sub:pp:semiannual')],
-      [Markup.button.callback(msg.btn.subPPAnnual, 'premium:sub:pp:annual')],
-      // One-shot option
-      [Markup.button.callback(msg.btn.seeOneshot, 'premium:oneshot_pricing')],
+      // Help button for payment issues
+      [Markup.button.callback(msg.btn.paymentHelp, 'premium:payment_help')],
       [Markup.button.callback(msg.btn.back, 'action:back_main')],
     ]);
 
@@ -329,11 +325,11 @@ case 'what_exchange':
   // Écran Premium Pricing pour utilisateurs déjà premium (renew)
   case 'premium_pricing_renew':
     return Markup.inlineKeyboard([
-      [Markup.button.callback(msg.btn.premiumDetails, 'premium:details')],
       [Markup.button.callback(msg.btn.renewPlan3months, 'premium:subscribe:quarterly')],
       [Markup.button.callback(msg.btn.renewPlan6months, 'premium:subscribe:semiannual')],
       [Markup.button.callback(msg.btn.renewPlan12months, 'premium:subscribe:annual')],
       [Markup.button.callback(msg.btn.createAlert, 'alert:choose_pair')],
+      [Markup.button.callback(msg.btn.paymentHelp, 'premium:payment_help')],
       [Markup.button.callback(msg.btn.back, 'action:back_main')]
     ]);
 

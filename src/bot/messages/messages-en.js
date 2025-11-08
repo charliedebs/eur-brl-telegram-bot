@@ -570,22 +570,21 @@ export const messagesEn = {
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🔄 <b>SUBSCRIPTIONS (Cancel anytime)</b>
+🔄 <b>RECURRING SUBSCRIPTIONS</b>
+Cancel anytime via Mercado Pago
 
-💳 <b>Mercado Pago (BRL)</b>
-• R$ 6/month
-• R$ 15/3 months (-17%)
-• R$ 28/6 months (-22%)
-• R$ 50/12 months (-31%)
-
-💳 <b>PayPal (EUR)</b>
-• €4/3 months
-• €7/6 months
-• €12/12 months
+💳 <b>Available plans:</b>
+• R$ 6/month (monthly renewal)
+• R$ 15/3 months (save 17%)
+• R$ 28/6 months (save 22%)
+• R$ 50/12 months (save 31%)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-💡 Subscriptions renew automatically. You can cancel anytime.`,
+💡 Subscriptions renew automatically via Mercado Pago.
+You can cancel anytime, directly in the Mercado Pago app.
+
+❓ Payment issues? Use the "Help" button below.`,
 
   PREMIUM_ONESHOT_PRICING: `💎 GO PREMIUM
 
@@ -1189,6 +1188,7 @@ export const messagesEn = {
         editMyAlert: '⚙️ Edit my alert',
         deleteMyAlert: '🗑️ Delete this alert',
         help: '❓ Help',
+        paymentHelp: '💬 Payment support',
         mainMenu: '🏠 Main menu',
 
         // Premium buttons with prices (for keyboards.js)

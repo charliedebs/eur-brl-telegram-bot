@@ -117,16 +117,13 @@ bot.command('premium', async (ctx) => {
             `• 🎯 Multi-pares (EUR→BRL + BRL→EUR)\n` +
             `• 📊 Análises avançadas\n` +
             `• ⚡ Acesso prioritário às novas funcionalidades\n\n` +
-            `[ℹ️ Ver detalhes das funcionalidades]\n\n` +
             `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
             `🔄 <b>PROLONGAR ASSINATURA</b>\n\n` +
             `Adicione mais meses ao seu Premium:\n\n` +
-            `📱 R$ 15,00 / 3 meses\n` +
-            `   Ou seja R$ 5,00/mês\n\n` +
-            `📱 R$ 28,00 / 6 meses\n` +
-            `   Ou seja R$ 4,67/mês • Economia de 7%\n\n` +
-            `📱 R$ 50,00 / 12 meses\n` +
-            `   Ou seja R$ 4,17/mês • Economia de 17%`,
+            `• R$ 15,00 / 3 meses (economia de 17%)\n` +
+            `• R$ 28,00 / 6 meses (economia de 22%)\n` +
+            `• R$ 50,00 / 12 meses (economia de 31%)\n\n` +
+            `💡 Pagamento via Mercado Pago`,
         fr: `✅ <b>Vous êtes Premium!</b>\n\n` +
             `⏰ Expire le: ${expiryDate}\n` +
             `📅 Jours restants: ${premiumInfo.days_remaining}\n\n` +
@@ -138,16 +135,13 @@ bot.command('premium', async (ctx) => {
             `• 🎯 Multi-paires (EUR→BRL + BRL→EUR)\n` +
             `• 📊 Analyses avancées\n` +
             `• ⚡ Accès prioritaire aux nouvelles fonctionnalités\n\n` +
-            `[ℹ️ Voir détails des fonctionnalités]\n\n` +
             `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
             `🔄 <b>PROLONGER L'ABONNEMENT</b>\n\n` +
             `Ajoutez plus de mois à votre Premium:\n\n` +
-            `📱 R$ 15,00 / 3 mois\n` +
-            `   Soit R$ 5,00/mois\n\n` +
-            `📱 R$ 28,00 / 6 mois\n` +
-            `   Soit R$ 4,67/mois • Économie de 7%\n\n` +
-            `📱 R$ 50,00 / 12 mois\n` +
-            `   Soit R$ 4,17/mois • Économie de 17%`,
+            `• R$ 15,00 / 3 mois (économie de 17%)\n` +
+            `• R$ 28,00 / 6 mois (économie de 22%)\n` +
+            `• R$ 50,00 / 12 mois (économie de 31%)\n\n` +
+            `💡 Paiement via Mercado Pago`,
         en: `✅ <b>You are Premium!</b>\n\n` +
             `⏰ Expires: ${expiryDate}\n` +
             `📅 Days remaining: ${premiumInfo.days_remaining}\n\n` +
@@ -159,16 +153,13 @@ bot.command('premium', async (ctx) => {
             `• 🎯 Multi-pairs (EUR→BRL + BRL→EUR)\n` +
             `• 📊 Advanced analytics\n` +
             `• ⚡ Priority access to new features\n\n` +
-            `[ℹ️ See feature details]\n\n` +
             `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
             `🔄 <b>EXTEND SUBSCRIPTION</b>\n\n` +
             `Add more months to your Premium:\n\n` +
-            `📱 R$ 15,00 / 3 months\n` +
-            `   That's R$ 5,00/month\n\n` +
-            `📱 R$ 28,00 / 6 months\n` +
-            `   That's R$ 4,67/month • Save 7%\n\n` +
-            `📱 R$ 50,00 / 12 months\n` +
-            `   That's R$ 4,17/month • Save 17%`
+            `• R$ 15,00 / 3 months (save 17%)\n` +
+            `• R$ 28,00 / 6 months (save 22%)\n` +
+            `• R$ 50,00 / 12 months (save 31%)\n\n` +
+            `💡 Payment via Mercado Pago`
       };
 
       const lang = ctx.state.lang || 'pt';
@@ -1014,6 +1005,63 @@ bot.action('premium:oneshot_pricing', async (ctx) => {
   const kb = buildKeyboards(msg, 'premium_oneshot_pricing');
   await ctx.editMessageText(msg.PREMIUM_ONESHOT_PRICING, { parse_mode: 'HTML', ...kb });
   await ctx.answerCbQuery();
+});
+
+// Payment help/support handler
+bot.action('premium:payment_help', async (ctx) => {
+  const lang = ctx.state.lang || 'pt';
+
+  const helpMessage = {
+    pt: `💬 <b>Ajuda com Pagamento</b>\n\n` +
+        `Estamos aqui para ajudar! Se você está tendo problemas com o pagamento:\n\n` +
+        `📱 <b>Problema com Mercado Pago?</b>\n` +
+        `• Verifique se você tem saldo ou cartão vinculado\n` +
+        `• Tente usar outro método de pagamento no Mercado Pago\n` +
+        `• Entre em contato com o suporte do Mercado Pago: 4020-7700\n\n` +
+        `❓ <b>Dúvidas sobre planos ou assinatura?</b>\n` +
+        `• As assinaturas são recorrentes e renováveis automaticamente\n` +
+        `• Você pode cancelar a qualquer momento pelo app do Mercado Pago\n` +
+        `• O acesso Premium é ativado imediatamente após o pagamento\n\n` +
+        `📧 <b>Precisa de ajuda personalizada?</b>\n` +
+        `Envie um e-mail para: <code>support@eurbrlbot.com</code>\n\n` +
+        `Inclua seu username do Telegram e descreva o problema. Responderemos em até 24h.`,
+    fr: `💬 <b>Aide pour le Paiement</b>\n\n` +
+        `Nous sommes là pour vous aider ! Si vous rencontrez des problèmes de paiement:\n\n` +
+        `📱 <b>Problème avec Mercado Pago?</b>\n` +
+        `• Vérifiez que vous avez un solde ou une carte liée\n` +
+        `• Essayez une autre méthode de paiement sur Mercado Pago\n` +
+        `• Contactez le support Mercado Pago: 4020-7700\n\n` +
+        `❓ <b>Questions sur les plans ou l'abonnement?</b>\n` +
+        `• Les abonnements sont récurrents et se renouvellent automatiquement\n` +
+        `• Vous pouvez annuler à tout moment via l'app Mercado Pago\n` +
+        `• L'accès Premium est activé immédiatement après le paiement\n\n` +
+        `📧 <b>Besoin d'aide personnalisée?</b>\n` +
+        `Envoyez un e-mail à: <code>support@eurbrlbot.com</code>\n\n` +
+        `Incluez votre username Telegram et décrivez le problème. Nous répondrons sous 24h.`,
+    en: `💬 <b>Payment Support</b>\n\n` +
+        `We're here to help! If you're having payment issues:\n\n` +
+        `📱 <b>Problem with Mercado Pago?</b>\n` +
+        `• Check that you have balance or a linked card\n` +
+        `• Try another payment method on Mercado Pago\n` +
+        `• Contact Mercado Pago support: 4020-7700\n\n` +
+        `❓ <b>Questions about plans or subscription?</b>\n` +
+        `• Subscriptions are recurring and renew automatically\n` +
+        `• You can cancel anytime via the Mercado Pago app\n` +
+        `• Premium access is activated immediately after payment\n\n` +
+        `📧 <b>Need personalized help?</b>\n` +
+        `Send an email to: <code>support@eurbrlbot.com</code>\n\n` +
+        `Include your Telegram username and describe the issue. We'll respond within 24h.`
+  };
+
+  await ctx.answerCbQuery();
+  await ctx.reply(helpMessage[lang] || helpMessage.en, {
+    parse_mode: 'HTML',
+    reply_markup: {
+      inline_keyboard: [[
+        { text: lang === 'pt' ? '⬅️ Voltar' : lang === 'fr' ? '⬅️ Retour' : '⬅️ Back', callback_data: 'premium:pricing' }
+      ]]
+    }
+  });
 });
 
 // Mercado Pago Subscription handler

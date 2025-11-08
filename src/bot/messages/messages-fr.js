@@ -575,22 +575,21 @@ Ce que tu as appris aujourd'hui sera de plus en plus utilisé dans le futur : tu
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🔄 <b>ABONNEMENTS (Annulable à tout moment)</b>
+🔄 <b>ABONNEMENTS RÉCURRENTS</b>
+Annulable à tout moment via Mercado Pago
 
-💳 <b>Mercado Pago (BRL)</b>
-• R$ 6/mois
-• R$ 15/3 mois (-17%)
-• R$ 28/6 mois (-22%)
-• R$ 50/12 mois (-31%)
-
-💳 <b>PayPal (EUR)</b>
-• €4/3 mois
-• €7/6 mois
-• €12/12 mois
+💳 <b>Plans disponibles :</b>
+• R$ 6/mois (renouvellement mensuel)
+• R$ 15/3 mois (économie de 17%)
+• R$ 28/6 mois (économie de 22%)
+• R$ 50/12 mois (économie de 31%)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-💡 Les abonnements se renouvellent automatiquement. Tu peux annuler quand tu veux.`,
+💡 Les abonnements se renouvellent automatiquement via Mercado Pago.
+Tu peux annuler quand tu veux, directement dans l'app Mercado Pago.
+
+❓ Problème avec le paiement ? Utilise le bouton "Aide" ci-dessous.`,
 
   PREMIUM_ONESHOT_PRICING: `💎 PASSER À PREMIUM
 
@@ -1203,6 +1202,7 @@ refAvg90d:  (rate, locale) => `📉 Moyenne 90j (${formatRate(rate, locale)})`,
   editMyAlert: '⚙️ Modifier mon alerte',
   deleteMyAlert: '🗑️ Supprimer cette alerte',
   help: '❓ Aide',
+  paymentHelp: '💬 Aide pour le paiement',
   mainMenu: '🏠 Menu principal',
   compare: '💱 Comparer',
 
