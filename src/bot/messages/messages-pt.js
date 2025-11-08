@@ -213,7 +213,11 @@ export const messagesPt = {
     Taxas off-chain: API Wise Comparisons (taxas ao vivo dos provedores)
 
     Links de indicação: gratuitos para você, financiam o serviço.`,
-    
+
+      SOURCES_PROOF: `📊 <b>Provas & Fontes</b>
+
+    Clique nos links abaixo para acessar os estudos e relatórios oficiais que provam a vantagem das transferências on-chain.`,
+
       // ✅ TELA 5: buildOffChain
       buildOffChain: ({ route, amount, bestBank, others, locale, onchainAmount }) => {
         const title = '🏦 Off-chain';

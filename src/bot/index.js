@@ -803,7 +803,9 @@ bot.action(/^action:onchain_intro:(.+):(\d+)$/, async (ctx) => {
 
 bot.action(/^action:proof_sources/, async (ctx) => {
   const msg = getMsg(ctx);
-  const kb = buildKeyboards(msg, 'proof_sources');
+  const route = ctx.session?.lastRoute || 'eurbrl';
+  const amount = ctx.session?.lastAmount || 1000;
+  const kb = buildKeyboards(msg, 'proof_sources', { route, amount });
   await ctx.editMessageText(msg.SOURCES_PROOF, { parse_mode: 'HTML', ...kb });
   await ctx.answerCbQuery();
 });
@@ -847,14 +849,18 @@ bot.action('action:faq_send_question', async (ctx) => {
 
 bot.action('action:exchanges_eu', async (ctx) => {
   const msg = getMsg(ctx);
-  const kb = buildKeyboards(msg, 'exchanges_eu');
+  const route = ctx.session?.lastRoute || 'eurbrl';
+  const amount = ctx.session?.lastAmount || 1000;
+  const kb = buildKeyboards(msg, 'exchanges_eu', { route, amount });
   await ctx.editMessageText(msg.EXCHANGES_EU, { parse_mode: 'HTML', ...kb });
   await ctx.answerCbQuery();
 });
 
 bot.action('action:exchanges_br', async (ctx) => {
   const msg = getMsg(ctx);
-  const kb = buildKeyboards(msg, 'exchanges_br');
+  const route = ctx.session?.lastRoute || 'eurbrl';
+  const amount = ctx.session?.lastAmount || 1000;
+  const kb = buildKeyboards(msg, 'exchanges_br', { route, amount });
   await ctx.editMessageText(msg.EXCHANGES_BR, { parse_mode: 'HTML', ...kb });
   await ctx.answerCbQuery();
 });

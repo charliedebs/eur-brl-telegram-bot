@@ -213,7 +213,11 @@ export const messagesEn = {
     Off-chain rates: Wise Comparisons API (live provider rates)
 
     Referral links: free for you, fund the service.`,
-    
+
+      SOURCES_PROOF: `📊 <b>Proof & Sources</b>
+
+    Click the links below to access official studies and reports that prove the advantage of on-chain transfers.`,
+
       // ✅ SCREEN 5: buildOffChain
       buildOffChain: ({ route, amount, bestBank, others, locale, onchainAmount }) => {
         const title = '🏦 Off-chain';

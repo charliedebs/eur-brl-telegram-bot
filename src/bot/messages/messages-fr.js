@@ -217,6 +217,10 @@ Taux off-chain : API Wise Comparisons (taux live des providers)
 
 Liens de parrainage : gratuits pour toi, financent le service.`,
 
+  SOURCES_PROOF: `📊 <b>Preuves & Sources</b>
+
+Cliquez sur les liens ci-dessous pour accéder aux études et rapports officiels qui prouvent l'avantage des transferts on-chain.`,
+
   // ✅ ÉCRAN 5 : buildOffChain (rappel on-chain, Wise, parrainage)
   buildOffChain: ({ route, amount, bestBank, others, locale, onchainAmount }) => {
     const title = '🏦 Off-chain';
