@@ -100,71 +100,118 @@ bot.command('premium', async (ctx) => {
     const premiumInfo = await getPremiumDetails(telegram_id);
 
     if (premiumInfo) {
-      // User has premium - show different message
+      // User has premium - check if has active subscription
+      const activeSubscription = await db.getActiveSubscription(telegram_id);
+
       const expiryDate = premiumInfo.expires_at.toLocaleDateString(
         ctx.state.lang === 'pt' ? 'pt-BR' : ctx.state.lang === 'fr' ? 'fr-FR' : 'en-US'
       );
 
-      const premiumMessage = {
-        pt: `✅ <b>Você é Premium!</b>\n\n` +
-            `⏰ Expira em: ${expiryDate}\n` +
-            `📅 Dias restantes: ${premiumInfo.days_remaining}\n\n` +
-            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-            `💎 <b>FUNCIONALIDADES ATIVAS</b>\n\n` +
-            `✨ Você tem acesso a:\n` +
-            `• 🔔 Alertas personalizados ilimitados\n` +
-            `• 📢 Alertas espontâneos regulares\n` +
-            `• 🎯 Multi-pares (EUR→BRL + BRL→EUR)\n` +
-            `• 📊 Análises avançadas\n` +
-            `• ⚡ Acesso prioritário às novas funcionalidades\n\n` +
-            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-            `🔄 <b>PROLONGAR ASSINATURA</b>\n\n` +
-            `Adicione mais meses ao seu Premium:\n\n` +
-            `• R$ 15,00 / 3 meses (economia de 17%)\n` +
-            `• R$ 28,00 / 6 meses (economia de 22%)\n` +
-            `• R$ 50,00 / 12 meses (economia de 31%)\n\n` +
-            `💡 Pagamento via Mercado Pago`,
-        fr: `✅ <b>Vous êtes Premium!</b>\n\n` +
-            `⏰ Expire le: ${expiryDate}\n` +
-            `📅 Jours restants: ${premiumInfo.days_remaining}\n\n` +
-            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-            `💎 <b>FONCTIONNALITÉS ACTIVES</b>\n\n` +
-            `✨ Vous avez accès à:\n` +
-            `• 🔔 Alertes personnalisées illimitées\n` +
-            `• 📢 Alertes spontanées régulières\n` +
-            `• 🎯 Multi-paires (EUR→BRL + BRL→EUR)\n` +
-            `• 📊 Analyses avancées\n` +
-            `• ⚡ Accès prioritaire aux nouvelles fonctionnalités\n\n` +
-            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-            `🔄 <b>PROLONGER L'ABONNEMENT</b>\n\n` +
-            `Ajoutez plus de mois à votre Premium:\n\n` +
-            `• R$ 15,00 / 3 mois (économie de 17%)\n` +
-            `• R$ 28,00 / 6 mois (économie de 22%)\n` +
-            `• R$ 50,00 / 12 mois (économie de 31%)\n\n` +
-            `💡 Paiement via Mercado Pago`,
-        en: `✅ <b>You are Premium!</b>\n\n` +
-            `⏰ Expires: ${expiryDate}\n` +
-            `📅 Days remaining: ${premiumInfo.days_remaining}\n\n` +
-            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-            `💎 <b>ACTIVE FEATURES</b>\n\n` +
-            `✨ You have access to:\n` +
-            `• 🔔 Unlimited custom alerts\n` +
-            `• 📢 Regular spontaneous alerts\n` +
-            `• 🎯 Multi-pairs (EUR→BRL + BRL→EUR)\n` +
-            `• 📊 Advanced analytics\n` +
-            `• ⚡ Priority access to new features\n\n` +
-            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-            `🔄 <b>EXTEND SUBSCRIPTION</b>\n\n` +
-            `Add more months to your Premium:\n\n` +
-            `• R$ 15,00 / 3 months (save 17%)\n` +
-            `• R$ 28,00 / 6 months (save 22%)\n` +
-            `• R$ 50,00 / 12 months (save 31%)\n\n` +
-            `💡 Payment via Mercado Pago`
-      };
-
       const lang = ctx.state.lang || 'pt';
+
+      let premiumMessage;
+      if (activeSubscription) {
+        // User has an active subscription
+        premiumMessage = {
+          pt: `✅ <b>Você é Premium!</b>\n\n` +
+              `⏰ Próxima renovação: ${expiryDate}\n` +
+              `📅 Dias restantes: ${premiumInfo.days_remaining}\n\n` +
+              `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+              `💎 <b>FUNCIONALIDADES ATIVAS</b>\n\n` +
+              `✨ Você tem acesso a:\n` +
+              `• 🔔 Alertas personalizados ilimitados\n` +
+              `• 📢 Alertas espontâneos regulares\n` +
+              `• 🎯 Multi-pares (EUR→BRL + BRL→EUR)\n` +
+              `• 📊 Análises avançadas\n` +
+              `• ⚡ Acesso prioritário às novas funcionalidades\n\n` +
+              `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+              `🔄 <b>ASSINATURA ATIVA</b>\n\n` +
+              `Você tem uma assinatura recorrente ativa.\n` +
+              `Renovação automática todo mês.\n\n` +
+              `Para cancelar, acesse seu app Mercado Pago.`,
+          fr: `✅ <b>Vous êtes Premium!</b>\n\n` +
+              `⏰ Prochain renouvellement: ${expiryDate}\n` +
+              `📅 Jours restants: ${premiumInfo.days_remaining}\n\n` +
+              `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+              `💎 <b>FONCTIONNALITÉS ACTIVES</b>\n\n` +
+              `✨ Vous avez accès à:\n` +
+              `• 🔔 Alertes personnalisées illimitées\n` +
+              `• 📢 Alertes spontanées régulières\n` +
+              `• 🎯 Multi-paires (EUR→BRL + BRL→EUR)\n` +
+              `• 📊 Analyses avancées\n` +
+              `• ⚡ Accès prioritaire aux nouvelles fonctionnalités\n\n` +
+              `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+              `🔄 <b>ABONNEMENT ACTIF</b>\n\n` +
+              `Vous avez un abonnement récurrent actif.\n` +
+              `Renouvellement automatique chaque mois.\n\n` +
+              `Pour annuler, accédez à votre app Mercado Pago.`,
+          en: `✅ <b>You are Premium!</b>\n\n` +
+              `⏰ Next renewal: ${expiryDate}\n` +
+              `📅 Days remaining: ${premiumInfo.days_remaining}\n\n` +
+              `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+              `💎 <b>ACTIVE FEATURES</b>\n\n` +
+              `✨ You have access to:\n` +
+              `• 🔔 Unlimited custom alerts\n` +
+              `• 📢 Regular spontaneous alerts\n` +
+              `• 🎯 Multi-pairs (EUR→BRL + BRL→EUR)\n` +
+              `• 📊 Advanced analytics\n` +
+              `• ⚡ Priority access to new features\n\n` +
+              `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+              `🔄 <b>ACTIVE SUBSCRIPTION</b>\n\n` +
+              `You have an active recurring subscription.\n` +
+              `Automatic renewal every month.\n\n` +
+              `To cancel, access your Mercado Pago app.`
+        };
+      } else {
+        // User has premium but no active subscription (one-shot payment)
+        premiumMessage = {
+          pt: `✅ <b>Você é Premium!</b>\n\n` +
+              `⏰ Expira em: ${expiryDate}\n` +
+              `📅 Dias restantes: ${premiumInfo.days_remaining}\n\n` +
+              `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+              `💎 <b>FUNCIONALIDADES ATIVAS</b>\n\n` +
+              `✨ Você tem acesso a:\n` +
+              `• 🔔 Alertas personalizados ilimitados\n` +
+              `• 📢 Alertas espontâneos regulares\n` +
+              `• 🎯 Multi-pares (EUR→BRL + BRL→EUR)\n` +
+              `• 📊 Análises avançadas\n` +
+              `• ⚡ Acesso prioritário às novas funcionalidades\n\n` +
+              `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+              `🔄 <b>ADICIONAR MAIS TEMPO</b>\n\n` +
+              `Você pode adicionar mais meses ou passar para assinatura:`,
+          fr: `✅ <b>Vous êtes Premium!</b>\n\n` +
+              `⏰ Expire le: ${expiryDate}\n` +
+              `📅 Jours restants: ${premiumInfo.days_remaining}\n\n` +
+              `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+              `💎 <b>FONCTIONNALITÉS ACTIVES</b>\n\n` +
+              `✨ Vous avez accès à:\n` +
+              `• 🔔 Alertes personnalisées illimitées\n` +
+              `• 📢 Alertes spontanées régulières\n` +
+              `• 🎯 Multi-paires (EUR→BRL + BRL→EUR)\n` +
+              `• 📊 Analyses avancées\n` +
+              `• ⚡ Accès prioritaire aux nouvelles fonctionnalités\n\n` +
+              `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+              `🔄 <b>AJOUTER PLUS DE TEMPS</b>\n\n` +
+              `Vous pouvez ajouter plus de mois ou passer en abonnement:`,
+          en: `✅ <b>You are Premium!</b>\n\n` +
+              `⏰ Expires: ${expiryDate}\n` +
+              `📅 Days remaining: ${premiumInfo.days_remaining}\n\n` +
+              `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+              `💎 <b>ACTIVE FEATURES</b>\n\n` +
+              `✨ You have access to:\n` +
+              `• 🔔 Unlimited custom alerts\n` +
+              `• 📢 Regular spontaneous alerts\n` +
+              `• 🎯 Multi-pairs (EUR→BRL + BRL→EUR)\n` +
+              `• 📊 Advanced analytics\n` +
+              `• ⚡ Priority access to new features\n\n` +
+              `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+              `🔄 <b>ADD MORE TIME</b>\n\n` +
+              `You can add more months or switch to subscription:`
+        };
+      }
+
       const kb = buildKeyboards(msg, 'premium_pricing_renew', { lang });
-      await ctx.reply(premiumMessage[lang] || premiumMessage.en, { parse_mode: 'HTML', ...kb });
+      await ctx.reply(premiumMessage[lang] || premiumMessage.pt, { parse_mode: 'HTML', ...kb });
     } else {
       // User doesn't have premium - show regular pricing
       const kb = buildKeyboards(msg, 'premium_pricing');
@@ -987,9 +1034,52 @@ bot.action(/^action:swap_mode:(.+):(\d+)$/, async (ctx) => {
 
 bot.action('premium:pricing', async (ctx) => {
   const msg = getMsg(ctx);
-  const kb = buildKeyboards(msg, 'premium_pricing');
-  await ctx.editMessageText(msg.PREMIUM_PRICING, { parse_mode: 'HTML', ...kb });
-  await ctx.answerCbQuery();
+  const telegram_id = ctx.from.id;
+
+  try {
+    // Re-check premium status before showing pricing
+    const { getPremiumDetails } = await import('../services/payments/index.js');
+    const premiumInfo = await getPremiumDetails(telegram_id);
+
+    if (premiumInfo) {
+      // User is premium - show appropriate message
+      const activeSubscription = await db.getActiveSubscription(telegram_id);
+      const expiryDate = premiumInfo.expires_at.toLocaleDateString(
+        ctx.state.lang === 'pt' ? 'pt-BR' : ctx.state.lang === 'fr' ? 'fr-FR' : 'en-US'
+      );
+      const lang = ctx.state.lang || 'pt';
+
+      let premiumMessage;
+      if (activeSubscription) {
+        premiumMessage = {
+          pt: `✅ <b>Você é Premium!</b>\n\n⏰ Próxima renovação: ${expiryDate}\n📅 Dias restantes: ${premiumInfo.days_remaining}\n\n💎 <b>FUNCIONALIDADES ATIVAS</b>\n✨ Alertas personalizados ilimitados\n✨ Alertas espontâneos regulares\n\n🔄 <b>ASSINATURA ATIVA</b>\nVocê tem uma assinatura recorrente ativa.`,
+          fr: `✅ <b>Vous êtes Premium!</b>\n\n⏰ Prochain renouvellement: ${expiryDate}\n📅 Jours restants: ${premiumInfo.days_remaining}\n\n💎 <b>FONCTIONNALITÉS ACTIVES</b>\n✨ Alertes personnalisées illimitées\n✨ Alertes spontanées régulières\n\n🔄 <b>ABONNEMENT ACTIF</b>\nVous avez un abonnement récurrent actif.`,
+          en: `✅ <b>You are Premium!</b>\n\n⏰ Next renewal: ${expiryDate}\n📅 Days remaining: ${premiumInfo.days_remaining}\n\n💎 <b>ACTIVE FEATURES</b>\n✨ Unlimited custom alerts\n✨ Regular spontaneous alerts\n\n🔄 <b>ACTIVE SUBSCRIPTION</b>\nYou have an active recurring subscription.`
+        };
+      } else {
+        premiumMessage = {
+          pt: `✅ <b>Você é Premium!</b>\n\n⏰ Expira em: ${expiryDate}\n📅 Dias restantes: ${premiumInfo.days_remaining}\n\n💎 <b>FUNCIONALIDADES ATIVAS</b>\n✨ Alertas personalizados ilimitados\n✨ Alertas espontâneos regulares\n\n🔄 <b>ADICIONAR MAIS TEMPO</b>\nVocê pode adicionar mais meses ou passar para assinatura:`,
+          fr: `✅ <b>Vous êtes Premium!</b>\n\n⏰ Expire le: ${expiryDate}\n📅 Jours restants: ${premiumInfo.days_remaining}\n\n💎 <b>FONCTIONNALITÉS ACTIVES</b>\n✨ Alertes personnalisées illimitées\n✨ Alertes spontanées régulières\n\n🔄 <b>AJOUTER PLUS DE TEMPS</b>\nVous pouvez ajouter plus de mois ou passer en abonnement:`,
+          en: `✅ <b>You are Premium!</b>\n\n⏰ Expires: ${expiryDate}\n📅 Days remaining: ${premiumInfo.days_remaining}\n\n💎 <b>ACTIVE FEATURES</b>\n✨ Unlimited custom alerts\n✨ Regular spontaneous alerts\n\n🔄 <b>ADD MORE TIME</b>\nYou can add more months or switch to subscription:`
+        };
+      }
+
+      const kb = buildKeyboards(msg, 'premium_pricing_renew', { lang });
+      await ctx.editMessageText(premiumMessage[lang] || premiumMessage.pt, { parse_mode: 'HTML', ...kb });
+    } else {
+      // User not premium - show regular pricing
+      const kb = buildKeyboards(msg, 'premium_pricing');
+      await ctx.editMessageText(msg.PREMIUM_PRICING, { parse_mode: 'HTML', ...kb });
+    }
+
+    await ctx.answerCbQuery();
+  } catch (error) {
+    logger.error('[BOT] Premium pricing callback failed:', { error: error.message, telegram_id });
+    // Fallback
+    const kb = buildKeyboards(msg, 'premium_pricing');
+    await ctx.editMessageText(msg.PREMIUM_PRICING, { parse_mode: 'HTML', ...kb });
+    await ctx.answerCbQuery();
+  }
 });
 
 bot.action('premium:details', async (ctx) => {
@@ -1204,6 +1294,14 @@ bot.action(/^premium:oneshot:mp:(.+)$/, async (ctx) => {
   const telegram_id = ctx.from.id;
   const email = ctx.from.username ? `${ctx.from.username}@telegram.user` : null;
 
+  // Map duration to plan name
+  const planMap = {
+    '3months': 'quarterly',
+    '6months': 'semiannual',
+    '12months': 'annual'
+  };
+  const plan = planMap[duration];
+
   await ctx.answerCbQuery('Gerando pagamento... / Generating payment...');
 
   try {
@@ -1211,7 +1309,7 @@ bot.action(/^premium:oneshot:mp:(.+)$/, async (ctx) => {
 
     const paymentData = await initiatePayment({
       telegram_id,
-      plan: duration,
+      plan,
       method: 'mercadopago',
       email
     });
