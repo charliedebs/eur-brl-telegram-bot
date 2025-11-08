@@ -1142,5 +1142,23 @@ refAvg90d:  (rate, locale) => `📉 Moyenne 90j (${formatRate(rate, locale)})`,
   chooseCooldown1week: '📆 1 semaine',
   deleteAlert: '🗑️ Supprimer',
   viewAlert: '👁️ Voir détails',
+
+  // ✅ Boutons supplémentaires pour cohérence linguistique
+  pairEurBrl: '🇪🇺 EUR → 🇧🇷 BRL',
+  pairBrlEur: '🇧🇷 BRL → 🇪🇺 EUR',
+  compareNow: '🚀 Comparer maintenant',
+  editMyAlert: '⚙️ Modifier mon alerte',
+  deleteMyAlert: '🗑️ Supprimer cette alerte',
+  help: '❓ Aide',
+  mainMenu: '🏠 Menu principal',
+  compare: '💱 Comparer',
+
+  // Boutons Premium avec prix (pour keyboards.js)
+  plan3months: '📅 3 mois - R$ 15,00',
+  plan6months: '📅 6 mois - R$ 28,00 (-7%)',
+  plan12months: '📅 12 mois - R$ 50,00 (-17%)',
+  renewPlan3months: '🔄 Prolonger 3 mois - R$ 15,00',
+  renewPlan6months: '🔄 Prolonger 6 mois - R$ 28,00 (-7%)',
+  renewPlan12months: '🔄 Prolonger 12 mois - R$ 50,00 (-17%)',
 }
 };

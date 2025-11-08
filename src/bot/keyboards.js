@@ -46,8 +46,8 @@ export function buildKeyboards(msg, type, options = {}) {
     // Écran 1bis : Clarification route
     case 'route_choice':
       return Markup.inlineKeyboard([
-        [Markup.button.callback('🇪🇺 EUR → 🇧🇷 BRL', `route:eurbrl:${amount}`)],
-        [Markup.button.callback('🇧🇷 BRL → 🇪🇺 EUR', `route:brleur:${amount}`)],
+        [Markup.button.callback(msg.btn.pairEurBrl, `route:eurbrl:${amount}`)],
+        [Markup.button.callback(msg.btn.pairBrlEur, `route:brleur:${amount}`)],
       ]);
   
     // Écran 2 : Carte comparaison
@@ -287,9 +287,9 @@ case 'what_exchange':
  case 'premium_pricing':
     return Markup.inlineKeyboard([
       [Markup.button.callback(msg.btn.premiumDetails, 'premium:details')],
-      [Markup.button.callback('📅 3 meses - R$ 15,00', 'premium:subscribe:quarterly')],
-      [Markup.button.callback('📅 6 meses - R$ 28,00 (-7%)', 'premium:subscribe:semiannual')],
-      [Markup.button.callback('📅 12 meses - R$ 50,00 (-17%)', 'premium:subscribe:annual')],
+      [Markup.button.callback(msg.btn.plan3months, 'premium:subscribe:quarterly')],
+      [Markup.button.callback(msg.btn.plan6months, 'premium:subscribe:semiannual')],
+      [Markup.button.callback(msg.btn.plan12months, 'premium:subscribe:annual')],
       [Markup.button.callback(msg.btn.back, 'action:back_main')],
     ]);
 
@@ -297,59 +297,30 @@ case 'what_exchange':
   case 'premium_details':
     return Markup.inlineKeyboard([
       [Markup.button.callback(msg.btn.backToPricing, 'premium:pricing')],
-      [Markup.button.callback('📅 3 meses - R$ 15,00', 'premium:subscribe:quarterly')],
-      [Markup.button.callback('📅 6 meses - R$ 28,00 (-7%)', 'premium:subscribe:semiannual')],
-      [Markup.button.callback('📅 12 meses - R$ 50,00 (-17%)', 'premium:subscribe:annual')],
+      [Markup.button.callback(msg.btn.plan3months, 'premium:subscribe:quarterly')],
+      [Markup.button.callback(msg.btn.plan6months, 'premium:subscribe:semiannual')],
+      [Markup.button.callback(msg.btn.plan12months, 'premium:subscribe:annual')],
       [Markup.button.callback(msg.btn.back, 'premium:pricing')]
     ]);
 
   // Écran Premium Pricing pour utilisateurs déjà premium (renew)
-  case 'premium_pricing_renew': {
-    const lang = options.lang || 'pt';
-
-    const buttonTexts = {
-      pt: {
-        details: 'ℹ️ Ver detalhes',
-        renew3: '🔄 Prolongar 3 meses - R$ 15,00',
-        renew6: '🔄 Prolongar 6 meses - R$ 28,00 (-7%)',
-        renew12: '🔄 Prolongar 12 meses - R$ 50,00 (-17%)',
-        createAlert: '🔔 Criar Alerta'
-      },
-      fr: {
-        details: 'ℹ️ Voir détails',
-        renew3: '🔄 Prolonger 3 mois - R$ 15,00',
-        renew6: '🔄 Prolonger 6 mois - R$ 28,00 (-7%)',
-        renew12: '🔄 Prolonger 12 mois - R$ 50,00 (-17%)',
-        createAlert: '🔔 Créer Alerte'
-      },
-      en: {
-        details: 'ℹ️ See details',
-        renew3: '🔄 Extend 3 months - R$ 15,00',
-        renew6: '🔄 Extend 6 months - R$ 28,00 (-7%)',
-        renew12: '🔄 Extend 12 months - R$ 50,00 (-17%)',
-        createAlert: '🔔 Create Alert'
-      }
-    };
-
-    const texts = buttonTexts[lang] || buttonTexts.en;
-
+  case 'premium_pricing_renew':
     return Markup.inlineKeyboard([
-      [Markup.button.callback(texts.details, 'premium:details')],
-      [Markup.button.callback(texts.renew3, 'premium:subscribe:quarterly')],
-      [Markup.button.callback(texts.renew6, 'premium:subscribe:semiannual')],
-      [Markup.button.callback(texts.renew12, 'premium:subscribe:annual')],
-      [Markup.button.callback(texts.createAlert, 'alert:choose_pair')],
+      [Markup.button.callback(msg.btn.premiumDetails, 'premium:details')],
+      [Markup.button.callback(msg.btn.renewPlan3months, 'premium:subscribe:quarterly')],
+      [Markup.button.callback(msg.btn.renewPlan6months, 'premium:subscribe:semiannual')],
+      [Markup.button.callback(msg.btn.renewPlan12months, 'premium:subscribe:annual')],
+      [Markup.button.callback(msg.btn.createAlert, 'alert:choose_pair')],
       [Markup.button.callback(msg.btn.back, 'action:back_main')]
     ]);
-  }
 
    // 👇 NOUVEAUX CASES ALERTES
     
     // Choix de la paire pour créer alerte
     case 'alert_choose_pair':
       return Markup.inlineKeyboard([
-        [Markup.button.callback('🇪🇺 EUR → 🇧🇷 BRL', 'alert:create:eurbrl')],
-        [Markup.button.callback('🇧🇷 BRL → 🇪🇺 EUR', 'alert:create:brleur')],
+        [Markup.button.callback(msg.btn.pairEurBrl, 'alert:create:eurbrl')],
+        [Markup.button.callback(msg.btn.pairBrlEur, 'alert:create:brleur')],
         [Markup.button.callback(msg.btn.back, 'alert:list')]
       ]);
     
@@ -497,7 +468,7 @@ case 'what_exchange':
       const freeAlertPair = options.pair || 'eurbrl';
       const freeAlertAmount = options.amount || 1000;
       return Markup.inlineKeyboard([
-        [Markup.button.callback('🚀 Comparer maintenant', `route:${freeAlertPair}:${freeAlertAmount}`)],
+        [Markup.button.callback(msg.btn.compareNow, `route:${freeAlertPair}:${freeAlertAmount}`)],
         [Markup.button.callback(msg.btn.seePremium, 'premium:pricing')]
       ]);
     
@@ -507,10 +478,10 @@ case 'what_exchange':
       const alertAmount = options.amount || 1000;
       const alertId = options.alertId;
       return Markup.inlineKeyboard([
-        [Markup.button.callback('🚀 Comparer maintenant', `route:${alertPair}:${alertAmount}`)],
-        [Markup.button.callback('⚙️ Modifier mon alerte', `alert:view:${alertId}`)],
-        [Markup.button.callback('🗑️ Supprimer cette alerte', `alert:delete:${alertId}`)],
-        [Markup.button.callback('🔔 Mes alertes', 'alert:list')]
+        [Markup.button.callback(msg.btn.compareNow, `route:${alertPair}:${alertAmount}`)],
+        [Markup.button.callback(msg.btn.editMyAlert, `alert:view:${alertId}`)],
+        [Markup.button.callback(msg.btn.deleteMyAlert, `alert:delete:${alertId}`)],
+        [Markup.button.callback(msg.btn.myAlerts, 'alert:list')]
       ]);
 
     // Alerte déclenchée manuellement (admin)
@@ -518,7 +489,7 @@ case 'what_exchange':
       const triggeredPair = options.pair || 'eurbrl';
       const triggeredAmount = options.amount || 1000;
       return Markup.inlineKeyboard([
-        [Markup.button.callback('🚀 Comparer maintenant', `route:${triggeredPair}:${triggeredAmount}`)],
+        [Markup.button.callback(msg.btn.compareNow, `route:${triggeredPair}:${triggeredAmount}`)],
         [Markup.button.callback(msg.btn.back, 'action:back_main')]
       ]);
 
@@ -532,24 +503,24 @@ case 'what_exchange':
     // Error fallback - for error messages
     case 'error_fallback':
       return Markup.inlineKeyboard([
-        [Markup.button.callback('❓ ' + msg.btn.help, 'action:about')],
-        [Markup.button.callback('💎 ' + msg.btn.premium, 'premium:pricing')],
-        [Markup.button.callback('🏠 ' + msg.btn.mainMenu, 'action:back_main')]
+        [Markup.button.callback(msg.btn.help, 'action:about')],
+        [Markup.button.callback(msg.btn.seePremium, 'premium:pricing')],
+        [Markup.button.callback(msg.btn.mainMenu, 'action:back_main')]
       ]);
 
     // Premium suggestion - for free users
     case 'premium_suggestion':
       return Markup.inlineKeyboard([
-        [Markup.button.callback('💎 ' + msg.btn.seePremium, 'premium:pricing')],
-        [Markup.button.callback('🏠 ' + msg.btn.mainMenu, 'action:back_main')]
+        [Markup.button.callback(msg.btn.seePremium, 'premium:pricing')],
+        [Markup.button.callback(msg.btn.mainMenu, 'action:back_main')]
       ]);
 
     // Status info - for status/info messages
     case 'status_info':
       return Markup.inlineKeyboard([
-        [Markup.button.callback('💱 ' + msg.btn.compare, 'route:eurbrl:1000')],
-        [Markup.button.callback('💎 ' + msg.btn.premium, 'premium:pricing')],
-        [Markup.button.callback('🏠 ' + msg.btn.mainMenu, 'action:back_main')]
+        [Markup.button.callback(msg.btn.eurbrl(1000, locale), 'route:eurbrl:1000')],
+        [Markup.button.callback(msg.btn.seePremium, 'premium:pricing')],
+        [Markup.button.callback(msg.btn.mainMenu, 'action:back_main')]
       ]);
 
     default:

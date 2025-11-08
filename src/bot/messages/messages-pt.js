@@ -1129,5 +1129,22 @@ export const messagesPt = {
         chooseCooldown1week: '📆 1 semana',
         deleteAlert: '🗑️ Apagar',
         viewAlert: '👁️ Ver detalhes',
+
+        // ✅ Botões adicionais para consistência linguística
+        pairEurBrl: '🇪🇺 EUR → 🇧🇷 BRL',
+        pairBrlEur: '🇧🇷 BRL → 🇪🇺 EUR',
+        compareNow: '🚀 Comparar agora',
+        editMyAlert: '⚙️ Editar meu alerta',
+        deleteMyAlert: '🗑️ Apagar este alerta',
+        help: '❓ Ajuda',
+        mainMenu: '🏠 Menu principal',
+
+        // Botões Premium com preços (para keyboards.js)
+        plan3months: '📅 3 meses - R$ 15,00',
+        plan6months: '📅 6 meses - R$ 28,00 (-7%)',
+        plan12months: '📅 12 meses - R$ 50,00 (-17%)',
+        renewPlan3months: '🔄 Renovar 3 meses - R$ 15,00',
+        renewPlan6months: '🔄 Renovar 6 meses - R$ 28,00 (-7%)',
+        renewPlan12months: '🔄 Renovar 12 meses - R$ 50,00 (-17%)',
       },
     };
