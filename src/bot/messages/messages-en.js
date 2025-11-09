@@ -18,8 +18,8 @@ export const messagesEn = {
       ERROR_INVALID_AMOUNT: `⚠️ Invalid amount. Enter a number (e.g. 1000)`,
       ERROR_UPDATE_FAILED: `❌ Update failed.`,
     
-      // ✅ SCREEN 2
-      promptAmt: `💬 Send an amount or choose:`,
+      // ✅ MAIN MENU
+      promptAmt: `🏠 <b>Main Menu</b>\n\n💱 Compare best EUR↔BRL rates live\n\n<b>💎 Premium:</b>\n🔔 Custom alerts\n⏰ Notifications at the best time to convert\n\n━━━━━━━━━━━━━━━━━━\n\n👉 <i>Choose below or send an amount (e.g. 1000)</i>`,
       
       askAmount: `✏️ Enter an amount (e.g. 1000)`,
       
@@ -28,9 +28,7 @@ export const messagesEn = {
       // ✅ SCREEN 3: buildComparison
       buildComparison: ({ route, amount, rates, onchain, bestBank, others, delta, locale, isTargetMode = false }) => {
         const now = new Date();
-        const dayOfWeek = now.getDay();
-        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-        
+
         let title;
         if (isTargetMode) {
           if (route === 'eurbrl') {
@@ -39,18 +37,22 @@ export const messagesEn = {
             title = `💱 To receive ${formatAmount(amount, 0, locale)} EUR\nYou need ~${formatAmount(onchain.in, 0, locale)} BRL`;
           }
         } else {
-          title = route === 'eurbrl' 
+          title = route === 'eurbrl'
             ? `💱 ${formatAmount(amount, 0, locale)} EUR → BRL`
             : `💱 ${formatAmount(amount, 0, locale)} BRL → EUR`;
         }
-        
+
         const timeStr = now.toLocaleTimeString(locale, {hour: '2-digit', minute: '2-digit'});
         const tzAbbr = new Date().toLocaleTimeString('en-US', {timeZoneName: 'short'}).split(' ')[2];
-        
-        // ✅ Reference line
-        let ref = `📊 Reference rate ${formatRate(rates.cross, locale)} • ${timeStr} ${tzAbbr}`;
-        if (isWeekend) {
-          ref += `\n⚠️ Weekend: rate frozen until Monday`;
+
+        // ✅ Reference line - Yahoo Finance only
+        let ref;
+        if (rates.yahooFrozen) {
+          // Yahoo unavailable (weekend/market closed) - showing crypto cross rate instead
+          ref = `📊 Reference rate ${formatRate(rates.cross, locale)} • ${timeStr} ${tzAbbr}\n⚠️ Official rate frozen (weekend) - showing ${rates.referenceSource} rate`;
+        } else {
+          // Yahoo available - official reference
+          ref = `📊 Official rate ${formatRate(rates.cross, locale)} (Yahoo Finance) • ${timeStr} ${tzAbbr}`;
         }
         
         let onchainLine, bankLine;
@@ -198,20 +200,24 @@ export const messagesEn = {
       },
     
       SOURCES_TEXT: `📊 Data sources
-    
-    EUR/BRL reference rate: Yahoo Finance (official exchange rate)
-    
+
+    EUR/BRL reference rate: Yahoo Finance (official FX market rate)
+
     On-chain calculation:
-    • Crypto rates: CoinGecko (USDC/EUR, USDC/BRL)
+    • Crypto rates: Coinpaprika (primary), CryptoCompare, or CoinGecko (USDC/EUR, USDC/BRL)
     • Real fees included:
       - Trading ~0.1%
       - Polygon network ~1 USDC
       - Pix withdrawal ~R$3.50
-    
+
     Off-chain rates: Wise Comparisons API (live provider rates)
-    
+
     Referral links: free for you, fund the service.`,
-    
+
+      SOURCES_PROOF: `📊 <b>Proof & Sources</b>
+
+    Click the links below to access official studies and reports that prove the advantage of on-chain transfers.`,
+
       // ✅ SCREEN 5: buildOffChain
       buildOffChain: ({ route, amount, bestBank, others, locale, onchainAmount }) => {
         const title = '🏦 Off-chain';
@@ -549,33 +555,60 @@ export const messagesEn = {
     
     🙌 We hope you enjoyed the experience!`,
     
-      // Premium and alerts (kept same)
+      // Premium and alerts
       PREMIUM_PRICING: `💎 GO PREMIUM
-    
-    ✨ With Premium:
-    • 🔔 Unlimited custom alerts
-    • 📢 Regular spontaneous alerts
-    • 🎯 Multi-pairs (EUR→BRL + BRL→EUR)
-    • 📊 Advanced analytics
-    • 🌍 Multi-currency coming soon
-    • ⚡ Priority access to new features
-    
-    [ℹ️ See all Premium features]
-    
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    
-    📱 15 R$ / 3 months
-       That's 5 R$/month
-    
-    📱 27 R$ / 6 months
-       That's 4.50 R$/month • Save 10%
-    
-    📱 50 R$ / 12 months
-       That's 4.17 R$/month • Save 17%
-    
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    
-    🔜 International credit card coming soon`,
+
+✨ With Premium:
+• 🔔 Unlimited custom alerts
+• 📢 Regular spontaneous alerts
+• 🎯 Multi-pairs (EUR→BRL + BRL→EUR)
+• 📊 Advanced analytics
+• 🌍 Multi-currency coming soon
+• ⚡ Priority access to new features
+
+[ℹ️ See all Premium features]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔄 <b>RECURRING SUBSCRIPTIONS</b>
+Cancel anytime via Mercado Pago
+
+💳 <b>Available plans:</b>
+• R$ 6/month (monthly renewal)
+• R$ 15/3 months (save 17%)
+• R$ 28/6 months (save 22%)
+• R$ 50/12 months (save 31%)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 Subscriptions renew automatically via Mercado Pago.
+You can cancel anytime, directly in the Mercado Pago app.
+
+❓ Payment issues? Use the "Help" button below.`,
+
+  PREMIUM_ONESHOT_PRICING: `💎 GO PREMIUM
+
+✨ With Premium:
+• 🔔 Unlimited custom alerts
+• 📢 Regular spontaneous alerts
+• 🎯 Multi-pairs (EUR→BRL + BRL→EUR)
+• 📊 Advanced analytics
+• 🌍 Multi-currency coming soon
+• ⚡ Priority access to new features
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💰 <b>ONE-TIME PAYMENT (no subscription)</b>
+Pay once, use for the chosen period, no automatic renewal.
+
+💳 <b>Available plans:</b>
+• R$ 18 - 3 months
+• R$ 32 - 6 months
+• R$ 60 - 12 months
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❓ Payment issues? Use the "Help" button below.`,
     
       PREMIUM_DETAILS: `💎 PREMIUM FEATURES
     
@@ -1048,6 +1081,8 @@ export const messagesEn = {
         change: '✏️ Change amount',
         
         back: '⬅️ Back',
+        subscribe: '💳 Subscribe',
+        pay: '💳 Pay',
         sources: '📊 Data sources',
         openWise: '🔗 Open Wise',
         openRemitly: '🔗 Open Remitly',
@@ -1098,9 +1133,28 @@ export const messagesEn = {
         premium: '🚀 Discover Premium',
         giveFeedback: '💬 Give feedback',
         seePremium: '💎 See Premium',
-        subscribe3m: '📱 15 R$ - 3 months',
-        subscribe6m: '📱 27 R$ - 6 months',
-        subscribe12m: '📱 50 R$ - 12 months',
+        seeOneshot: '💰 Or try without subscription →',
+        backToSubscriptions: '⬅️ Back to subscriptions',
+        addMoreTime: '💰 Add more time (one-time payment)',
+        switchToSubscription: '🔄 Switch to recurring subscription',
+
+        // Subscription plans (recurring)
+        subMPMonthly: '💳 R$ 6/month',
+        subMPQuarterly: '💳 R$ 15/3 months (-17%)',
+        subMPSemiannual: '💳 R$ 28/6 months (-22%)',
+        subMPAnnual: '💳 R$ 50/12 months (-31%)',
+        subPPQuarterly: '💳 €4/3 months',
+        subPPSemiannual: '💳 €7/6 months',
+        subPPAnnual: '💳 €12/12 months',
+
+        // One-shot plans
+        oneshot3m: '💰 R$ 18 - 3 months',
+        oneshot6m: '💰 R$ 32 - 6 months',
+        oneshot12m: '💰 R$ 60 - 12 months',
+        oneshotPP3m: '💰 $4.50 - 3 months',
+        oneshotPP6m: '💰 $8 - 6 months',
+        oneshotPP12m: '💰 $15 - 12 months',
+
         premiumDetails: 'ℹ️ See all features',
         createAlert: '➕ Create an alert',
         myAlerts: '🔔 My alerts',
@@ -1126,5 +1180,23 @@ export const messagesEn = {
         chooseCooldown1week: '📆 1 week',
         deleteAlert: '🗑️ Delete',
         viewAlert: '👁️ View details',
+
+        // ✅ Additional buttons for language consistency
+        pairEurBrl: '🇪🇺 EUR → 🇧🇷 BRL',
+        pairBrlEur: '🇧🇷 BRL → 🇪🇺 EUR',
+        compareNow: '🚀 Compare now',
+        editMyAlert: '⚙️ Edit my alert',
+        deleteMyAlert: '🗑️ Delete this alert',
+        help: '❓ Help',
+        paymentHelp: '💬 Payment support',
+        mainMenu: '🏠 Main menu',
+
+        // Premium buttons with prices (for keyboards.js)
+        plan3months: '📅 3 months - R$ 15.00',
+        plan6months: '📅 6 months - R$ 28.00 (-7%)',
+        plan12months: '📅 12 months - R$ 50.00 (-17%)',
+        renewPlan3months: '🔄 Renew 3 months - R$ 15.00',
+        renewPlan6months: '🔄 Renew 6 months - R$ 28.00 (-7%)',
+        renewPlan12months: '🔄 Renew 12 months - R$ 50.00 (-17%)',
       },
     };

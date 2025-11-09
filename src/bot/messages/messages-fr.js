@@ -18,8 +18,8 @@ Service gratuit, financé par des liens de parrainage.`,
   ERROR_INVALID_AMOUNT: `⚠️ Montant invalide. Entre un nombre (ex. 1000)`,
   ERROR_UPDATE_FAILED: `❌ Erreur lors de la mise à jour.`,
 
-  // ✅ ÉCRAN 2 : Changement "le" → "un"
-  promptAmt: `💬 Envoie un montant ou choisis :`,
+  // ✅ MENU PRINCIPAL
+  promptAmt: `🏠 <b>Menu Principal</b>\n\n💱 Compare les meilleurs taux EUR↔BRL en direct\n\n<b>💎 Premium:</b>\n🔔 Alertes personnalisées\n⏰ Notifications au meilleur moment pour convertir\n\n━━━━━━━━━━━━━━━━━━\n\n👉 <i>Choisis ci-dessous ou envoie un montant (ex: 1000)</i>`,
   
   askAmount: `✏️ Entre un montant (ex. 1000)`,
   
@@ -28,9 +28,7 @@ Service gratuit, financé par des liens de parrainage.`,
   // ✅ ÉCRAN 3 : buildComparison (ref, delta, autres)
   buildComparison: ({ route, amount, rates, onchain, bestBank, others, delta, locale, isTargetMode = false }) => {
     const now = new Date();
-    const dayOfWeek = now.getDay();
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    
+
     let title;
     if (isTargetMode) {
       if (route === 'eurbrl') {
@@ -39,18 +37,22 @@ Service gratuit, financé par des liens de parrainage.`,
         title = `💱 Pour recevoir ${formatAmount(amount, 0, locale)} EUR\nIl faut ~${formatAmount(onchain.in, 0, locale)} BRL`;
       }
     } else {
-      title = route === 'eurbrl' 
+      title = route === 'eurbrl'
         ? `💱 ${formatAmount(amount, 0, locale)} EUR → BRL`
         : `💱 ${formatAmount(amount, 0, locale)} BRL → EUR`;
     }
-    
+
     const timeStr = now.toLocaleTimeString(locale, {hour: '2-digit', minute: '2-digit'});
     const tzAbbr = new Date().toLocaleTimeString('en-US', {timeZoneName: 'short'}).split(' ')[2];
-    
-    // ✅ Ligne référence modifiée
-    let ref = `📊 Taux de référence ${formatRate(rates.cross, locale)} • ${timeStr} ${tzAbbr}`;
-    if (isWeekend) {
-      ref += `\n⚠️ Week-end : taux figé jusqu'à lundi`;
+
+    // ✅ Ligne référence - Yahoo Finance uniquement
+    let ref;
+    if (rates.yahooFrozen) {
+      // Yahoo indisponible (week-end/marché fermé) - affichage du taux crypto
+      ref = `📊 Taux de référence ${formatRate(rates.cross, locale)} • ${timeStr} ${tzAbbr}\n⚠️ Taux officiel figé (week-end) - affichage du taux ${rates.referenceSource}`;
+    } else {
+      // Yahoo disponible - référence officielle
+      ref = `📊 Taux officiel ${formatRate(rates.cross, locale)} (Yahoo Finance) • ${timeStr} ${tzAbbr}`;
     }
     
     let onchainLine, bankLine;
@@ -202,10 +204,10 @@ Service gratuit, financé par des liens de parrainage.`,
 
   SOURCES_TEXT: `📊 Sources des données
 
-Taux de référence EUR/BRL : Yahoo Finance (taux de change officiel)
+Taux de référence EUR/BRL : Yahoo Finance (taux officiel du marché FX)
 
-Calcul on-chain : 
-• Taux crypto : CoinGecko (USDC/EUR, USDC/BRL)
+Calcul on-chain:
+• Taux crypto : Coinpaprika (principal), CryptoCompare, ou CoinGecko (USDC/EUR, USDC/BRL)
 • Frais réels inclus :
   - Trading ~0,1%
   - Réseau Polygon ~1 USDC
@@ -214,6 +216,10 @@ Calcul on-chain :
 Taux off-chain : API Wise Comparisons (taux live des providers)
 
 Liens de parrainage : gratuits pour toi, financent le service.`,
+
+  SOURCES_PROOF: `📊 <b>Preuves & Sources</b>
+
+Cliquez sur les liens ci-dessous pour accéder aux études et rapports officiels qui prouvent l'avantage des transferts on-chain.`,
 
   // ✅ ÉCRAN 5 : buildOffChain (rappel on-chain, Wise, parrainage)
   buildOffChain: ({ route, amount, bestBank, others, locale, onchainAmount }) => {
@@ -554,9 +560,9 @@ Ce que tu as appris aujourd'hui sera de plus en plus utilisé dans le futur : tu
 
 🙌 On espère que tu as kiffé l'expérience !`,
 
-  // Premium et alertes (inchangés, déjà dans le code)
+  // Premium et alertes
   PREMIUM_PRICING: `💎 PASSER À PREMIUM
-  
+
 ✨ Avec Premium :
 • 🔔 Alertes personnalisées illimitées
 • 📢 Alertes spontanées régulières
@@ -569,18 +575,45 @@ Ce que tu as appris aujourd'hui sera de plus en plus utilisé dans le futur : tu
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📱 15 R$ / 3 mois
-   Soit 5 R$/mois
+🔄 <b>ABONNEMENTS RÉCURRENTS</b>
+Annulable à tout moment via Mercado Pago
 
-📱 27 R$ / 6 mois
-   Soit 4,50 R$/mois • Économie de 10%
-
-📱 50 R$ / 12 mois
-   Soit 4,17 R$/mois • Économie de 17%
+💳 <b>Plans disponibles :</b>
+• R$ 6/mois (renouvellement mensuel)
+• R$ 15/3 mois (économie de 17%)
+• R$ 28/6 mois (économie de 22%)
+• R$ 50/12 mois (économie de 31%)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🔜 Carte bancaire internationale bientôt disponible`,
+💡 Les abonnements se renouvellent automatiquement via Mercado Pago.
+Tu peux annuler quand tu veux, directement dans l'app Mercado Pago.
+
+❓ Problème avec le paiement ? Utilise le bouton "Aide" ci-dessous.`,
+
+  PREMIUM_ONESHOT_PRICING: `💎 PASSER À PREMIUM
+
+✨ Avec Premium :
+• 🔔 Alertes personnalisées illimitées
+• 📢 Alertes spontanées régulières
+• 🎯 Multi-paires (EUR→BRL + BRL→EUR)
+• 📊 Analyses plus poussées
+• 🌍 Multi-devises à venir
+• ⚡ Accès prioritaire aux nouvelles fonctionnalités
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💰 <b>PAIEMENT UNIQUE (sans abonnement)</b>
+Payez une fois, utilisez pour la période choisie, sans renouvellement automatique.
+
+💳 <b>Plans disponibles :</b>
+• R$ 18 - 3 mois
+• R$ 32 - 6 mois
+• R$ 60 - 12 mois
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❓ Problème avec le paiement ? Utilise le bouton "Aide" ci-dessous.`,
   
     PREMIUM_DETAILS: `💎 FONCTIONNALITÉS PREMIUM
   
@@ -1062,6 +1095,8 @@ btn: {
   change: '✏️ Changer montant',
   
   back: '⬅️ Retour',
+  subscribe: '💳 S\'abonner',
+  pay: '💳 Payer',
   sources: '📊 Sources des données',
   openWise: '🔗 Ouvrir Wise',
   openRemitly: '🔗 Ouvrir Remitly',
@@ -1112,9 +1147,28 @@ btn: {
   premium: '🚀 Découvrir Premium',
   giveFeedback: '💬 Donner une suggestion',
   seePremium: '💎 Voir Premium',
-  subscribe3m: '📱 15 R$ - 3 mois',
-  subscribe6m: '📱 27 R$ - 6 mois',
-  subscribe12m: '📱 50 R$ - 12 mois',
+  seeOneshot: '💰 Ou essaie sans abonnement →',
+  backToSubscriptions: '⬅️ Retour aux abonnements',
+  addMoreTime: '💰 Ajouter plus de temps (paiement unique)',
+  switchToSubscription: '🔄 Passer en abonnement récurrent',
+
+  // Subscription plans (recurring)
+  subMPMonthly: '💳 R$ 6/mois',
+  subMPQuarterly: '💳 R$ 15/3 mois (-17%)',
+  subMPSemiannual: '💳 R$ 28/6 mois (-22%)',
+  subMPAnnual: '💳 R$ 50/12 mois (-31%)',
+  subPPQuarterly: '💳 €4/3 mois',
+  subPPSemiannual: '💳 €7/6 mois',
+  subPPAnnual: '💳 €12/12 mois',
+
+  // One-shot plans
+  oneshot3m: '💰 R$ 18 - 3 mois',
+  oneshot6m: '💰 R$ 32 - 6 mois',
+  oneshot12m: '💰 R$ 60 - 12 mois',
+  oneshotPP3m: '💰 $4.50 - 3 mois',
+  oneshotPP6m: '💰 $8 - 6 mois',
+  oneshotPP12m: '💰 $15 - 12 mois',
+
   premiumDetails: 'ℹ️ Voir toutes les fonctionnalités',
   createAlert: '➕ Créer une alerte',
   myAlerts: '🔔 Mes alertes',
@@ -1140,5 +1194,24 @@ refAvg90d:  (rate, locale) => `📉 Moyenne 90j (${formatRate(rate, locale)})`,
   chooseCooldown1week: '📆 1 semaine',
   deleteAlert: '🗑️ Supprimer',
   viewAlert: '👁️ Voir détails',
+
+  // ✅ Boutons supplémentaires pour cohérence linguistique
+  pairEurBrl: '🇪🇺 EUR → 🇧🇷 BRL',
+  pairBrlEur: '🇧🇷 BRL → 🇪🇺 EUR',
+  compareNow: '🚀 Comparer maintenant',
+  editMyAlert: '⚙️ Modifier mon alerte',
+  deleteMyAlert: '🗑️ Supprimer cette alerte',
+  help: '❓ Aide',
+  paymentHelp: '💬 Aide pour le paiement',
+  mainMenu: '🏠 Menu principal',
+  compare: '💱 Comparer',
+
+  // Boutons Premium avec prix (pour keyboards.js)
+  plan3months: '📅 3 mois - R$ 15,00',
+  plan6months: '📅 6 mois - R$ 28,00 (-7%)',
+  plan12months: '📅 12 mois - R$ 50,00 (-17%)',
+  renewPlan3months: '🔄 Prolonger 3 mois - R$ 15,00',
+  renewPlan6months: '🔄 Prolonger 6 mois - R$ 28,00 (-7%)',
+  renewPlan12months: '🔄 Prolonger 12 mois - R$ 50,00 (-17%)',
 }
 };

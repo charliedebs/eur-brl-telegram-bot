@@ -9,6 +9,7 @@ import { DatabaseService } from '../services/database.js';
 import { messages } from '../bot/messages/messages-loader.js';
 import { buildKeyboards } from '../bot/keyboards.js';
 import { getLocale, formatRate, formatAmount } from '../services/rates.js';
+import { logger } from '../utils/logger.js';
 
 const db = new DatabaseService();
 
@@ -21,7 +22,7 @@ async function shouldSendFreeAlert(pair, currentRate) {
     // 1. Record 90 jours + variation >5% vs avg90d
     const history90d = await db.getRateHistory(pair, 90);
     if (history90d.length < 60) {
-      console.log(`[FREE-SPONTANEOUS] Not enough data for ${pair} (${history90d.length}/90)`);
+      logger.warn(`[FREE-SPONTANEOUS] Not enough data for ${pair} (${history90d.length}/90)`);
       return false;
     }
     
@@ -43,12 +44,12 @@ async function shouldSendFreeAlert(pair, currentRate) {
     if (lastAlert) {
       const daysSince = (Date.now() - new Date(lastAlert.sent_at)) / (1000 * 60 * 60 * 24);
       if (daysSince < 14) {
-        console.log(`[FREE-SPONTANEOUS] ${pair}: Cooldown active (${daysSince.toFixed(1)}j/14j)`);
+        logger.info(`[FREE-SPONTANEOUS] ${pair}: Cooldown active (${daysSince.toFixed(1)}j/14j)`);
         return { send: false };
       }
     }
     
-    console.log(`[FREE-SPONTANEOUS] ✅ ${pair}: Criteria met! Var=${variationVsAvg.toFixed(1)}%`);
+    logger.info(`[FREE-SPONTANEOUS] ✅ ${pair}: Criteria met! Var=${variationVsAvg.toFixed(1)}%`);
     return { 
       send: true, 
       avg90d,
@@ -58,7 +59,7 @@ async function shouldSendFreeAlert(pair, currentRate) {
     };
     
   } catch (error) {
-    console.error(`[FREE-SPONTANEOUS] Error for ${pair}:`, error);
+    logger.error(`[FREE-SPONTANEOUS] Error for ${pair}:`, { error: error.message });
     return { send: false };
   }
 }
@@ -66,7 +67,7 @@ async function shouldSendFreeAlert(pair, currentRate) {
 async function broadcastFreeAlert(pair, currentRate, stats) {
   try {
     const users = await db.getAllActiveUsers();
-    console.log(`[FREE-SPONTANEOUS] Broadcasting ${pair} to ${users.length} users...`);
+    logger.info(`[FREE-SPONTANEOUS] Broadcasting ${pair} to ${users.length} users...`);
     
     const amountExample = pair === 'eurbrl' ? 1000 : 5000;
     const savings = (currentRate - stats.avg90d) * amountExample;
@@ -93,16 +94,16 @@ async function broadcastFreeAlert(pair, currentRate, stats) {
         await new Promise(resolve => setTimeout(resolve, 50)); // Anti-spam
         
       } catch (error) {
-        console.error(`[FREE-SPONTANEOUS] Failed for user ${user.telegram_id}:`, error.message);
+        logger.error(`[FREE-SPONTANEOUS] Failed for user ${user.telegram_id}:`, { error: error.message });
       }
     }
-    
+
     // Log
     await db.logFreeAlert(pair, currentRate, successCount);
-    console.log(`[FREE-SPONTANEOUS] ✅ ${pair}: Sent to ${successCount}/${users.length} users`);
-    
+    logger.info(`[FREE-SPONTANEOUS] ✅ ${pair}: Sent to ${successCount}/${users.length} users`);
+
   } catch (error) {
-    console.error('[FREE-SPONTANEOUS] Broadcast error:', error);
+    logger.error('[FREE-SPONTANEOUS] Broadcast error:', { error: error.message });
   }
 }
 
@@ -126,22 +127,22 @@ async function shouldSendPremiumAlert(pair, currentRate, userId) {
     
     // 2. Cooldown 6h (on pourrait tracker en DB, mais pour MVP on simplifie)
     // Option simple : pas de tracking précis, juste global dans le CRON
-    
-    console.log(`[PREMIUM-SPONTANEOUS] ✅ ${pair} for user ${userId}: +${variation.toFixed(1)}%`);
+
+    logger.info(`[PREMIUM-SPONTANEOUS] ✅ ${pair} for user ${userId}: +${variation.toFixed(1)}%`);
     return {
       send: true,
       avg30d,
       variation
     };
-    
+
   } catch (error) {
-    console.error(`[PREMIUM-SPONTANEOUS] Error:`, error);
+    logger.error(`[PREMIUM-SPONTANEOUS] Error:`, { error: error.message });
     return { send: false };
   }
 }
 
 async function broadcastPremiumAlert(pair, currentRate, stats, premiumUsers) {
-  console.log(`[PREMIUM-SPONTANEOUS] Broadcasting ${pair} to ${premiumUsers.length} premium users...`);
+  logger.info(`[PREMIUM-SPONTANEOUS] Broadcasting ${pair} to ${premiumUsers.length} premium users...`);
   
   let successCount = 0;
   
@@ -182,11 +183,11 @@ ${pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'} : ${formatRate(currentRate,
       await new Promise(resolve => setTimeout(resolve, 50));
       
     } catch (error) {
-      console.error(`[PREMIUM-SPONTANEOUS] Failed for user ${user.telegram_id}:`, error.message);
+      logger.error(`[PREMIUM-SPONTANEOUS] Failed for user ${user.telegram_id}:`, { error: error.message });
     }
   }
-  
-  console.log(`[PREMIUM-SPONTANEOUS] ✅ ${pair}: Sent to ${successCount}/${premiumUsers.length} users`);
+
+  logger.info(`[PREMIUM-SPONTANEOUS] ✅ ${pair}: Sent to ${successCount}/${premiumUsers.length} users`);
 }
 
 // ==========================================
@@ -194,12 +195,12 @@ ${pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'} : ${formatRate(currentRate,
 // ==========================================
 
 export async function checkSpontaneousAlerts() {
-  console.log('\n🔍 [SPONTANEOUS] Checking spontaneous alerts...');
-  
+  logger.info('\n🔍 [SPONTANEOUS] Checking spontaneous alerts...');
+
   try {
     const rates = await getRates();
     if (!rates) {
-      console.error('[SPONTANEOUS] ❌ Failed to fetch rates');
+      logger.error('[SPONTANEOUS] ❌ Failed to fetch rates');
       return;
     }
     
@@ -207,29 +208,29 @@ export async function checkSpontaneousAlerts() {
     for (const pair of ['eurbrl', 'brleur']) {
       const currentRate = pair === 'eurbrl' ? rates.cross : 1 / rates.cross;
       
-      console.log(`\n[SPONTANEOUS] Checking ${pair.toUpperCase()}: ${currentRate.toFixed(4)}`);
-      
+      logger.info(`\n[SPONTANEOUS] Checking ${pair.toUpperCase()}: ${currentRate.toFixed(4)}`);
+
       // 1. FREE
       const freeCheck = await shouldSendFreeAlert(pair, currentRate);
       if (freeCheck.send) {
-        console.log(`[SPONTANEOUS] 🎯 FREE alert triggered for ${pair}`);
+        logger.info(`[SPONTANEOUS] 🎯 FREE alert triggered for ${pair}`);
         await broadcastFreeAlert(pair, currentRate, freeCheck);
       }
-      
+
       // 2. PREMIUM
       const premiumUsers = await db.getPremiumUsers();
       if (premiumUsers.length > 0) {
         const premiumCheck = await shouldSendPremiumAlert(pair, currentRate);
         if (premiumCheck.send) {
-          console.log(`[SPONTANEOUS] 🎯 PREMIUM alert triggered for ${pair}`);
+          logger.info(`[SPONTANEOUS] 🎯 PREMIUM alert triggered for ${pair}`);
           await broadcastPremiumAlert(pair, currentRate, premiumCheck, premiumUsers);
         }
       }
     }
-    
-    console.log('[SPONTANEOUS] ✅ Check complete\n');
-    
+
+    logger.info('[SPONTANEOUS] ✅ Check complete\n');
+
   } catch (error) {
-    console.error('[SPONTANEOUS] ❌ Error:', error);
+    logger.error('[SPONTANEOUS] ❌ Error:', { error: error.message, stack: error.stack });
   }
 }

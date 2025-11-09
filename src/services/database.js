@@ -502,13 +502,335 @@ async createAlert(userId, alertData) {
       .not('user_feedback', 'is', null)
       .order('created_at', { ascending: false })
       .limit(limit);
-    
+
     if (error) {
       console.error('[DB] Failed to get NLU feedbacks:', error);
       return [];
     }
-    
+
     return data || [];
+  }
+
+  // ==========================================
+  // PAYMENTS (NEW - Enhanced payment tracking)
+  // ==========================================
+
+  async createPayment(paymentData) {
+    const { data, error } = await supabase
+      .from('payments')
+      .insert([{
+        telegram_id: paymentData.telegram_id,
+        plan: paymentData.plan,
+        method: paymentData.method,
+        amount: paymentData.amount,
+        currency: paymentData.currency,
+        payment_id: paymentData.payment_id,
+        status: paymentData.status || 'pending',
+        payment_data: paymentData.data || {},
+        created_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[DB] Failed to create payment:', error);
+      return null;
+    }
+
+    console.log(`[DB] ✅ Payment created: ${paymentData.payment_id}`);
+    return data;
+  }
+
+  async getPayment(payment_id) {
+    const { data, error } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('payment_id', payment_id)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('[DB] Failed to get payment:', error);
+      return null;
+    }
+
+    return data;
+  }
+
+  async getPaymentsByUser(telegram_id) {
+    const { data, error } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('telegram_id', telegram_id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[DB] Failed to get user payments:', error);
+      return [];
+    }
+
+    return data || [];
+  }
+
+  async updatePaymentStatus(payment_id, status, details = {}) {
+    const { data, error } = await supabase
+      .from('payments')
+      .update({
+        status,
+        confirmed_at: status === 'approved' ? new Date().toISOString() : null,
+        ...details
+      })
+      .eq('payment_id', payment_id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[DB] Failed to update payment status:', error);
+      return null;
+    }
+
+    console.log(`[DB] ✅ Payment status updated: ${payment_id} -> ${status}`);
+    return data;
+  }
+
+  async getPendingPayments() {
+    const { data, error } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[DB] Failed to get pending payments:', error);
+      return [];
+    }
+
+    return data || [];
+  }
+
+  async getExpiredPendingPayments(hours = 24) {
+    const cutoffTime = new Date(Date.now() - hours * 60 * 60 * 1000);
+
+    const { data, error} = await supabase
+      .from('payments')
+      .select('*')
+      .eq('status', 'pending')
+      .lt('created_at', cutoffTime.toISOString());
+
+    if (error) {
+      console.error('[DB] Failed to get expired pending payments:', error);
+      return [];
+    }
+
+    return data || [];
+  }
+
+  // ==========================================
+  // SUBSCRIPTIONS (recurring payments - stored in payments table)
+  // ==========================================
+
+  async createSubscription(subscriptionData) {
+    const { data, error } = await supabase
+      .from('payments')
+      .insert([{
+        telegram_id: subscriptionData.telegram_id,
+        payment_id: subscriptionData.provider_subscription_id, // Use subscription ID as payment_id
+        method: subscriptionData.provider, // 'mercadopago' | 'paypal'
+        plan: subscriptionData.plan,
+        amount: subscriptionData.price,
+        currency: subscriptionData.currency,
+        status: subscriptionData.status || 'active',
+        is_subscription: true,
+        subscription_id: subscriptionData.provider_subscription_id,
+        subscription_status: subscriptionData.status || 'active',
+        next_billing_date: subscriptionData.next_billing_date,
+        payment_data: subscriptionData.data || {},
+        created_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[DB] Failed to create subscription:', error);
+      return null;
+    }
+
+    console.log(`[DB] ✅ Subscription created: ${subscriptionData.provider_subscription_id} (${subscriptionData.provider})`);
+    return data;
+  }
+
+  async getActiveSubscription(telegram_id) {
+    const { data, error } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('telegram_id', telegram_id)
+      .eq('is_subscription', true)
+      .eq('subscription_status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('[DB] Failed to get active subscription:', error);
+      return null;
+    }
+
+    return data;
+  }
+
+  async getSubscriptionByProvider(provider, provider_subscription_id) {
+    const { data, error } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('method', provider)
+      .eq('subscription_id', provider_subscription_id)
+      .eq('is_subscription', true)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('[DB] Failed to get subscription by provider:', error);
+      return null;
+    }
+
+    return data;
+  }
+
+  async updateSubscription(subscription_id, updates) {
+    const { data, error } = await supabase
+      .from('payments')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('subscription_id', subscription_id)
+      .eq('is_subscription', true)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[DB] Failed to update subscription:', error);
+      return null;
+    }
+
+    console.log(`[DB] ✅ Subscription updated: ${subscription_id}`);
+    return data;
+  }
+
+  async cancelUserSubscription(telegram_id) {
+    const { data, error } = await supabase
+      .from('payments')
+      .update({
+        subscription_status: 'cancelled',
+        cancelled_at: new Date().toISOString()
+      })
+      .eq('telegram_id', telegram_id)
+      .eq('is_subscription', true)
+      .eq('subscription_status', 'active')
+      .select();
+
+    if (error) {
+      console.error('[DB] Failed to cancel subscription:', error);
+      return null;
+    }
+
+    console.log(`[DB] ✅ Subscription cancelled for user: ${telegram_id}`);
+    return data && data.length > 0 ? data[0] : null;
+  }
+
+  async getAllActiveSubscriptions() {
+    const { data, error } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('is_subscription', true)
+      .eq('subscription_status', 'active')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[DB] Failed to get active subscriptions:', error);
+      return [];
+    }
+
+    return data || [];
+  }
+
+  async getExpiringSubscriptions(days = 3) {
+    const targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() + days);
+
+    const { data, error } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('is_subscription', true)
+      .eq('subscription_status', 'active')
+      .gte('next_billing_date', new Date().toISOString())
+      .lte('next_billing_date', targetDate.toISOString());
+
+    if (error) {
+      console.error('[DB] Failed to get expiring subscriptions:', error);
+      return [];
+    }
+
+    return data || [];
+  }
+
+  // ==========================================
+  // SUPPORT TICKETS METHODS
+  // ==========================================
+
+  async createSupportTicket(telegram_id, message_type, message) {
+    const { data, error } = await this.supabase
+      .from('support_tickets')
+      .insert([{
+        telegram_id,
+        message_type, // 'predefined' or 'custom'
+        message,
+        status: 'open'
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      logger.error('[DB] Failed to create support ticket:', { error, telegram_id });
+      throw new Error('Failed to create support ticket');
+    }
+
+    logger.info('[DB] Support ticket created:', { telegram_id, message_type });
+    return data;
+  }
+
+  async getSupportTickets(status = null) {
+    let query = this.supabase
+      .from('support_tickets')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      logger.error('[DB] Failed to get support tickets:', { error });
+      return [];
+    }
+
+    return data || [];
+  }
+
+  async closeSupportTicket(ticket_id) {
+    const { data, error } = await this.supabase
+      .from('support_tickets')
+      .update({ status: 'closed' })
+      .eq('id', ticket_id)
+      .select()
+      .single();
+
+    if (error) {
+      logger.error('[DB] Failed to close support ticket:', { error, ticket_id });
+      throw new Error('Failed to close support ticket');
+    }
+
+    return data;
   }
 }
 

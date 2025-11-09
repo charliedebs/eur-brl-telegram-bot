@@ -3,6 +3,7 @@
 
 import 'dotenv/config';
 import { DatabaseService } from '../services/database.js';
+import { logger } from '../utils/logger.js';
 
 const db = new DatabaseService();
 
@@ -40,9 +41,9 @@ async function fetchYahooRate(symbol) {
     }
     
     return rate;
-    
+
   } catch (error) {
-    console.error(`[YAHOO] ❌ ${symbol} failed:`, error.message);
+    logger.error(`[YAHOO] ❌ ${symbol} failed:`, { error: error.message });
     return null;
   }
 }
@@ -70,18 +71,18 @@ function calculateInverseRate(rate, originalPair) {
  * Job principal : sauvegarde toutes les paires
  */
 export async function saveRatesHistory() {
-  console.log('\n⏰ [CRON-RATES] Starting rates history job...');
-  console.log(`[CRON-RATES] Time: ${new Date().toISOString()}`);
-  
+  logger.info('\n⏰ [CRON-RATES] Starting rates history job...');
+  logger.info(`[CRON-RATES] Time: ${new Date().toISOString()}`);
+
   const results = {
     success: [],
     failed: []
   };
-  
+
   try {
     // 1. Fetch les 3 paires directes depuis Yahoo
     for (const [symbol, pair] of Object.entries(YAHOO_PAIRS)) {
-      console.log(`[CRON-RATES] 📡 Fetching ${symbol}...`);
+      logger.info(`[CRON-RATES] 📡 Fetching ${symbol}...`);
       
       const rate = await fetchYahooRate(symbol);
       
@@ -95,8 +96,8 @@ export async function saveRatesHistory() {
         
         if (saved) {
           results.success.push({ pair, rate });
-          console.log(`[CRON-RATES] ✅ ${pair}: ${rate.toFixed(4)}`);
-          
+          logger.info(`[CRON-RATES] ✅ ${pair}: ${rate.toFixed(4)}`);
+
           // Calculer et sauvegarder paire inverse
           const inverse = calculateInverseRate(rate, pair);
           const savedInverse = await db.saveRateHistory({
@@ -104,10 +105,10 @@ export async function saveRatesHistory() {
             rate: inverse.rate,
             timestamp: new Date().toISOString()
           });
-          
+
           if (savedInverse) {
             results.success.push({ pair: inverse.pair, rate: inverse.rate });
-            console.log(`[CRON-RATES] ✅ ${inverse.pair}: ${inverse.rate.toFixed(4)}`);
+            logger.info(`[CRON-RATES] ✅ ${inverse.pair}: ${inverse.rate.toFixed(4)}`);
           }
         } else {
           results.failed.push({ pair, error: 'Failed to save' });
@@ -121,32 +122,32 @@ export async function saveRatesHistory() {
     }
     
     // 2. Résumé
-    console.log('\n' + '='.repeat(60));
-    console.log('[CRON-RATES] 📊 SUMMARY');
-    console.log('='.repeat(60));
-    console.log(`✅ Success: ${results.success.length} pairs`);
-    console.log(`❌ Failed: ${results.failed.length} pairs`);
-    
+    logger.info('\n' + '='.repeat(60));
+    logger.info('[CRON-RATES] 📊 SUMMARY');
+    logger.info('='.repeat(60));
+    logger.info(`✅ Success: ${results.success.length} pairs`);
+    logger.info(`❌ Failed: ${results.failed.length} pairs`);
+
     if (results.success.length > 0) {
-      console.log('\nSaved rates:');
+      logger.info('\nSaved rates:');
       results.success.forEach(r => {
-        console.log(`  • ${r.pair.toUpperCase()}: ${r.rate.toFixed(4)}`);
+        logger.info(`  • ${r.pair.toUpperCase()}: ${r.rate.toFixed(4)}`);
       });
     }
-    
+
     if (results.failed.length > 0) {
-      console.log('\n❌ Failed pairs:');
+      logger.error('\n❌ Failed pairs:');
       results.failed.forEach(r => {
-        console.log(`  • ${r.pair}: ${r.error}`);
+        logger.error(`  • ${r.pair}: ${r.error}`);
       });
     }
-    
-    console.log('='.repeat(60) + '\n');
+
+    logger.info('='.repeat(60) + '\n');
     
     return results;
-    
+
   } catch (error) {
-    console.error('[CRON-RATES] 💥 Critical error:', error);
+    logger.error('[CRON-RATES] 💥 Critical error:', { error: error.message, stack: error.stack });
     return results;
   }
 }
@@ -161,14 +162,14 @@ const isMainModule = process.argv[1] && (
 );
 
 if (isMainModule) {
-  console.log('🧪 Manual execution - Testing rates history job\n');
+  logger.info('🧪 Manual execution - Testing rates history job\n');
   saveRatesHistory()
     .then(() => {
-      console.log('\n✅ Test completed');
+      logger.info('\n✅ Test completed');
       process.exit(0);
     })
     .catch((error) => {
-      console.error('\n💥 Test failed:', error);
+      logger.error('\n💥 Test failed:', { error: error.message, stack: error.stack });
       process.exit(1);
     });
 }

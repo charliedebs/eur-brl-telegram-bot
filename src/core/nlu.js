@@ -3,6 +3,7 @@
 // Architecture CORE : Fonctionne pour Telegram ET WhatsApp
 
 import OpenAI from 'openai';
+import { logger } from '../utils/logger.js';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -53,6 +54,68 @@ const REGEX_PATTERNS = [
       entities: {},
       confidence: 0.98
     })
+  },
+  // Language change requests
+  {
+    pattern: /(change|mudar|changer|switch|alterar|modifier).*(language|langue|idioma|língua)/i,
+    extract: (match, fullText) => {
+      // Detect target language
+      let targetLang = null;
+      if (/\b(french|français|francês|fr)\b/i.test(fullText)) targetLang = 'fr';
+      else if (/\b(portuguese|português|portugues|pt|br)\b/i.test(fullText)) targetLang = 'pt';
+      else if (/\b(english|inglês|ingles|anglais|en)\b/i.test(fullText)) targetLang = 'en';
+
+      return {
+        intent: 'change_language',
+        entities: {
+          language: targetLang
+        },
+        confidence: 0.95
+      };
+    }
+  },
+  {
+    pattern: /^(french|français|francês|portuguese|português|portugues|english|inglês|ingles|anglais|pt|fr|en)$/i,
+    extract: (match) => {
+      const langMap = {
+        'french': 'fr', 'français': 'fr', 'francês': 'fr', 'fr': 'fr',
+        'portuguese': 'pt', 'português': 'pt', 'portugues': 'pt', 'pt': 'pt', 'br': 'pt',
+        'english': 'en', 'inglês': 'en', 'ingles': 'en', 'anglais': 'en', 'en': 'en'
+      };
+
+      return {
+        intent: 'change_language',
+        entities: {
+          language: langMap[match[0].toLowerCase()]
+        },
+        confidence: 0.98
+      };
+    }
+  },
+  // Premium status queries
+  {
+    pattern: /^(meu premium|minha assinatura|sou premium|premium status|statut premium|mon premium|ma souscription|am i premium|my premium|my subscription)$/i,
+    extract: () => ({
+      intent: 'premium_status',
+      entities: {},
+      confidence: 0.95
+    })
+  },
+  {
+    pattern: /(check|ver|voir|consultar|verificar).*(premium|subscription|assinatura|souscription)/i,
+    extract: () => ({
+      intent: 'premium_status',
+      entities: {},
+      confidence: 0.90
+    })
+  },
+  {
+    pattern: /(premium|subscription|assinatura|souscription).*(status|expira|expire|validade|validité|validity|ativa|active|actif)/i,
+    extract: () => ({
+      intent: 'premium_status',
+      entities: {},
+      confidence: 0.90
+    })
   }
 ];
 
@@ -63,15 +126,15 @@ function parseAmount(str) {
 
 function tryRegexMatch(text) {
   const normalized = text.trim().toLowerCase();
-  
+
   for (const { pattern, extract } of REGEX_PATTERNS) {
     const match = normalized.match(pattern);
     if (match) {
-      console.log('[NLU] ⚡ Regex match:', pattern.source);
-      return extract(match);
+      logger.info('[NLU] ⚡ Regex match:', { pattern: pattern.source });
+      return extract(match, normalized);
     }
   }
-  
+
   return null;
 }
 
@@ -134,6 +197,8 @@ INTENTIONS POSSIBLES :
 - compare : demande de comparaison EUR↔BRL
 - help : demande d'aide
 - about : demande d'info sur le bot
+- change_language : demande explicite de changement de langue (change language, mudar idioma, changer langue, etc.)
+- premium_status : demande de statut premium/assinatura (sou premium?, minha assinatura, premium status, etc.)
 - clarification : référence à un résultat précédent
 - unknown : message incompréhensible
 
@@ -146,7 +211,7 @@ ENTITÉS À EXTRAIRE :
 
 FORMAT DE RÉPONSE (JSON uniquement) :
 {
-  "intent": "greeting|compare|help|about|clarification|unknown",
+  "intent": "greeting|compare|help|about|premium_status|clarification|unknown",
   "entities": {
     "amount": 1000,
     "route": "eurbrl",
@@ -190,6 +255,30 @@ User: "R$3000"
 Context: {}
 → {"intent":"compare","entities":{"amount":3000,"route":"brleur"},"confidence":0.85,"reasoning":"R$ = possède reais, veut convertir en EUR"}
 
+User: "sou premium?"
+Context: {language: "pt"}
+→ {"intent":"premium_status","entities":{"language":"pt"},"confidence":0.95,"reasoning":"Pergunta direta sobre status premium"}
+
+User: "when does my subscription expire"
+Context: {language: "en"}
+→ {"intent":"premium_status","entities":{"language":"en"},"confidence":0.92,"reasoning":"Pergunta sobre validade da assinatura premium"}
+
+User: "ma souscription est active?"
+Context: {language: "fr"}
+→ {"intent":"premium_status","entities":{"language":"fr"},"confidence":0.93,"reasoning":"Question sur l'état de l'abonnement premium"}
+
+User: "change my language to french"
+Context: {language: "en"}
+→ {"intent":"change_language","entities":{"language":"fr"},"confidence":0.98,"reasoning":"Demande explicite de changement de langue vers le français"}
+
+User: "mudar para português"
+Context: {language: "en"}
+→ {"intent":"change_language","entities":{"language":"pt"},"confidence":0.97,"reasoning":"Demande explicite de changement de langue vers le portugais"}
+
+User: "en français s'il vous plait"
+Context: {language: "en"}
+→ {"intent":"change_language","entities":{"language":"fr"},"confidence":0.96,"reasoning":"Demande polie de passer en français"}
+
 Maintenant, analyse ce message avec le contexte fourni.`;
 }
 
@@ -214,8 +303,8 @@ async function analyzeWithAI(text, context) {
     
     const processingTime = Date.now() - startTime;
     const parsed = JSON.parse(response.choices[0].message.content);
-    
-    console.log('[NLU] 🤖 AI analysis:', {
+
+    logger.info('[NLU] 🤖 AI analysis:', {
       intent: parsed.intent,
       confidence: parsed.confidence,
       reasoning: parsed.reasoning,
@@ -227,8 +316,8 @@ async function analyzeWithAI(text, context) {
       processingTime
     };
   } catch (error) {
-    console.error('[NLU] ❌ AI error:', error.message);
-    
+    logger.error('[NLU] ❌ AI error:', { error: error.message });
+
     // Fallback : unknown
     return {
       intent: 'unknown',
@@ -245,8 +334,8 @@ async function analyzeWithAI(text, context) {
 // ==========================================
 
 export async function parseUserIntent(text, context = {}) {
-  console.log('[NLU] 📥 Input:', text);
-  console.log('[NLU] 📋 Context:', context);
+  logger.info('[NLU] 📥 Input:', { text });
+  logger.info('[NLU] 📋 Context:', context);
   
   // 1. Essayer regex d'abord (rapide)
   const regexResult = tryRegexMatch(text);
@@ -262,9 +351,12 @@ export async function parseUserIntent(text, context = {}) {
     if (aiResult.entities.language !== context.language) {
       // Changement de langue détecté
       if (aiResult.intent === 'greeting' || aiResult.confidence >= 0.85) {
-        console.log('[NLU] 🔄 Language change allowed:', context.language, '→', aiResult.entities.language);
+        logger.info('[NLU] 🔄 Language change allowed:', {
+          from: context.language,
+          to: aiResult.entities.language
+        });
       } else {
-        console.log('[NLU] 🔒 Language change blocked (low confidence)');
+        logger.info('[NLU] 🔒 Language change blocked (low confidence)');
         aiResult.entities.language = context.language; // Garder langue actuelle
       }
     }

@@ -18,8 +18,8 @@ export const messagesPt = {
       ERROR_INVALID_AMOUNT: `⚠️ Valor inválido. Digite um número (ex. 1000)`,
       ERROR_UPDATE_FAILED: `❌ Erro ao atualizar.`,
     
-      // ✅ TELA 2
-      promptAmt: `💬 Envie um valor ou escolha:`,
+      // ✅ MENU PRINCIPAL
+      promptAmt: `🏠 <b>Menu Principal</b>\n\n💱 Compare as melhores taxas EUR↔BRL ao vivo\n\n<b>💎 Premium:</b>\n🔔 Alertas personalizados\n⏰ Notificações no melhor momento para converter\n\n━━━━━━━━━━━━━━━━━━\n\n👉 <i>Escolha abaixo ou envie um valor (ex: 1000)</i>`,
       
       askAmount: `✏️ Digite um valor (ex. 1000)`,
       
@@ -28,9 +28,7 @@ export const messagesPt = {
       // ✅ TELA 3: buildComparison
       buildComparison: ({ route, amount, rates, onchain, bestBank, others, delta, locale, isTargetMode = false }) => {
         const now = new Date();
-        const dayOfWeek = now.getDay();
-        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-        
+
         let title;
         if (isTargetMode) {
           if (route === 'eurbrl') {
@@ -39,18 +37,22 @@ export const messagesPt = {
             title = `💱 Para receber ${formatAmount(amount, 0, locale)} EUR\nPrecisa ~${formatAmount(onchain.in, 0, locale)} BRL`;
           }
         } else {
-          title = route === 'eurbrl' 
+          title = route === 'eurbrl'
             ? `💱 ${formatAmount(amount, 0, locale)} EUR → BRL`
             : `💱 ${formatAmount(amount, 0, locale)} BRL → EUR`;
         }
-        
+
         const timeStr = now.toLocaleTimeString(locale, {hour: '2-digit', minute: '2-digit'});
         const tzAbbr = new Date().toLocaleTimeString('en-US', {timeZoneName: 'short'}).split(' ')[2];
-        
-        // ✅ Linha referência
-        let ref = `📊 Taxa de referência ${formatRate(rates.cross, locale)} • ${timeStr} ${tzAbbr}`;
-        if (isWeekend) {
-          ref += `\n⚠️ Fim de semana: taxa congelada até segunda`;
+
+        // ✅ Linha referência - Yahoo Finance apenas
+        let ref;
+        if (rates.yahooFrozen) {
+          // Yahoo indisponível (fim de semana/mercado fechado) - mostrando taxa crypto
+          ref = `📊 Taxa de referência ${formatRate(rates.cross, locale)} • ${timeStr} ${tzAbbr}\n⚠️ Taxa oficial congelada (fim de semana) - mostrando taxa ${rates.referenceSource}`;
+        } else {
+          // Yahoo disponível - referência oficial
+          ref = `📊 Taxa oficial ${formatRate(rates.cross, locale)} (Yahoo Finance) • ${timeStr} ${tzAbbr}`;
         }
         
         let onchainLine, bankLine;
@@ -198,20 +200,24 @@ export const messagesPt = {
       },
     
       SOURCES_TEXT: `📊 Fontes dos dados
-    
-    Taxa de referência EUR/BRL: Yahoo Finance (taxa oficial de câmbio)
-    
+
+    Taxa de referência EUR/BRL: Yahoo Finance (taxa oficial do mercado FX)
+
     Cálculo on-chain:
-    • Taxas crypto: CoinGecko (USDC/EUR, USDC/BRL)
+    • Taxas crypto: Coinpaprika (principal), CryptoCompare, ou CoinGecko (USDC/EUR, USDC/BRL)
     • Taxas reais incluídas:
       - Trading ~0,1%
       - Rede Polygon ~1 USDC
       - Saque Pix ~R$3,50
-    
+
     Taxas off-chain: API Wise Comparisons (taxas ao vivo dos provedores)
-    
+
     Links de indicação: gratuitos para você, financiam o serviço.`,
-    
+
+      SOURCES_PROOF: `📊 <b>Provas & Fontes</b>
+
+    Clique nos links abaixo para acessar os estudos e relatórios oficiais que provam a vantagem das transferências on-chain.`,
+
       // ✅ TELA 5: buildOffChain
       buildOffChain: ({ route, amount, bestBank, others, locale, onchainAmount }) => {
         const title = '🏦 Off-chain';
@@ -549,33 +555,59 @@ export const messagesPt = {
     
     🙌 Esperamos que você tenha curtido a experiência!`,
     
-      // Premium e alertas (mantidos iguais)
+      // Premium e alertas
       PREMIUM_PRICING: `💎 ASSINAR PREMIUM
-    
-    ✨ Com Premium:
-    • 🔔 Alertas personalizados ilimitados
-    • 📢 Alertas espontâneos regulares
-    • 🎯 Multi-pares (EUR→BRL + BRL→EUR)
-    • 📊 Análises mais avançadas
-    • 🌍 Multi-moedas em breve
-    • ⚡ Acesso prioritário às novas funcionalidades
-    
-    [ℹ️ Ver todas as funcionalidades Premium]
-    
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    
-    📱 15 R$ / 3 meses
-       Ou seja 5 R$/mês
-    
-    📱 27 R$ / 6 meses
-       Ou seja 4,50 R$/mês • Economia de 10%
-    
-    📱 50 R$ / 12 meses
-       Ou seja 4,17 R$/mês • Economia de 17%
-    
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    
-    🔜 Cartão de crédito internacional em breve`,
+
+✨ Com Premium:
+• 🔔 Alertas personalizados ilimitados
+• 📢 Alertas espontâneos regulares
+• 🎯 Multi-pares (EUR→BRL + BRL→EUR)
+• 📊 Análises mais avançadas
+• 🌍 Multi-moedas em breve
+• ⚡ Acesso prioritário às novas funcionalidades
+
+[ℹ️ Ver todas as funcionalidades Premium]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔄 <b>ASSINATURAS RECORRENTES</b>
+Cancelável a qualquer momento via Mercado Pago
+
+💳 <b>Planos disponíveis:</b>
+• R$ 6/mês (renovação mensal)
+• R$ 15/3 meses (economia de 17%)
+• R$ 28/6 meses (economia de 22%)
+• R$ 50/12 meses (economia de 31%)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 As assinaturas se renovam automaticamente via Mercado Pago.
+Você pode cancelar quando quiser, direto no app do Mercado Pago.
+
+❓ Problemas com o pagamento? Use o botão "Ajuda" abaixo.`,
+
+  PREMIUM_ONESHOT_PRICING: `💎 ASSINAR PREMIUM
+
+✨ Com Premium:
+• 🔔 Alertas personalizados ilimitados
+• 📢 Alertas espontâneos regulares
+• 🎯 Multi-pares (EUR→BRL + BRL→EUR)
+• 📊 Análises mais avançadas
+• ⚡ Acesso prioritário às novas funcionalidades
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💰 <b>PAGAMENTO ÚNICO (sem assinatura)</b>
+Pague uma vez, use pelo período escolhido, sem renovação automática.
+
+💳 <b>Planos disponíveis:</b>
+• R$ 18 - 3 meses
+• R$ 32 - 6 meses
+• R$ 60 - 12 meses
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❓ Problemas com o pagamento? Use o botão "Ajuda" abaixo.`,
     
       PREMIUM_DETAILS: `💎 FUNCIONALIDADES PREMIUM
     
@@ -1049,6 +1081,8 @@ export const messagesPt = {
         change: '✏️ Alterar valor',
         
         back: '⬅️ Voltar',
+        subscribe: '💳 Assinar',
+        pay: '💳 Pagar',
         sources: '📊 Fontes dos dados',
         openWise: '🔗 Abrir Wise',
         openRemitly: '🔗 Abrir Remitly',
@@ -1099,9 +1133,28 @@ export const messagesPt = {
         premium: '🚀 Descobrir Premium',
         giveFeedback: '💬 Dar uma sugestão',
         seePremium: '💎 Ver Premium',
-        subscribe3m: '📱 15 R$ - 3 meses',
-        subscribe6m: '📱 27 R$ - 6 meses',
-        subscribe12m: '📱 50 R$ - 12 meses',
+        seeOneshot: '💰 Ou experimente sem assinatura →',
+        backToSubscriptions: '⬅️ Voltar às assinaturas',
+        addMoreTime: '💰 Adicionar mais tempo (pagamento único)',
+        switchToSubscription: '🔄 Passar para assinatura recorrente',
+
+        // Subscription plans (recurring)
+        subMPMonthly: '💳 R$ 6/mês',
+        subMPQuarterly: '💳 R$ 15/3 meses (-17%)',
+        subMPSemiannual: '💳 R$ 28/6 meses (-22%)',
+        subMPAnnual: '💳 R$ 50/12 meses (-31%)',
+        subPPQuarterly: '💳 €4/3 meses',
+        subPPSemiannual: '💳 €7/6 meses',
+        subPPAnnual: '💳 €12/12 meses',
+
+        // One-shot plans
+        oneshot3m: '💰 R$ 18 - 3 meses',
+        oneshot6m: '💰 R$ 32 - 6 meses',
+        oneshot12m: '💰 R$ 60 - 12 meses',
+        oneshotPP3m: '💰 $4.50 - 3 meses',
+        oneshotPP6m: '💰 $8 - 6 meses',
+        oneshotPP12m: '💰 $15 - 12 meses',
+
         premiumDetails: 'ℹ️ Ver todas as funcionalidades',
         createAlert: '➕ Criar um alerta',
         myAlerts: '🔔 Meus alertas',
@@ -1127,5 +1180,23 @@ export const messagesPt = {
         chooseCooldown1week: '📆 1 semana',
         deleteAlert: '🗑️ Apagar',
         viewAlert: '👁️ Ver detalhes',
+
+        // ✅ Botões adicionais para consistência linguística
+        pairEurBrl: '🇪🇺 EUR → 🇧🇷 BRL',
+        pairBrlEur: '🇧🇷 BRL → 🇪🇺 EUR',
+        compareNow: '🚀 Comparar agora',
+        editMyAlert: '⚙️ Editar meu alerta',
+        deleteMyAlert: '🗑️ Apagar este alerta',
+        help: '❓ Ajuda',
+        paymentHelp: '💬 Ajuda com pagamento',
+        mainMenu: '🏠 Menu principal',
+
+        // Botões Premium com preços (para keyboards.js)
+        plan3months: '📅 3 meses - R$ 15,00',
+        plan6months: '📅 6 meses - R$ 28,00 (-7%)',
+        plan12months: '📅 12 meses - R$ 50,00 (-17%)',
+        renewPlan3months: '🔄 Renovar 3 meses - R$ 15,00',
+        renewPlan6months: '🔄 Renovar 6 meses - R$ 28,00 (-7%)',
+        renewPlan12months: '🔄 Renovar 12 meses - R$ 50,00 (-17%)',
       },
     };

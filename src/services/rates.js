@@ -1,5 +1,5 @@
 // src/services/rates.js
-// Version complète avec Yahoo + Binance + fallback CoinGecko
+// Yahoo Finance (référence officielle EUR/BRL) + Coinpaprika/CryptoCompare (on-chain via USDC)
 
 import { FEES } from '../config/constants.js';
 
@@ -9,7 +9,7 @@ let cacheTimestamp = null;
 const CACHE_DURATION = 60 * 1000; // 1 minute
 
 // ==========================================
-// YAHOO FINANCE - Taux FX officiel
+// YAHOO FINANCE - Taux FX officiel (RÉFÉRENCE UNIQUEMENT)
 // ==========================================
 
 async function fetchYahooRate() {
@@ -23,20 +23,20 @@ async function fetchYahooRate() {
         }
       }
     );
-    
+
     if (!response.ok) {
       throw new Error(`Yahoo API error: ${response.status}`);
     }
-    
+
     const data = await response.json();
     const yahooRate = data.chart.result[0].meta.regularMarketPrice;
-    
+
     if (!yahooRate || isNaN(yahooRate)) {
       throw new Error('Invalid Yahoo rate data');
     }
-    
+
     return yahooRate;
-    
+
   } catch (error) {
     console.error('[RATES-YAHOO] ❌ Error:', error.message);
     throw error;
@@ -44,95 +44,143 @@ async function fetchYahooRate() {
 }
 
 // ==========================================
-// BINANCE - Pairs USDC directes
+// COINPAPRIKA - Source principale (gratuit, illimité)
 // ==========================================
 
-async function fetchBinanceRates() {
+async function fetchCoinpaprikaRates() {
   try {
-    const [usdcBrlResponse, eurUsdcResponse] = await Promise.all([
-      fetch('https://api.binance.com/api/v3/ticker/price?symbol=USDCBRL'),
-      fetch('https://api.binance.com/api/v3/ticker/price?symbol=EURUSDC')
-    ]);
-    
-    if (!usdcBrlResponse.ok) {
-      throw new Error(`Binance USDCBRL error: ${usdcBrlResponse.status}`);
-    }
-    
-    const usdcBrlData = await usdcBrlResponse.json();
-    const usdcBRL = parseFloat(usdcBrlData.price);
-    
-    let usdcEUR;
-    
-    if (eurUsdcResponse.ok) {
-      const eurUsdcData = await eurUsdcResponse.json();
-      const eurUsdc = parseFloat(eurUsdcData.price);
-      usdcEUR = 1 / eurUsdc;
-      console.log('[RATES-BINANCE] Using EURUSDC pair');
-    } else {
-      console.log('[RATES-BINANCE] EURUSDC not found, trying USDCEUR...');
-      const usdcEurResponse = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=USDCEUR');
-      
-      if (!usdcEurResponse.ok) {
-        throw new Error('Neither EURUSDC nor USDCEUR available on Binance');
+    // Coinpaprika: free, unlimited, no API key needed
+    const response = await fetch(
+      'https://api.coinpaprika.com/v1/tickers/usdc-usd-coin',
+      {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'EUR-BRL-Bot/1.0'
+        }
       }
-      
-      const usdcEurData = await usdcEurResponse.json();
-      usdcEUR = parseFloat(usdcEurData.price);
-      console.log('[RATES-BINANCE] Using USDCEUR pair');
+    );
+
+    if (!response.ok) {
+      throw new Error(`Coinpaprika API error: ${response.status}`);
     }
-    
-    if (!usdcBRL || !usdcEUR || isNaN(usdcBRL) || isNaN(usdcEUR)) {
-      throw new Error('Invalid rate data from Binance');
+
+    const data = await response.json();
+
+    // Coinpaprika returns quotes in various currencies
+    const usdcBRL = data.quotes?.BRL?.price;
+    const usdcEUR = data.quotes?.EUR?.price;
+
+    if (!usdcBRL || !usdcEUR) {
+      throw new Error('Missing BRL or EUR quotes from Coinpaprika');
     }
-    
+
+    console.log(`[RATES-COINPAPRIKA] ✅ USDC/BRL = ${usdcBRL.toFixed(4)}, USDC/EUR = ${usdcEUR.toFixed(4)}`);
+
     return {
       usdcBRL,
       usdcEUR,
-      source: 'binance'
+      source: 'coinpaprika'
     };
-    
+
   } catch (error) {
-    console.error('[RATES-BINANCE] ❌ Error:', error.message);
+    console.error('[RATES-COINPAPRIKA] ❌ Error:', error.message);
     throw error;
   }
 }
 
 // ==========================================
-// COINGECKO - Fallback uniquement
+// CRYPTOCOMPARE - Fallback 1 (100k appels/mois gratuits)
+// ==========================================
+
+async function fetchCryptoCompareRates() {
+  try {
+    const apiKey = process.env.CRYPTOCOMPARE_API_KEY; // Optional but recommended
+
+    const headers = {
+      'Accept': 'application/json'
+    };
+
+    if (apiKey) {
+      headers['authorization'] = `Apikey ${apiKey}`;
+    }
+
+    const response = await fetch(
+      'https://min-api.cryptocompare.com/data/price?fsym=USDC&tsyms=BRL,EUR',
+      { headers }
+    );
+
+    if (!response.ok) {
+      throw new Error(`CryptoCompare API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (data.Response === 'Error') {
+      throw new Error(`CryptoCompare error: ${data.Message}`);
+    }
+
+    const usdcBRL = data.BRL;
+    const usdcEUR = data.EUR;
+
+    if (!usdcBRL || !usdcEUR) {
+      throw new Error('Missing BRL or EUR data from CryptoCompare');
+    }
+
+    console.log(`[RATES-CRYPTOCOMPARE] ✅ USDC/BRL = ${usdcBRL.toFixed(4)}, USDC/EUR = ${usdcEUR.toFixed(4)}`);
+
+    return {
+      usdcBRL,
+      usdcEUR,
+      source: 'cryptocompare'
+    };
+
+  } catch (error) {
+    console.error('[RATES-CRYPTOCOMPARE] ❌ Error:', error.message);
+    throw error;
+  }
+}
+
+// ==========================================
+// COINGECKO - Fallback 2 (en dernier recours)
 // ==========================================
 
 async function fetchCoinGeckoRates() {
   try {
     const apiKey = process.env.COINGECKO_API_KEY;
-    const url = apiKey 
-      ? `https://api.coingecko.com/api/v3/simple/price?ids=usd-coin&vs_currencies=brl,eur&x_cg_demo_api_key=${apiKey}`
-      : 'https://api.coingecko.com/api/v3/simple/price?ids=usd-coin&vs_currencies=brl,eur';
-    
-    const response = await fetch(url, {
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'EUR-BRL-Bot/1.0'
-      }
-    });
-    
+
+    const headers = {
+      'Accept': 'application/json'
+    };
+
+    if (apiKey) {
+      headers['x-cg-demo-api-key'] = apiKey;
+    }
+
+    const response = await fetch(
+      'https://api.coingecko.com/api/v3/simple/price?ids=usd-coin&vs_currencies=brl,eur',
+      { headers }
+    );
+
     if (!response.ok) {
       throw new Error(`CoinGecko API error: ${response.status}`);
     }
-    
+
     const data = await response.json();
     const usdcBRL = data['usd-coin']?.brl;
     const usdcEUR = data['usd-coin']?.eur;
-    
+
     if (!usdcBRL || !usdcEUR) {
       throw new Error('Missing rate data from CoinGecko');
     }
-    
+
+    console.log(`[RATES-COINGECKO] ✅ USDC/BRL = ${usdcBRL.toFixed(4)}, USDC/EUR = ${usdcEUR.toFixed(4)}`);
+
     return {
       usdcBRL,
       usdcEUR,
       source: 'coingecko'
     };
-    
+
   } catch (error) {
     console.error('[RATES-COINGECKO] ❌ Error:', error.message);
     throw error;
@@ -140,112 +188,115 @@ async function fetchCoinGeckoRates() {
 }
 
 // ==========================================
-// GET RATES - Fonction principale
+// FONCTION PRINCIPALE
 // ==========================================
 
 export async function getRates() {
-  // 1. Vérifier le cache
-  if (ratesCache && cacheTimestamp) {
-    const age = Date.now() - cacheTimestamp;
-    if (age < CACHE_DURATION) {
-      console.log(`[RATES] ✅ Using cache (age: ${Math.round(age/1000)}s)`);
-      return ratesCache;
+  // 1. Vérifier cache
+  if (ratesCache && cacheTimestamp && (Date.now() - cacheTimestamp < CACHE_DURATION)) {
+    console.log('[RATES] ✅ Using cache');
+    return ratesCache;
+  }
+
+  console.log('[RATES] 🔄 Cache expired or missing, fetching fresh rates...');
+
+  // 2. Yahoo Finance pour la référence OFFICIELLE
+  let yahooRate = null;
+  let yahooFrozen = false;
+
+  try {
+    console.log('[RATES] 📡 Fetching Yahoo Finance reference...');
+    yahooRate = await fetchYahooRate();
+    console.log(`[RATES-YAHOO] ✅ EUR/BRL = ${yahooRate.toFixed(4)}`);
+  } catch (yahooError) {
+    console.warn('[RATES-YAHOO] ⚠️ Yahoo failed (likely weekend/market closed)');
+    yahooFrozen = true;
+  }
+
+  // 3. Coinpaprika pour on-chain (USDC bridge) - source principale (gratuit illimité)
+  let usdcBRL, usdcEUR, onchainSource;
+
+  try {
+    console.log('[RATES] 📡 Fetching Coinpaprika for on-chain rates...');
+    const paprikaData = await fetchCoinpaprikaRates();
+    usdcBRL = paprikaData.usdcBRL;
+    usdcEUR = paprikaData.usdcEUR;
+    onchainSource = paprikaData.source;
+  } catch (paprikaError) {
+    console.warn('[RATES] ⚠️ Coinpaprika failed, trying CryptoCompare fallback...');
+
+    try {
+      const compareData = await fetchCryptoCompareRates();
+      usdcBRL = compareData.usdcBRL;
+      usdcEUR = compareData.usdcEUR;
+      onchainSource = compareData.source;
+    } catch (compareError) {
+      console.warn('[RATES] ⚠️ CryptoCompare failed, trying CoinGecko fallback...');
+
+      try {
+        const geckoData = await fetchCoinGeckoRates();
+        usdcBRL = geckoData.usdcBRL;
+        usdcEUR = geckoData.usdcEUR;
+        onchainSource = geckoData.source;
+      } catch (geckoError) {
+        console.error('[RATES] ❌ All crypto sources failed (Coinpaprika, CryptoCompare, CoinGecko)');
+
+        // Fallback au cache stale si disponible
+        if (ratesCache) {
+          const age = Date.now() - cacheTimestamp;
+          console.warn(`[RATES] ⚠️ Using stale cache (age: ${Math.round(age/1000)}s)`);
+          return ratesCache;
+        }
+
+        console.error('[RATES] 💥 All sources failed, no cache available');
+        return null;
+      }
     }
   }
 
-  // 2. Binance (principal - pour calculs on-chain)
-  try {
-    console.log('[RATES] 📡 Fetching from Binance...');
-    const { usdcBRL, usdcEUR, source } = await fetchBinanceRates();
-    
-    const eurToUsdc = 1 / usdcEUR;
-    const crossBinance = eurToUsdc * usdcBRL;
-    
-    // 3. Yahoo Finance (référence FX officielle)
-    let crossReference = crossBinance; // Fallback
-    let referenceSource = 'binance';
-    
-    try {
-      console.log('[RATES] 📡 Fetching Yahoo reference...');
-      const yahooRate = await fetchYahooRate();
-      crossReference = yahooRate;
-      referenceSource = 'yahoo';
-      console.log(`[RATES] ✅ Yahoo: EUR/BRL = ${yahooRate.toFixed(4)}`);
-    } catch (yahooError) {
-      console.warn('[RATES] ⚠️ Yahoo failed, using Binance cross as reference');
-    }
-    
-    const rates = {
-      usdcBRL,
-      usdcEUR,
-      eurToUsdc,
-      cross: crossReference,
-      crossBinance,
-      timestamp: new Date().toISOString(),
-      source,
-      referenceSource
-    };
-    
-    // Mettre à jour le cache
-    ratesCache = rates;
-    cacheTimestamp = Date.now();
-    
-    console.log(`[RATES] ✅ Complete: Ref=${crossReference.toFixed(4)} (${referenceSource}), Binance=${crossBinance.toFixed(4)}`);
-    return rates;
-    
-  } catch (binanceError) {
-    console.warn('[RATES] ⚠️ Binance failed, trying CoinGecko fallback...');
-    
-    // 4. Fallback CoinGecko (uniquement si Binance fail)
-    try {
-      const { usdcBRL, usdcEUR, source } = await fetchCoinGeckoRates();
-      
-      const eurToUsdc = 1 / usdcEUR;
-      const crossCoinGecko = eurToUsdc * usdcBRL;
-      
-      // Essayer Yahoo même si Binance a fail
-      let crossReference = crossCoinGecko;
-      let referenceSource = 'coingecko';
-      
-      try {
-        const yahooRate = await fetchYahooRate();
-        crossReference = yahooRate;
-        referenceSource = 'yahoo';
-      } catch {
-        console.warn('[RATES] ⚠️ Yahoo also failed, using CoinGecko cross');
-      }
-      
-      const rates = {
-        usdcBRL,
-        usdcEUR,
-        eurToUsdc,
-        cross: crossReference,
-        crossBinance: crossCoinGecko,
-        timestamp: new Date().toISOString(),
-        source,
-        referenceSource
-      };
-      
-      ratesCache = rates;
-      cacheTimestamp = Date.now();
-      
-      console.log(`[RATES] ✅ CoinGecko: EUR/BRL = ${crossReference.toFixed(4)}`);
-      return rates;
-      
-    } catch (coinGeckoError) {
-      console.error('[RATES] ❌ CoinGecko also failed');
-      
-      // 5. Cache stale en dernier recours
-      if (ratesCache) {
-        const age = Date.now() - cacheTimestamp;
-        console.warn(`[RATES] ⚠️ Using stale cache (age: ${Math.round(age/1000)}s)`);
-        return ratesCache;
-      }
-      
-      console.error('[RATES] 💥 All sources failed, no cache available');
-      return null;
-    }
+  // 4. Calculer le cross rate on-chain via USDC
+  const eurToUsdc = 1 / usdcEUR;
+  const onchainCross = eurToUsdc * usdcBRL;
+
+  // 5. Déterminer la référence à afficher
+  let referenceRate;
+  let referenceSource;
+
+  if (yahooRate) {
+    // Yahoo disponible = référence officielle
+    referenceRate = yahooRate;
+    referenceSource = 'yahoo';
+  } else {
+    // Yahoo indisponible (weekend) = utiliser le cross on-chain
+    referenceRate = onchainCross;
+    referenceSource = onchainSource;
+    yahooFrozen = true;
   }
+
+  // 6. Construire l'objet de résultat
+  const rates = {
+    // Référence officielle (Yahoo ou frozen)
+    cross: referenceRate,
+    referenceSource,
+    yahooFrozen,
+
+    // Taux on-chain via USDC
+    usdcBRL,
+    usdcEUR,
+    eurToUsdc,
+    crossBinance: onchainCross, // Nom conservé pour compatibilité
+    source: onchainSource,
+
+    timestamp: new Date().toISOString()
+  };
+
+  // Mettre à jour le cache
+  ratesCache = rates;
+  cacheTimestamp = Date.now();
+
+  console.log(`[RATES] ✅ Complete: Reference=${referenceRate.toFixed(4)} (${referenceSource}${yahooFrozen ? ', frozen' : ''}), On-chain=${onchainCross.toFixed(4)} (${onchainSource})`);
+
+  return rates;
 }
 
 // ==========================================
@@ -254,12 +305,12 @@ export async function getRates() {
 
 function calculateEURtoBRL(eurIn, rates) {
   const { eurToUsdc, usdcBRL } = rates;
-  
+
   const usdcAfterBuy = eurIn * (1 - FEES.TRADE_EU) * eurToUsdc;
   const usdcAfterNetwork = Math.max(0, usdcAfterBuy - FEES.NETWORK_USDC_FIXED);
   const brlAfterTrade = usdcAfterNetwork * (1 - FEES.TRADE_BR) * usdcBRL;
   const brlNet = Math.max(0, brlAfterTrade - FEES.WITHDRAW_BRL_FIXED);
-  
+
   return {
     in: eurIn,
     out: brlNet,
@@ -270,12 +321,12 @@ function calculateEURtoBRL(eurIn, rates) {
 
 function calculateBRLtoEUR(brlIn, rates) {
   const { eurToUsdc, usdcBRL } = rates;
-  
+
   const usdcFromBRL = (brlIn / usdcBRL) * (1 - FEES.TRADE_BR);
   const usdcAfterNetwork = Math.max(0, usdcFromBRL - FEES.NETWORK_USDC_FIXED);
   const eurOut = (usdcAfterNetwork / eurToUsdc) * (1 - FEES.TRADE_EU);
   const eurNet = Math.max(0, eurOut);
-  
+
   return {
     in: brlIn,
     out: eurNet,
@@ -285,34 +336,34 @@ function calculateBRLtoEUR(brlIn, rates) {
 }
 
 export function calculateOnChain(route, amount, rates) {
-  return route === 'eurbrl' 
+  return route === 'eurbrl'
     ? calculateEURtoBRL(amount, rates)
     : calculateBRLtoEUR(amount, rates);
 }
 
 export function calculateOnChainReverse(route, targetAmount, rates) {
   // Calcul inversé : partir du montant cible pour trouver le montant source nécessaire
-  
+
   if (route === 'eurbrl') {
     // Je veux recevoir X BRL, combien d'EUR faut-il envoyer ?
-    
+
     const brlTarget = targetAmount;
-    
+
     // Étape 4 inverse : Avant Pix (retrait)
     const brlBeforePix = brlTarget + FEES.WITHDRAW_BRL_FIXED;
-    
+
     // Étape 3 inverse : Avant vente USDC
     const brlBeforeTrade = brlBeforePix / (1 - FEES.TRADE_BR);
     const usdcInBrazil = brlBeforeTrade / rates.usdcBRL;
-    
+
     // Étape 2 inverse : Avant transfert blockchain
     const usdcInEurope = usdcInBrazil + FEES.NETWORK_USDC_FIXED;
-    
+
     // Étape 1 inverse : Avant achat USDC en Europe
     const eurNeeded = (usdcInEurope * rates.usdcEUR) / (1 - FEES.TRADE_EU);
-    
+
     const effectiveRate = brlTarget / eurNeeded;
-    
+
     return {
       in: eurNeeded,          // EUR à envoyer
       out: targetAmount,      // BRL à recevoir
@@ -325,24 +376,24 @@ export function calculateOnChainReverse(route, targetAmount, rates) {
         brlNet: brlTarget
       }
     };
-    
+
   } else {
     // brleur : Je veux recevoir X EUR, combien de BRL faut-il envoyer ?
-    
+
     const eurTarget = targetAmount;
-    
+
     // Étape 3 inverse : Avant vente USDC en Europe
     const eurBeforeTrade = eurTarget / (1 - FEES.TRADE_EU);
     const usdcInEurope = eurBeforeTrade / rates.usdcEUR;
-    
+
     // Étape 2 inverse : Avant transfert blockchain
     const usdcInBrazil = usdcInEurope + FEES.NETWORK_USDC_FIXED;
-    
+
     // Étape 1 inverse : Avant achat USDC au Brésil
     const brlNeeded = (usdcInBrazil * rates.usdcBRL) / (1 - FEES.TRADE_BR);
-    
+
     const effectiveRate = eurTarget / brlNeeded;
-    
+
     return {
       in: brlNeeded,          // BRL à envoyer
       out: targetAmount,      // EUR à recevoir
@@ -354,6 +405,77 @@ export function calculateOnChainReverse(route, targetAmount, rates) {
         eurAfterTrade: eurTarget,
         eurNet: eurTarget
       }
+    };
+  }
+}
+
+export async function fetchOnChainRates(from, to, amount) {
+  const rates = await getRates();
+
+  if (!rates) {
+    throw new Error('Unable to fetch rates');
+  }
+
+  const { usdcBRL, eurToUsdc } = rates;
+
+  let result;
+  if (from === 'EUR' && to === 'BRL') {
+    const usdcAmount = amount * eurToUsdc;
+    const brlAmount = usdcAmount * usdcBRL;
+    const impliedRate = brlAmount / amount;
+
+    result = {
+      you_get: brlAmount,
+      rate: impliedRate,
+      fee: 0,
+      you_send: amount
+    };
+  } else if (from === 'BRL' && to === 'EUR') {
+    const usdcAmount = amount / usdcBRL;
+    const eurAmount = usdcAmount / eurToUsdc;
+    const impliedRate = amount / eurAmount;
+
+    result = {
+      you_get: eurAmount,
+      rate: impliedRate,
+      fee: 0,
+      you_send: amount
+    };
+  }
+
+  return result;
+}
+
+// ==========================================
+// CALCULS PROVIDERS TRADITIONNELS
+// ==========================================
+
+export function fetchProviderRate(provider, from, to, amount) {
+  const baseRate = ratesCache?.cross || 6.0;
+
+  if (from === 'EUR' && to === 'BRL') {
+    const markup = FEES[provider].markup;
+    const appliedRate = baseRate * (1 - markup);
+    const youGet = amount * appliedRate;
+    const fee = FEES[provider].fee;
+
+    return {
+      you_get: youGet - fee,
+      rate: appliedRate,
+      fee,
+      you_send: amount
+    };
+  } else if (from === 'BRL' && to === 'EUR') {
+    const markup = FEES[provider].markup;
+    const appliedRate = baseRate * (1 + markup);
+    const youGet = amount / appliedRate;
+    const fee = FEES[provider].fee;
+
+    return {
+      you_get: youGet - fee,
+      rate: appliedRate,
+      fee,
+      you_send: amount
     };
   }
 }

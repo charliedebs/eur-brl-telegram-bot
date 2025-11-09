@@ -1,4 +1,5 @@
 import { Telegraf, Markup, session } from 'telegraf';
+import rateLimit from 'telegraf-ratelimit';
 import { buildKeyboards } from './keyboards.js';
 import { updateNLUFeedback } from '../services/nlu-logger.js';
 import { getRates, calculateOnChain, getLocale, formatAmount, formatRate, calculateOnChainReverse } from '../services/rates.js';
@@ -7,8 +8,33 @@ import { AlertsService } from '../services/alerts.js';
 import { DatabaseService } from '../services/database.js';
 import { parseUserIntent } from '../core/nlu.js';
 import { messages } from './messages/messages-loader.js';
+import { parseAndValidateAmount, validateThreshold } from '../utils/validation.js';
+import { logger } from '../utils/logger.js';
 
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
+
+// ==========================================
+// RATE LIMITING
+// ==========================================
+const limitConfig = {
+  window: 3000,      // 3 seconds window
+  limit: 5,          // 5 messages max per window
+  onLimitExceeded: (ctx) => {
+    const lang = ctx.state?.lang || 'pt';
+    const messages = {
+      fr: '⏱️ Ralentis un peu ! Tu peux envoyer maximum 5 messages par 3 secondes.',
+      pt: '⏱️ Devagar! Você pode enviar no máximo 5 mensagens a cada 3 segundos.',
+      en: '⏱️ Slow down! You can send maximum 5 messages per 3 seconds.'
+    };
+    return ctx.reply(messages[lang] || messages.en);
+  },
+  keyGenerator: (ctx) => {
+    // Rate limit per user
+    return ctx.from?.id?.toString();
+  }
+};
+
+bot.use(rateLimit(limitConfig));
 
 // Activer les sessions
 bot.use(session());
@@ -22,12 +48,21 @@ bot.use(async (ctx, next) => {
   if (userId) {
     let user = await db.getUser(userId);
     if (!user) {
-      const langCode = ctx.from.language_code || 'en';
-      const lang = langCode.startsWith('fr') ? 'fr' : langCode.startsWith('pt') ? 'pt' : 'en';
+      // New user - detect language from Telegram
+      const langCode = ctx.from.language_code || 'pt';
+      const lang = langCode.startsWith('fr') ? 'fr' : langCode.startsWith('pt') ? 'pt' : langCode.startsWith('en') ? 'en' : 'pt';
       user = await db.createUser(userId, lang);
+      logger.info('[LANG] New user created with language:', { userId, lang, telegram_lang: langCode });
     }
     ctx.state.user = user;
-    ctx.state.lang = user.language;
+    ctx.state.lang = user.language || 'pt'; // Ensure we always have a language (PT default)
+
+    // Log if user language is not set (should not happen)
+    if (!user.language) {
+      logger.warn('[LANG] User without language detected, defaulting to PT:', { userId });
+      await db.updateUser(userId, { language: 'pt' });
+      ctx.state.lang = 'pt';
+    }
   }
 
   if (!ctx.session) {
@@ -40,7 +75,7 @@ bot.use(async (ctx, next) => {
   await next();
 });
 
-const getMsg = (ctx) => messages[ctx.state.lang || 'fr'];
+const getMsg = (ctx) => messages[ctx.state.lang || 'pt'];
 
 // ==================== COMMANDS ====================
 
@@ -57,8 +92,154 @@ bot.command('help', async (ctx) => {
 
 bot.command('premium', async (ctx) => {
   const msg = getMsg(ctx);
-  const kb = buildKeyboards(msg, 'premium_pricing');
-  await ctx.reply(msg.PREMIUM_PRICING, { parse_mode: 'HTML', ...kb });
+  const telegram_id = ctx.from.id;
+
+  try {
+    // Check if user has premium
+    const { getPremiumDetails } = await import('../services/payments/index.js');
+    const premiumInfo = await getPremiumDetails(telegram_id);
+
+    if (premiumInfo) {
+      // User has premium - check if has active subscription
+      const activeSubscription = await db.getActiveSubscription(telegram_id);
+
+      const expiryDate = premiumInfo.expires_at.toLocaleDateString(
+        ctx.state.lang === 'pt' ? 'pt-BR' : ctx.state.lang === 'fr' ? 'fr-FR' : 'en-US'
+      );
+
+      const lang = ctx.state.lang || 'pt';
+
+      let premiumMessage;
+      let keyboardType;
+
+      if (activeSubscription) {
+        // User has an active subscription
+        // Get subscription plan details
+        const planNames = {
+          monthly: { pt: 'Mensal', fr: 'Mensuel', en: 'Monthly', freq: { pt: 'todo mês', fr: 'chaque mois', en: 'every month' } },
+          quarterly: { pt: '3 Meses', fr: '3 Mois', en: '3 Months', freq: { pt: 'a cada 3 meses', fr: 'tous les 3 mois', en: 'every 3 months' } },
+          semiannual: { pt: '6 Meses', fr: '6 Mois', en: '6 Months', freq: { pt: 'a cada 6 meses', fr: 'tous les 6 mois', en: 'every 6 months' } },
+          annual: { pt: '12 Meses', fr: '12 Mois', en: '12 Months', freq: { pt: 'anualmente', fr: 'annuellement', en: 'annually' } }
+        };
+
+        const planInfo = planNames[activeSubscription.plan] || planNames.monthly;
+
+        premiumMessage = {
+          pt: `✅ <b>Você é Premium!</b>\n\n` +
+              `⏰ Próxima renovação: ${expiryDate}\n` +
+              `📅 Dias restantes: ${premiumInfo.days_remaining}\n\n` +
+              `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+              `💎 <b>FUNCIONALIDADES ATIVAS</b>\n\n` +
+              `✨ Você tem acesso a:\n` +
+              `• 🔔 Alertas personalizados ilimitados\n` +
+              `• 📢 Alertas espontâneos regulares\n` +
+              `• 🎯 Multi-pares (EUR→BRL + BRL→EUR)\n` +
+              `• 📊 Análises avançadas\n` +
+              `• ⚡ Acesso prioritário às novas funcionalidades\n\n` +
+              `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+              `🔄 <b>ASSINATURA ATIVA</b>\n\n` +
+              `📦 Plano: ${planInfo.pt}\n` +
+              `🔄 Renovação: ${planInfo.freq.pt}\n\n` +
+              `Para cancelar sua assinatura, acesse seu app <b>Mercado Pago</b> → Assinaturas.`,
+          fr: `✅ <b>Vous êtes Premium!</b>\n\n` +
+              `⏰ Prochain renouvellement: ${expiryDate}\n` +
+              `📅 Jours restants: ${premiumInfo.days_remaining}\n\n` +
+              `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+              `💎 <b>FONCTIONNALITÉS ACTIVES</b>\n\n` +
+              `✨ Vous avez accès à:\n` +
+              `• 🔔 Alertes personnalisées illimitées\n` +
+              `• 📢 Alertes spontanées régulières\n` +
+              `• 🎯 Multi-paires (EUR→BRL + BRL→EUR)\n` +
+              `• 📊 Analyses avancées\n` +
+              `• ⚡ Accès prioritaire aux nouvelles fonctionnalités\n\n` +
+              `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+              `🔄 <b>ABONNEMENT ACTIF</b>\n\n` +
+              `📦 Plan: ${planInfo.fr}\n` +
+              `🔄 Renouvellement: ${planInfo.freq.fr}\n\n` +
+              `Pour annuler votre abonnement, accédez à votre app <b>Mercado Pago</b> → Abonnements.`,
+          en: `✅ <b>You are Premium!</b>\n\n` +
+              `⏰ Next renewal: ${expiryDate}\n` +
+              `📅 Days remaining: ${premiumInfo.days_remaining}\n\n` +
+              `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+              `💎 <b>ACTIVE FEATURES</b>\n\n` +
+              `✨ You have access to:\n` +
+              `• 🔔 Unlimited custom alerts\n` +
+              `• 📢 Regular spontaneous alerts\n` +
+              `• 🎯 Multi-pairs (EUR→BRL + BRL→EUR)\n` +
+              `• 📊 Advanced analytics\n` +
+              `• ⚡ Priority access to new features\n\n` +
+              `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+              `🔄 <b>ACTIVE SUBSCRIPTION</b>\n\n` +
+              `📦 Plan: ${planInfo.en}\n` +
+              `🔄 Renewal: ${planInfo.freq.en}\n\n` +
+              `To cancel your subscription, access your <b>Mercado Pago</b> app → Subscriptions.`
+        };
+
+        keyboardType = 'premium_subscription_active';
+      } else {
+        // User has premium but no active subscription (one-shot payment)
+        premiumMessage = {
+          pt: `✅ <b>Você é Premium!</b>\n\n` +
+              `⏰ Expira em: ${expiryDate}\n` +
+              `📅 Dias restantes: ${premiumInfo.days_remaining}\n\n` +
+              `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+              `💎 <b>FUNCIONALIDADES ATIVAS</b>\n\n` +
+              `✨ Você tem acesso a:\n` +
+              `• 🔔 Alertas personalizados ilimitados\n` +
+              `• 📢 Alertas espontâneos regulares\n` +
+              `• 🎯 Multi-pares (EUR→BRL + BRL→EUR)\n` +
+              `• 📊 Análises avançadas\n` +
+              `• ⚡ Acesso prioritário às novas funcionalidades\n\n` +
+              `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+              `💰 <b>RENOVAR SEU ACESSO</b>\n\n` +
+              `Escolha abaixo para adicionar mais tempo ou passar para assinatura recorrente:`,
+          fr: `✅ <b>Vous êtes Premium!</b>\n\n` +
+              `⏰ Expire le: ${expiryDate}\n` +
+              `📅 Jours restants: ${premiumInfo.days_remaining}\n\n` +
+              `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+              `💎 <b>FONCTIONNALITÉS ACTIVES</b>\n\n` +
+              `✨ Vous avez accès à:\n` +
+              `• 🔔 Alertes personnalisées illimitées\n` +
+              `• 📢 Alertes spontanées régulières\n` +
+              `• 🎯 Multi-paires (EUR→BRL + BRL→EUR)\n` +
+              `• 📊 Analyses avancées\n` +
+              `• ⚡ Accès prioritaire aux nouvelles fonctionnalités\n\n` +
+              `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+              `💰 <b>RENOUVELER VOTRE ACCÈS</b>\n\n` +
+              `Choisissez ci-dessous pour ajouter plus de temps ou passer en abonnement récurrent:`,
+          en: `✅ <b>You are Premium!</b>\n\n` +
+              `⏰ Expires: ${expiryDate}\n` +
+              `📅 Days remaining: ${premiumInfo.days_remaining}\n\n` +
+              `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+              `💎 <b>ACTIVE FEATURES</b>\n\n` +
+              `✨ You have access to:\n` +
+              `• 🔔 Unlimited custom alerts\n` +
+              `• 📢 Regular spontaneous alerts\n` +
+              `• 🎯 Multi-pairs (EUR→BRL + BRL→EUR)\n` +
+              `• 📊 Advanced analytics\n` +
+              `• ⚡ Priority access to new features\n\n` +
+              `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+              `💰 <b>RENEW YOUR ACCESS</b>\n\n` +
+              `Choose below to add more time or switch to recurring subscription:`
+        };
+
+        keyboardType = 'premium_oneshot_renew';
+      }
+
+      const kb = buildKeyboards(msg, keyboardType, { lang });
+      await ctx.reply(premiumMessage[lang] || premiumMessage.pt, { parse_mode: 'HTML', ...kb });
+    } else {
+      // User doesn't have premium - show regular pricing
+      const kb = buildKeyboards(msg, 'premium_pricing');
+      await ctx.reply(msg.PREMIUM_PRICING, { parse_mode: 'HTML', ...kb });
+    }
+
+  } catch (error) {
+    logger.error('[BOT] Premium command failed:', { error: error.message, telegram_id });
+    // Fallback to simple premium message
+    const kb = buildKeyboards(msg, 'premium_pricing');
+    await ctx.reply(msg.PREMIUM_PRICING, { parse_mode: 'HTML', ...kb });
+  }
 });
 
 // Commande /lang (et alias /language)
@@ -81,12 +262,12 @@ Choisis ta langue`;
 bot.command('rate', async (ctx) => {
   const msg = getMsg(ctx);
   const locale = getLocale(ctx.state.lang);
-  
-  // Parse amount (default 1000)
+
+  // Parse and validate amount (default 1000)
   const args = ctx.message.text.split(' ').slice(1).join(' ').trim();
-  const amount = args ? parseFloat(args.replace(/[^\d.]/g, '')) : 1000;
-  
-  if (!amount || !isFinite(amount)) {
+  const amount = args ? parseAndValidateAmount(args) : 1000;
+
+  if (!amount) {
     return ctx.reply(msg.ERROR_INVALID_AMOUNT);
   }
   
@@ -158,11 +339,11 @@ bot.command('convert', async (ctx) => {
     return ctx.reply(msg.ERROR_INVALID_AMOUNT);
   }
   
-  const amount = parseFloat(match[1].replace(',', '.'));
+  const amount = parseAndValidateAmount(match[1]);
   const currency = match[2]; // peut être null
   const forcedLang = match[3]; // peut être null
-  
-  if (!amount || !isFinite(amount)) {
+
+  if (!amount) {
     const msg = getMsg(ctx);
     return ctx.reply(msg.ERROR_INVALID_AMOUNT);
   }
@@ -170,6 +351,11 @@ bot.command('convert', async (ctx) => {
   // Appliquer langue forcée si présente
   if (forcedLang && ['fr', 'pt', 'en'].includes(forcedLang)) {
     if (forcedLang !== ctx.state.lang) {
+      logger.info('[LANG] Language changed via /convert command:', {
+        userId: ctx.from.id,
+        from: ctx.state.lang,
+        to: forcedLang
+      });
       await db.updateUser(ctx.from.id, { language: forcedLang });
       ctx.state.lang = forcedLang;
     }
@@ -417,13 +603,21 @@ bot.command('sources', async (ctx) => {
 
 bot.action(/^lang:(.+)$/, async (ctx) => {
   const lang = ctx.match[1];
+  const previousLang = ctx.state.lang;
+
+  logger.info('[LANG] Language changed via button:', {
+    userId: ctx.from.id,
+    from: previousLang,
+    to: lang
+  });
+
   await db.updateUser(ctx.from.id, { language: lang });
   ctx.state.lang = lang;
-  
+
   const msg = getMsg(ctx);
   const locale = getLocale(lang);
   const kb = buildKeyboards(msg, 'main', { locale });
-  
+
   await ctx.editMessageText(msg.promptAmt, { parse_mode: 'HTML', ...kb });
   await ctx.answerCbQuery();
 });
@@ -438,7 +632,11 @@ bot.action('action:about', async (ctx) => {
 bot.action('action:back_main', async (ctx) => {
   const msg = getMsg(ctx);
   const locale = getLocale(ctx.state.lang);
-  const kb = buildKeyboards(msg, 'main', { locale });
+
+  // Check if user is premium to show alerts button
+  const isPremium = await db.isPremium(ctx.from.id);
+  const kb = buildKeyboards(msg, 'main', { locale, isPremium });
+
   await ctx.editMessageText(msg.promptAmt, { parse_mode: 'HTML', ...kb });
   await ctx.answerCbQuery();
 });
@@ -471,7 +669,8 @@ async function showComparison(ctx, route, amount, isTargetMode = false) {
   ]);
   
   if (!rates) {
-    await ctx.reply("⚠️ Taux crypto indisponibles. Réessaie dans un instant.");
+    const msg = getMsg(ctx);
+    await ctx.reply(msg.ERROR_RATES_UNAVAILABLE || "⚠️ Rates temporarily unavailable. Try again in a moment.");
     return;
   }
   
@@ -547,7 +746,8 @@ bot.action('action:sources', async (ctx) => {
 bot.action(/^action:back_comparison:(.+):(\d+)$/, async (ctx) => {
   const route = ctx.match[1];
   const amount = parseFloat(ctx.match[2]);
-  await showComparison(ctx, route, amount);
+  const isTargetMode = ctx.session.lastIsTargetMode || false;
+  await showComparison(ctx, route, amount, isTargetMode);
   await ctx.answerCbQuery();
 });
 
@@ -556,21 +756,33 @@ bot.action(/^action:calc_details:(.+):(\d+)$/, async (ctx) => {
   const amount = parseFloat(ctx.match[2]);
   const msg = getMsg(ctx);
   const locale = getLocale(ctx.state.lang);
-  
+  const isTargetMode = ctx.session.lastIsTargetMode || false;
+
   const rates = await getRates();
   if (!rates) {
-    await ctx.reply("⚠️ Taux indisponibles.");
+    const msg = getMsg(ctx);
+    await ctx.reply(msg.ERROR_RATES_UNAVAILABLE || "⚠️ Rates temporarily unavailable.");
     await ctx.answerCbQuery();
     return;
   }
-  
-  const onchain = calculateOnChain(route, amount, rates);
-  const text = msg.buildCalcDetails({ route, amount, rates, onchain, locale });
-  
+
+  // Use appropriate calculation based on mode
+  const onchain = isTargetMode
+    ? calculateOnChainReverse(route, amount, rates)
+    : calculateOnChain(route, amount, rates);
+
+  const text = msg.buildCalcDetails({
+    route,
+    amount: isTargetMode ? onchain.in : amount, // Show source amount for target mode
+    rates,
+    onchain: isTargetMode ? { ...onchain, out: amount } : onchain, // Adjust for display
+    locale
+  });
+
   const kb = Markup.inlineKeyboard([
     [Markup.button.callback(msg.btn.back, `action:back_comparison:${route}:${amount}`)]
   ]);
-  
+
   await ctx.editMessageText(text, { parse_mode: 'HTML', ...kb });
   await ctx.answerCbQuery();
 });
@@ -580,36 +792,43 @@ bot.action(/^action:stay_offchain:(.+):(\d+)$/, async (ctx) => {
   const amount = parseFloat(ctx.match[2]);
   const msg = getMsg(ctx);
   const locale = getLocale(ctx.state.lang);
-  
-  const [rates, wiseData] = await Promise.all([
-    getRates(),
-    getWiseComparison(route, amount)
-  ]);
-  
+  const isTargetMode = ctx.session.lastIsTargetMode || false;
+
+  const rates = await getRates();
   if (!rates) {
-    await ctx.reply("⚠️ Taux indisponibles.");
+    const msg = getMsg(ctx);
+    await ctx.reply(msg.ERROR_RATES_UNAVAILABLE || "⚠️ Rates temporarily unavailable.");
     await ctx.answerCbQuery();
     return;
   }
-  
+
+  let wiseData, onchain;
+
+  if (isTargetMode) {
+    // Target mode: get reverse comparison
+    wiseData = await getWiseComparisonReverse(route, amount);
+    onchain = calculateOnChainReverse(route, amount, rates);
+  } else {
+    // Normal mode
+    wiseData = await getWiseComparison(route, amount);
+    onchain = calculateOnChain(route, amount, rates);
+  }
+
   const bestBank = wiseData?.providers?.[0] || null;
   const others = wiseData?.providers?.slice(1) || [];
-  
-  // ⚠️ NOUVEAU : Calculer montant on-chain pour comparaison
-  const onchain = calculateOnChain(route, amount, rates);
-  
+
   const text = msg.buildOffChain({
     route,
     amount,
     bestBank,
     others,
     locale,
-    onchainAmount: onchain.out // ← NOUVEAU paramètre
+    onchainAmount: isTargetMode ? onchain.in : onchain.out
   });
-  
+
   const displayProviders = wiseData?.providers || [];
   const kb = buildKeyboards(msg, 'offchain', { route, amount, locale, providers: displayProviders });
-  
+
   await ctx.editMessageText(text, { parse_mode: 'HTML', ...kb });
   await ctx.answerCbQuery();
 });
@@ -638,7 +857,9 @@ bot.action(/^action:onchain_intro:(.+):(\d+)$/, async (ctx) => {
 
 bot.action(/^action:proof_sources/, async (ctx) => {
   const msg = getMsg(ctx);
-  const kb = buildKeyboards(msg, 'proof_sources');
+  const route = ctx.session?.lastRoute || 'eurbrl';
+  const amount = ctx.session?.lastAmount || 1000;
+  const kb = buildKeyboards(msg, 'proof_sources', { route, amount });
   await ctx.editMessageText(msg.SOURCES_PROOF, { parse_mode: 'HTML', ...kb });
   await ctx.answerCbQuery();
 });
@@ -682,14 +903,18 @@ bot.action('action:faq_send_question', async (ctx) => {
 
 bot.action('action:exchanges_eu', async (ctx) => {
   const msg = getMsg(ctx);
-  const kb = buildKeyboards(msg, 'exchanges_eu');
+  const route = ctx.session?.lastRoute || 'eurbrl';
+  const amount = ctx.session?.lastAmount || 1000;
+  const kb = buildKeyboards(msg, 'exchanges_eu', { route, amount });
   await ctx.editMessageText(msg.EXCHANGES_EU, { parse_mode: 'HTML', ...kb });
   await ctx.answerCbQuery();
 });
 
 bot.action('action:exchanges_br', async (ctx) => {
   const msg = getMsg(ctx);
-  const kb = buildKeyboards(msg, 'exchanges_br');
+  const route = ctx.session?.lastRoute || 'eurbrl';
+  const amount = ctx.session?.lastAmount || 1000;
+  const kb = buildKeyboards(msg, 'exchanges_br', { route, amount });
   await ctx.editMessageText(msg.EXCHANGES_BR, { parse_mode: 'HTML', ...kb });
   await ctx.answerCbQuery();
 });
@@ -825,9 +1050,68 @@ bot.action(/^action:swap_mode:(.+):(\d+)$/, async (ctx) => {
 
 bot.action('premium:pricing', async (ctx) => {
   const msg = getMsg(ctx);
-  const kb = buildKeyboards(msg, 'premium_pricing');
-  await ctx.editMessageText(msg.PREMIUM_PRICING, { parse_mode: 'HTML', ...kb });
-  await ctx.answerCbQuery();
+  const telegram_id = ctx.from.id;
+
+  try {
+    // Re-check premium status before showing pricing
+    const { getPremiumDetails } = await import('../services/payments/index.js');
+    const premiumInfo = await getPremiumDetails(telegram_id);
+
+    if (premiumInfo) {
+      // User is premium - show appropriate message
+      const activeSubscription = await db.getActiveSubscription(telegram_id);
+      const expiryDate = premiumInfo.expires_at.toLocaleDateString(
+        ctx.state.lang === 'pt' ? 'pt-BR' : ctx.state.lang === 'fr' ? 'fr-FR' : 'en-US'
+      );
+      const lang = ctx.state.lang || 'pt';
+
+      let premiumMessage;
+      let keyboardType;
+
+      if (activeSubscription) {
+        // Get subscription plan details
+        const planNames = {
+          monthly: { pt: 'Mensal', fr: 'Mensuel', en: 'Monthly', freq: { pt: 'todo mês', fr: 'chaque mois', en: 'every month' } },
+          quarterly: { pt: '3 Meses', fr: '3 Mois', en: '3 Months', freq: { pt: 'a cada 3 meses', fr: 'tous les 3 mois', en: 'every 3 months' } },
+          semiannual: { pt: '6 Meses', fr: '6 Mois', en: '6 Months', freq: { pt: 'a cada 6 meses', fr: 'tous les 6 mois', en: 'every 6 months' } },
+          annual: { pt: '12 Meses', fr: '12 Mois', en: '12 Months', freq: { pt: 'anualmente', fr: 'annuellement', en: 'annually' } }
+        };
+
+        const planInfo = planNames[activeSubscription.plan] || planNames.monthly;
+
+        premiumMessage = {
+          pt: `✅ <b>Você é Premium!</b>\n\n⏰ Próxima renovação: ${expiryDate}\n📅 Dias restantes: ${premiumInfo.days_remaining}\n\n💎 <b>FUNCIONALIDADES ATIVAS</b>\n✨ Alertas personalizados ilimitados\n✨ Alertas espontâneos regulares\n\n🔄 <b>ASSINATURA ATIVA</b>\n📦 Plano: ${planInfo.pt}\n🔄 Renovação: ${planInfo.freq.pt}\n\nPara cancelar sua assinatura, acesse seu app <b>Mercado Pago</b> → Assinaturas.`,
+          fr: `✅ <b>Vous êtes Premium!</b>\n\n⏰ Prochain renouvellement: ${expiryDate}\n📅 Jours restants: ${premiumInfo.days_remaining}\n\n💎 <b>FONCTIONNALITÉS ACTIVES</b>\n✨ Alertes personnalisées illimitées\n✨ Alertes spontanées régulières\n\n🔄 <b>ABONNEMENT ACTIF</b>\n📦 Plan: ${planInfo.fr}\n🔄 Renouvellement: ${planInfo.freq.fr}\n\nPour annuler votre abonnement, accédez à votre app <b>Mercado Pago</b> → Abonnements.`,
+          en: `✅ <b>You are Premium!</b>\n\n⏰ Next renewal: ${expiryDate}\n📅 Days remaining: ${premiumInfo.days_remaining}\n\n💎 <b>ACTIVE FEATURES</b>\n✨ Unlimited custom alerts\n✨ Regular spontaneous alerts\n\n🔄 <b>ACTIVE SUBSCRIPTION</b>\n📦 Plan: ${planInfo.en}\n🔄 Renewal: ${planInfo.freq.en}\n\nTo cancel your subscription, access your <b>Mercado Pago</b> app → Subscriptions.`
+        };
+
+        keyboardType = 'premium_subscription_active';
+      } else {
+        premiumMessage = {
+          pt: `✅ <b>Você é Premium!</b>\n\n⏰ Expira em: ${expiryDate}\n📅 Dias restantes: ${premiumInfo.days_remaining}\n\n💎 <b>FUNCIONALIDADES ATIVAS</b>\n✨ Alertas personalizados ilimitados\n✨ Alertas espontâneos regulares\n\n💰 <b>RENOVAR SEU ACESSO</b>\n\nEscolha abaixo para adicionar mais tempo ou passar para assinatura recorrente:`,
+          fr: `✅ <b>Vous êtes Premium!</b>\n\n⏰ Expire le: ${expiryDate}\n📅 Jours restants: ${premiumInfo.days_remaining}\n\n💎 <b>FONCTIONNALITÉS ACTIVES</b>\n✨ Alertes personnalisées illimitées\n✨ Alertes spontanées régulières\n\n💰 <b>RENOUVELER VOTRE ACCÈS</b>\n\nChoisissez ci-dessous pour ajouter plus de temps ou passer en abonnement récurrent:`,
+          en: `✅ <b>You are Premium!</b>\n\n⏰ Expires: ${expiryDate}\n📅 Days remaining: ${premiumInfo.days_remaining}\n\n💎 <b>ACTIVE FEATURES</b>\n✨ Unlimited custom alerts\n✨ Regular spontaneous alerts\n\n💰 <b>RENEW YOUR ACCESS</b>\n\nChoose below to add more time or switch to recurring subscription:`
+        };
+
+        keyboardType = 'premium_oneshot_renew';
+      }
+
+      const kb = buildKeyboards(msg, keyboardType, { lang });
+      await ctx.editMessageText(premiumMessage[lang] || premiumMessage.pt, { parse_mode: 'HTML', ...kb });
+    } else {
+      // User not premium - show regular pricing
+      const kb = buildKeyboards(msg, 'premium_pricing');
+      await ctx.editMessageText(msg.PREMIUM_PRICING, { parse_mode: 'HTML', ...kb });
+    }
+
+    await ctx.answerCbQuery();
+  } catch (error) {
+    logger.error('[BOT] Premium pricing callback failed:', { error: error.message, telegram_id });
+    // Fallback
+    const kb = buildKeyboards(msg, 'premium_pricing');
+    await ctx.editMessageText(msg.PREMIUM_PRICING, { parse_mode: 'HTML', ...kb });
+    await ctx.answerCbQuery();
+  }
 });
 
 bot.action('premium:details', async (ctx) => {
@@ -837,18 +1121,720 @@ bot.action('premium:details', async (ctx) => {
   await ctx.answerCbQuery();
 });
 
-bot.action(/^premium:subscribe:(\d+)$/, async (ctx) => {
-  const months = parseInt(ctx.match[1]);
-  const prices = { 3: 15, 6: 27, 12: 50 };
-  const price = prices[months];
-  
-  await ctx.answerCbQuery('🚧 Paiement Pix bientôt disponible !');
-  
-  await ctx.reply(
-    `💳 Souscription ${months} mois (${price} R$)\n\n` +
-    `🚧 Le paiement par Pix sera disponible très bientôt !\n\n` +
-    `En attendant, contacte-nous pour activer ton Premium manuellement.`
-  );
+// One-shot pricing screen
+bot.action('premium:oneshot_pricing', async (ctx) => {
+  const msg = getMsg(ctx);
+  const kb = buildKeyboards(msg, 'premium_oneshot_pricing');
+  await ctx.editMessageText(msg.PREMIUM_ONESHOT_PRICING, { parse_mode: 'HTML', ...kb });
+  await ctx.answerCbQuery();
+});
+
+// No-op handler for label buttons (buttons that are just labels, not clickable)
+bot.action('noop', async (ctx) => {
+  await ctx.answerCbQuery();
+});
+
+// NEW: Premium users renewing - show one-shot pricing
+bot.action('premium:renew_oneshot', async (ctx) => {
+  const msg = getMsg(ctx);
+  const kb = buildKeyboards(msg, 'premium_oneshot_pricing_renew');
+  await ctx.editMessageText(msg.PREMIUM_ONESHOT_PRICING, { parse_mode: 'HTML', ...kb });
+  await ctx.answerCbQuery();
+});
+
+// NEW: Premium users switching to subscription - show subscription pricing
+bot.action('premium:renew_subscription', async (ctx) => {
+  const msg = getMsg(ctx);
+  const kb = buildKeyboards(msg, 'premium_subscription_pricing_renew');
+  await ctx.editMessageText(msg.PREMIUM_PRICING, { parse_mode: 'HTML', ...kb });
+  await ctx.answerCbQuery();
+});
+
+// NEW: Back to premium renew screen
+bot.action('premium:back_to_renew', async (ctx) => {
+  const telegram_id = ctx.from.id;
+  const msg = getMsg(ctx);
+
+  try {
+    // Re-fetch premium details to show current status
+    const { getPremiumDetails } = await import('../services/payments/index.js');
+    const premiumInfo = await getPremiumDetails(telegram_id);
+
+    if (!premiumInfo) {
+      // No longer premium, redirect to pricing
+      const kb = buildKeyboards(msg, 'premium_pricing');
+      await ctx.editMessageText(msg.PREMIUM_PRICING, { parse_mode: 'HTML', ...kb });
+      await ctx.answerCbQuery();
+      return;
+    }
+
+    const expiryDate = premiumInfo.expires_at.toLocaleDateString(
+      ctx.state.lang === 'pt' ? 'pt-BR' : ctx.state.lang === 'fr' ? 'fr-FR' : 'en-US'
+    );
+    const lang = ctx.state.lang || 'pt';
+
+    const premiumMessage = {
+      pt: `✅ <b>Você é Premium!</b>\n\n⏰ Expira em: ${expiryDate}\n📅 Dias restantes: ${premiumInfo.days_remaining}\n\n💎 <b>FUNCIONALIDADES ATIVAS</b>\n✨ Alertas personalizados ilimitados\n✨ Alertas espontâneos regulares\n\n💰 <b>RENOVAR SEU ACESSO</b>\n\nEscolha abaixo para adicionar mais tempo ou passar para assinatura recorrente:`,
+      fr: `✅ <b>Vous êtes Premium!</b>\n\n⏰ Expire le: ${expiryDate}\n📅 Jours restants: ${premiumInfo.days_remaining}\n\n💎 <b>FONCTIONNALITÉS ACTIVES</b>\n✨ Alertes personnalisées illimitées\n✨ Alertes spontanées régulières\n\n💰 <b>RENOUVELER VOTRE ACCÈS</b>\n\nChoisissez ci-dessous pour ajouter plus de temps ou passer en abonnement récurrent:`,
+      en: `✅ <b>You are Premium!</b>\n\n⏰ Expires: ${expiryDate}\n📅 Days remaining: ${premiumInfo.days_remaining}\n\n💎 <b>ACTIVE FEATURES</b>\n✨ Unlimited custom alerts\n✨ Regular spontaneous alerts\n\n💰 <b>RENEW YOUR ACCESS</b>\n\nChoose below to add more time or switch to recurring subscription:`
+    };
+
+    const kb = buildKeyboards(msg, 'premium_oneshot_renew', { lang });
+    await ctx.editMessageText(premiumMessage[lang] || premiumMessage.pt, { parse_mode: 'HTML', ...kb });
+    await ctx.answerCbQuery();
+  } catch (error) {
+    logger.error('[BOT] Back to renew failed:', { error: error.message, telegram_id });
+    await ctx.answerCbQuery();
+  }
+});
+
+// Payment help/support handler - show predefined options
+bot.action('premium:payment_help', async (ctx) => {
+  const lang = ctx.state.lang || 'pt';
+
+  const helpMessage = {
+    pt: `💬 <b>Ajuda com Pagamento</b>\n\nSelecione sua situação ou escreva uma mensagem personalizada:`,
+    fr: `💬 <b>Aide pour le Paiement</b>\n\nSélectionnez votre situation ou écrivez un message personnalisé:`,
+    en: `💬 <b>Payment Support</b>\n\nSelect your situation or write a custom message:`
+  };
+
+  const buttons = {
+    pt: [
+      [{ text: 'Não tenho Mercado Pago', callback_data: 'support:no_mercadopago' }],
+      [{ text: 'Quero pagar em outra moeda', callback_data: 'support:other_currency' }],
+      [{ text: 'O pagamento não funciona', callback_data: 'support:payment_failed' }],
+      [{ text: '✍️ Escrever mensagem personalizada', callback_data: 'support:custom_message' }],
+      [{ text: '⬅️ Voltar', callback_data: 'premium:pricing' }]
+    ],
+    fr: [
+      [{ text: 'Je n\'ai pas Mercado Pago', callback_data: 'support:no_mercadopago' }],
+      [{ text: 'Je veux payer dans une autre devise', callback_data: 'support:other_currency' }],
+      [{ text: 'Le paiement ne marche pas', callback_data: 'support:payment_failed' }],
+      [{ text: '✍️ Écrire un message personnalisé', callback_data: 'support:custom_message' }],
+      [{ text: '⬅️ Retour', callback_data: 'premium:pricing' }]
+    ],
+    en: [
+      [{ text: 'I don\'t have Mercado Pago', callback_data: 'support:no_mercadopago' }],
+      [{ text: 'I want to pay in another currency', callback_data: 'support:other_currency' }],
+      [{ text: 'Payment doesn\'t work', callback_data: 'support:payment_failed' }],
+      [{ text: '✍️ Write a custom message', callback_data: 'support:custom_message' }],
+      [{ text: '⬅️ Back', callback_data: 'premium:pricing' }]
+    ]
+  };
+
+  await ctx.answerCbQuery();
+  await ctx.reply(helpMessage[lang] || helpMessage.pt, {
+    parse_mode: 'HTML',
+    reply_markup: { inline_keyboard: buttons[lang] || buttons.pt }
+  });
+});
+
+// Handle predefined support messages
+bot.action(/^support:(no_mercadopago|other_currency|payment_failed)$/, async (ctx) => {
+  const type = ctx.match[1];
+  const lang = ctx.state.lang || 'pt';
+  const telegram_id = ctx.from.id;
+
+  const messages = {
+    no_mercadopago: {
+      pt: 'Não tenho Mercado Pago',
+      fr: 'Je n\'ai pas Mercado Pago',
+      en: 'I don\'t have Mercado Pago'
+    },
+    other_currency: {
+      pt: 'Quero pagar em outra moeda',
+      fr: 'Je veux payer dans une autre devise',
+      en: 'I want to pay in another currency'
+    },
+    payment_failed: {
+      pt: 'O pagamento não funciona',
+      fr: 'Le paiement ne marche pas',
+      en: 'Payment doesn\'t work'
+    }
+  };
+
+  const confirmations = {
+    pt: '✅ Mensagem enviada! Obrigado pelo feedback.',
+    fr: '✅ Message envoyé ! Merci pour le retour.',
+    en: '✅ Message sent! Thanks for the feedback.'
+  };
+
+  try {
+    await db.createSupportTicket(telegram_id, 'predefined', messages[type][lang]);
+    await ctx.answerCbQuery(confirmations[lang]);
+    await ctx.reply(confirmations[lang]);
+  } catch (error) {
+    logger.error('[BOT] Failed to create support ticket:', { error: error.message, telegram_id });
+    await ctx.answerCbQuery('Erro / Erreur / Error');
+  }
+});
+
+// Handle custom message request
+bot.action('support:custom_message', async (ctx) => {
+  const lang = ctx.state.lang || 'pt';
+
+  const prompts = {
+    pt: '✍️ Escreva sua mensagem abaixo:',
+    fr: '✍️ Écrivez votre message ci-dessous:',
+    en: '✍️ Write your message below:'
+  };
+
+  ctx.session.awaitingSupportMessage = true;
+  await ctx.answerCbQuery();
+  await ctx.reply(prompts[lang]);
+});
+
+// Mercado Pago Subscription handler
+bot.action(/^premium:sub:mp:(.+?)(?::renew)?$/, async (ctx) => {
+  const match = ctx.match[0];
+  const plan = ctx.match[1]; // 'monthly', 'quarterly', 'semiannual', 'annual'
+  const isRenew = match.includes(':renew');
+  const telegram_id = ctx.from.id;
+  const email = ctx.from.username ? `${ctx.from.username}@telegram.user` : null;
+
+  await ctx.answerCbQuery('Gerando link de pagamento... / Generating payment link...');
+
+  try {
+    const mercadopago = await import('../services/payments/mercadopago.js');
+    const checkoutData = mercadopago.getSubscriptionCheckoutUrl({ plan, telegram_id, email });
+
+    const lang = ctx.state.lang || 'pt';
+
+    const extendNote = isRenew ? {
+      pt: `\n💡 <i>Seu tempo premium atual será preservado e estendido.</i>\n`,
+      fr: `\n💡 <i>Votre temps premium actuel sera préservé et prolongé.</i>\n`,
+      en: `\n💡 <i>Your current premium time will be preserved and extended.</i>\n`
+    } : { pt: '', fr: '', en: '' };
+
+    const text = {
+      pt: `💳 <b>Assinatura Mercado Pago</b>\n\n` +
+          `📦 Plano: ${checkoutData.plan_name.pt}\n` +
+          `💰 Preço: R$ ${checkoutData.price_brl} a cada ${checkoutData.frequency} ${checkoutData.frequency === 1 ? 'mês' : 'meses'}\n\n` +
+          `🔄 Renovação automática (cancelável a qualquer momento)${extendNote.pt}\n` +
+          `👇 Clique no link abaixo para finalizar:`,
+      fr: `💳 <b>Abonnement Mercado Pago</b>\n\n` +
+          `📦 Plan: ${checkoutData.plan_name.fr}\n` +
+          `💰 Prix: R$ ${checkoutData.price_brl} tous les ${checkoutData.frequency} mois\n\n` +
+          `🔄 Renouvellement automatique (annulable à tout moment)${extendNote.fr}\n` +
+          `👇 Cliquez sur le lien ci-dessous pour finaliser:`,
+      en: `💳 <b>Mercado Pago Subscription</b>\n\n` +
+          `📦 Plan: ${checkoutData.plan_name.en}\n` +
+          `💰 Price: R$ ${checkoutData.price_brl} every ${checkoutData.frequency} month${checkoutData.frequency > 1 ? 's' : ''}\n\n` +
+          `🔄 Auto-renewal (cancel anytime)${extendNote.en}\n` +
+          `👇 Click the link below to complete:`
+    };
+
+    const { Markup } = await import('telegraf');
+    const msg = getMsg(ctx);
+    const backButton = isRenew ? 'premium:back_to_renew' : 'premium:pricing';
+
+    await ctx.editMessageText(text[lang] || text.en, {
+      parse_mode: 'HTML',
+      reply_markup: {
+        inline_keyboard: [
+          [Markup.button.url(msg.btn.subscribe, checkoutData.checkout_url)],
+          [Markup.button.callback(msg.btn.back, backButton)]
+        ]
+      }
+    });
+
+  } catch (error) {
+    logger.error('[BOT] Failed to create Mercado Pago subscription:', error);
+    const errorMsg = {
+      pt: '❌ Erro ao gerar link de pagamento',
+      fr: '❌ Erreur lors de la génération du lien de paiement',
+      en: '❌ Error generating payment link'
+    };
+    await ctx.reply(errorMsg[lang] || errorMsg.en);
+  }
+});
+
+// PayPal Subscription handler
+bot.action(/^premium:sub:pp:(.+)$/, async (ctx) => {
+  const plan = ctx.match[1]; // 'quarterly', 'semiannual', 'annual'
+  const telegram_id = ctx.from.id;
+
+  await ctx.answerCbQuery('Generating PayPal subscription link...');
+
+  try {
+    const paypal = await import('../services/payments/paypal.js');
+    const checkoutData = paypal.getSubscriptionCheckoutUrl({ plan, telegram_id });
+
+    const lang = ctx.state.lang || 'pt';
+    const text = {
+      pt: `💳 <b>Assinatura PayPal</b>\n\n` +
+          `📦 Plano: ${checkoutData.plan_name.pt}\n` +
+          `💰 Preço: €${checkoutData.price} a cada ${checkoutData.frequency} ${checkoutData.frequency === 1 ? 'mês' : 'meses'}\n\n` +
+          `🔄 Renovação automática (cancelável a qualquer momento)\n\n` +
+          `👇 Clique no link abaixo para finalizar:`,
+      fr: `💳 <b>Abonnement PayPal</b>\n\n` +
+          `📦 Plan: ${checkoutData.plan_name.fr}\n` +
+          `💰 Prix: €${checkoutData.price} tous les ${checkoutData.frequency} mois\n\n` +
+          `🔄 Renouvellement automatique (annulable à tout moment)\n\n` +
+          `👇 Cliquez sur le lien ci-dessous pour finaliser:`,
+      en: `💳 <b>PayPal Subscription</b>\n\n` +
+          `📦 Plan: ${checkoutData.plan_name.en}\n` +
+          `💰 Price: €${checkoutData.price} every ${checkoutData.frequency} month${checkoutData.frequency > 1 ? 's' : ''}\n\n` +
+          `🔄 Auto-renewal (cancel anytime)\n\n` +
+          `👇 Click the link below to complete:`
+    };
+
+    const { Markup } = await import('telegraf');
+    const msg = getMsg(ctx);
+
+    await ctx.editMessageText(text[lang] || text.en, {
+      parse_mode: 'HTML',
+      reply_markup: {
+        inline_keyboard: [
+          [Markup.button.url(msg.btn.subscribe, checkoutData.checkout_url)],
+          [Markup.button.callback(msg.btn.back, 'premium:pricing')]
+        ]
+      }
+    });
+
+  } catch (error) {
+    logger.error('[BOT] Failed to create PayPal subscription:', error);
+    const errorMsg = {
+      pt: '❌ Erro ao gerar link de pagamento',
+      fr: '❌ Erreur lors de la génération du lien de paiement',
+      en: '❌ Error generating payment link'
+    };
+    await ctx.reply(errorMsg[lang] || errorMsg.en);
+  }
+});
+
+// Mercado Pago One-shot payment handler
+bot.action(/^premium:oneshot:mp:(.+?)(?::renew)?$/, async (ctx) => {
+  const match = ctx.match[0];
+  const duration = ctx.match[1]; // '3months', '6months', '12months'
+  const isRenew = match.includes(':renew');
+  const telegram_id = ctx.from.id;
+  const email = ctx.from.username ? `${ctx.from.username}@telegram.user` : null;
+
+  // Map duration to plan name
+  const planMap = {
+    '3months': 'quarterly',
+    '6months': 'semiannual',
+    '12months': 'annual'
+  };
+  const plan = planMap[duration];
+
+  await ctx.answerCbQuery('Gerando pagamento... / Generating payment...');
+
+  try {
+    const { initiatePayment } = await import('../services/payments/index.js');
+
+    const paymentData = await initiatePayment({
+      telegram_id,
+      plan,
+      method: 'mercadopago',
+      email
+    });
+
+    const lang = ctx.state.lang || 'pt';
+    const mercadopago = await import('../services/payments/mercadopago.js');
+    const planInfo = mercadopago.PREMIUM_PLANS[duration];
+
+    const extendNote = isRenew ? {
+      pt: `\n💡 <i>Seu tempo premium atual será estendido.</i>\n`,
+      fr: `\n💡 <i>Votre temps premium actuel sera prolongé.</i>\n`,
+      en: `\n💡 <i>Your current premium time will be extended.</i>\n`
+    } : { pt: '', fr: '', en: '' };
+
+    const text = {
+      pt: `💳 <b>Pagamento Único Mercado Pago</b>\n\n` +
+          `📦 Plano: ${planInfo.name.pt}\n` +
+          `💰 Preço: R$ ${planInfo.price_brl}\n` +
+          `⏱ Duração: ${planInfo.duration} dias\n\n` +
+          `💡 Pagamento único, sem renovação automática${extendNote.pt}\n` +
+          `👇 Clique no link abaixo para pagar:`,
+      fr: `💳 <b>Paiement Unique Mercado Pago</b>\n\n` +
+          `📦 Plan: ${planInfo.name.fr}\n` +
+          `💰 Prix: R$ ${planInfo.price_brl}\n` +
+          `⏱ Durée: ${planInfo.duration} jours\n\n` +
+          `💡 Paiement unique, pas de renouvellement automatique${extendNote.fr}\n` +
+          `👇 Cliquez sur le lien ci-dessous pour payer:`,
+      en: `💳 <b>One-Time Payment Mercado Pago</b>\n\n` +
+          `📦 Plan: ${planInfo.name.en}\n` +
+          `💰 Price: R$ ${planInfo.price_brl}\n` +
+          `⏱ Duration: ${planInfo.duration} days\n\n` +
+          `💡 One-time payment, no automatic renewal${extendNote.en}\n` +
+          `👇 Click the link below to pay:`
+    };
+
+    const { Markup } = await import('telegraf');
+    const msg = getMsg(ctx);
+    const backButton = isRenew ? 'premium:back_to_renew' : 'premium:oneshot_pricing';
+
+    await ctx.editMessageText(text[lang] || text.en, {
+      parse_mode: 'HTML',
+      reply_markup: {
+        inline_keyboard: [
+          [Markup.button.url(msg.btn.pay, paymentData.init_point)],
+          [Markup.button.callback(msg.btn.back, backButton)]
+        ]
+      }
+    });
+
+  } catch (error) {
+    logger.error('[BOT] Failed to create Mercado Pago one-shot payment:', error);
+    const errorMsg = {
+      pt: '❌ Erro ao gerar pagamento',
+      fr: '❌ Erreur lors de la génération du paiement',
+      en: '❌ Error generating payment'
+    };
+    await ctx.reply(errorMsg[lang] || errorMsg.en);
+  }
+});
+
+// PayPal One-shot payment handler
+bot.action(/^premium:oneshot:pp:(.+)$/, async (ctx) => {
+  const duration = ctx.match[1]; // '3months', '6months', '12months'
+  const telegram_id = ctx.from.id;
+
+  await ctx.answerCbQuery('Generating PayPal payment...');
+
+  try {
+    const { initiatePayment } = await import('../services/payments/index.js');
+
+    const paymentData = await initiatePayment({
+      telegram_id,
+      plan: duration,
+      method: 'paypal',
+      email: null
+    });
+
+    const lang = ctx.state.lang || 'pt';
+    const paypal = await import('../services/payments/paypal.js');
+    const planInfo = paypal.PAYPAL_PLANS[duration];
+
+    const text = {
+      pt: `💳 <b>Pagamento Único PayPal</b>\n\n` +
+          `📦 Plano: ${planInfo.name.pt}\n` +
+          `💰 Preço: $${planInfo.price}\n` +
+          `⏱ Duração: ${planInfo.duration} dias\n\n` +
+          `💡 Pagamento único, sem renovação automática\n\n` +
+          `👇 Clique no link abaixo para pagar:`,
+      fr: `💳 <b>Paiement Unique PayPal</b>\n\n` +
+          `📦 Plan: ${planInfo.name.fr}\n` +
+          `💰 Prix: $${planInfo.price}\n` +
+          `⏱ Durée: ${planInfo.duration} jours\n\n` +
+          `💡 Paiement unique, pas de renouvellement automatique\n\n` +
+          `👇 Cliquez sur le lien ci-dessous pour payer:`,
+      en: `💳 <b>One-Time Payment PayPal</b>\n\n` +
+          `📦 Plan: ${planInfo.name.en}\n` +
+          `💰 Price: $${planInfo.price}\n` +
+          `⏱ Duration: ${planInfo.duration} days\n\n` +
+          `💡 One-time payment, no automatic renewal\n\n` +
+          `👇 Click the link below to pay:`
+    };
+
+    const { Markup } = await import('telegraf');
+    const msg = getMsg(ctx);
+
+    await ctx.editMessageText(text[lang] || text.en, {
+      parse_mode: 'HTML',
+      reply_markup: {
+        inline_keyboard: [
+          [Markup.button.url(msg.btn.pay, paymentData.approval_url)],
+          [Markup.button.callback(msg.btn.back, 'premium:oneshot_pricing')]
+        ]
+      }
+    });
+
+  } catch (error) {
+    logger.error('[BOT] Failed to create PayPal one-shot payment:', error);
+    const errorMsg = {
+      pt: '❌ Erro ao gerar pagamento',
+      fr: '❌ Erreur lors de la génération du paiement',
+      en: '❌ Error generating payment'
+    };
+    await ctx.reply(errorMsg[lang] || errorMsg.en);
+  }
+});
+
+// Plan selection - show payment methods
+bot.action(/^premium:subscribe:(.+)$/, async (ctx) => {
+  const plan = ctx.match[1]; // 'monthly', 'quarterly', 'annual'
+  const msg = getMsg(ctx);
+
+  await ctx.answerCbQuery();
+
+  // Import payment service
+  const { getAvailablePaymentMethods, getPremiumPlans } = await import('../services/payments/index.js');
+
+  const plans = getPremiumPlans();
+  const planInfo = plans[plan];
+  const methods = getAvailablePaymentMethods();
+
+  if (!planInfo) {
+    return ctx.reply('❌ Plano inválido / Plan invalide / Invalid plan');
+  }
+
+  // Build payment methods keyboard
+  const { Markup } = await import('telegraf');
+  const buttons = methods.map(method => [
+    Markup.button.callback(
+      `${method.icon} ${method.name} (${method.currency} ${planInfo.prices[method.currency]})`,
+      `payment:method:${plan}:${method.id}`
+    )
+  ]);
+  buttons.push([Markup.button.callback(msg.btn.back || '◀️ Retour', 'premium:pricing')]);
+
+  const text = {
+    pt: `💳 <b>Escolha seu método de pagamento</b>\n\n` +
+        `📦 Plano: ${planInfo.name.pt}\n` +
+        `⏱ Duração: ${planInfo.duration} dias\n\n` +
+        `Selecione abaixo:`,
+    fr: `💳 <b>Choisissez votre méthode de paiement</b>\n\n` +
+        `📦 Plan: ${planInfo.name.fr}\n` +
+        `⏱ Durée: ${planInfo.duration} jours\n\n` +
+        `Sélectionnez ci-dessous:`,
+    en: `💳 <b>Choose your payment method</b>\n\n` +
+        `📦 Plan: ${planInfo.name.en}\n` +
+        `⏱ Duration: ${planInfo.duration} days\n\n` +
+        `Select below:`
+  };
+
+  const lang = ctx.state.lang || 'pt';
+  await ctx.editMessageText(text[lang] || text.en, {
+    parse_mode: 'HTML',
+    reply_markup: { inline_keyboard: buttons }
+  });
+});
+
+// Payment method selected - initiate payment
+bot.action(/^payment:method:(.+):(.+)$/, async (ctx) => {
+  const [plan, method] = [ctx.match[1], ctx.match[2]];
+  const telegram_id = ctx.from.id;
+  const email = ctx.from.username ? `${ctx.from.username}@telegram.user` : null;
+
+  await ctx.answerCbQuery('Processando... / Processing...');
+
+  try {
+    // Import payment service
+    const { initiatePayment } = await import('../services/payments/index.js');
+
+    const paymentData = await initiatePayment({
+      telegram_id,
+      plan,
+      method,
+      email
+    });
+
+    const lang = ctx.state.lang || 'pt';
+
+    if (method === 'mercadopago') {
+      // Mercado Pago - send payment link
+
+      // Debug: Check if init_point exists in paymentData
+      logger.info('[BOT] Mercado Pago payment data:', {
+        has_init_point: !!paymentData.init_point,
+        init_point: paymentData.init_point,
+        payment_id: paymentData.payment_id,
+        all_keys: Object.keys(paymentData)
+      });
+
+      const text = {
+        pt: `💳 <b>Pagamento Mercado Pago</b>\n\n` +
+            `💰 Valor: R$ ${paymentData.amount || paymentData.plan_info.prices.BRL}\n` +
+            `📦 Plano: ${paymentData.plan_info.name.pt}\n\n` +
+            `Clique no botão abaixo para completar o pagamento:`,
+        fr: `💳 <b>Paiement Mercado Pago</b>\n\n` +
+            `💰 Montant: R$ ${paymentData.amount || paymentData.plan_info.prices.BRL}\n` +
+            `📦 Plan: ${paymentData.plan_info.name.fr}\n\n` +
+            `Cliquez sur le bouton ci-dessous pour compléter le paiement:`,
+        en: `💳 <b>Mercado Pago Payment</b>\n\n` +
+            `💰 Amount: R$ ${paymentData.amount || paymentData.plan_info.prices.BRL}\n` +
+            `📦 Plan: ${paymentData.plan_info.name.en}\n\n` +
+            `Click the button below to complete payment:`
+      };
+
+      // Markup is already imported at the top of the file - no need to import again
+
+      if (!paymentData.init_point) {
+        logger.error('[BOT] ERROR: init_point is missing from paymentData!');
+        const errorMsg = {
+          pt: '❌ Erro: Link de pagamento não gerado. Tente novamente.',
+          fr: '❌ Erreur: Lien de paiement non généré. Réessayez.',
+          en: '❌ Error: Payment link not generated. Try again.'
+        };
+        await ctx.reply(errorMsg[lang] || errorMsg.en, { parse_mode: 'HTML' });
+        return;
+      }
+
+      logger.info('[BOT] Sending Mercado Pago message with button...');
+
+      try {
+        await ctx.reply(text[lang] || text.en, {
+          parse_mode: 'HTML',
+          reply_markup: {
+            inline_keyboard: [[
+              { text: msg.btn.pay, url: paymentData.init_point }
+            ]]
+          }
+        });
+        logger.info('[BOT] ✅ Mercado Pago message sent successfully');
+      } catch (sendError) {
+        logger.error('[BOT] ❌ Failed to send Mercado Pago message:', {
+          error: sendError.message,
+          stack: sendError.stack
+        });
+        // Fallback: send without button
+        await ctx.reply(`${text[lang] || text.en}\n\n🔗 Link: ${paymentData.init_point}`, {
+          parse_mode: 'HTML'
+        });
+      }
+
+    } else if (method === 'paypal') {
+      // PayPal - send payment link
+      const text = {
+        pt: `💳 <b>Pagamento PayPal</b>\n\n` +
+            `💰 Valor: $${paymentData.amount}\n` +
+            `📦 Plano: ${paymentData.plan_info.name.pt}\n\n` +
+            `Clique no botão abaixo para completar o pagamento:`,
+        fr: `💳 <b>Paiement PayPal</b>\n\n` +
+            `💰 Montant: $${paymentData.amount}\n` +
+            `📦 Plan: ${paymentData.plan_info.name.fr}\n\n` +
+            `Cliquez sur le bouton ci-dessous pour compléter le paiement:`,
+        en: `💳 <b>PayPal Payment</b>\n\n` +
+            `💰 Amount: $${paymentData.amount}\n` +
+            `📦 Plan: ${paymentData.plan_info.name.en}\n\n` +
+            `Click the button below to complete payment:`
+      };
+
+      // Markup is already imported at the top of the file
+      await ctx.reply(text[lang] || text.en, {
+        parse_mode: 'HTML',
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.url(msg.btn.pay, paymentData.approval_url)]
+        ])
+      });
+    }
+
+  } catch (error) {
+    logger.error('[BOT] Payment initiation failed:', { error: error.message, telegram_id, plan, method });
+
+    const errorText = {
+      pt: '❌ Erro ao processar pagamento. Tente novamente ou contate o suporte.',
+      fr: '❌ Erreur lors du traitement du paiement. Réessayez ou contactez le support.',
+      en: '❌ Error processing payment. Please try again or contact support.'
+    };
+    const lang = ctx.state.lang || 'pt';
+    await ctx.reply(errorText[lang] || errorText.en);
+  }
+});
+
+// Check payment status
+bot.command('checkpayment', async (ctx) => {
+  const msg = getMsg(ctx);
+  const telegram_id = ctx.from.id;
+
+  try {
+    const { getPremiumDetails } = await import('../services/payments/index.js');
+    const premiumInfo = await getPremiumDetails(telegram_id);
+
+    if (premiumInfo) {
+      const text = {
+        pt: `✅ <b>Você é Premium!</b>\n\n` +
+            `⏰ Expira em: ${premiumInfo.expires_at.toLocaleDateString('pt-BR')}\n` +
+            `📅 Dias restantes: ${premiumInfo.days_remaining}`,
+        fr: `✅ <b>Vous êtes Premium!</b>\n\n` +
+            `⏰ Expire le: ${premiumInfo.expires_at.toLocaleDateString('fr-FR')}\n` +
+            `📅 Jours restants: ${premiumInfo.days_remaining}`,
+        en: `✅ <b>You are Premium!</b>\n\n` +
+            `⏰ Expires: ${premiumInfo.expires_at.toLocaleDateString('en-US')}\n` +
+            `📅 Days remaining: ${premiumInfo.days_remaining}`
+      };
+      const lang = ctx.state.lang || 'pt';
+      await ctx.reply(text[lang] || text.en, { parse_mode: 'HTML' });
+    } else {
+      const text = {
+        pt: '❌ Você não tem uma assinatura Premium ativa.\nUse /premium para assinar.',
+        fr: '❌ Vous n\'avez pas d\'abonnement Premium actif.\nUtilisez /premium pour vous abonner.',
+        en: '❌ You don\'t have an active Premium subscription.\nUse /premium to subscribe.'
+      };
+      const lang = ctx.state.lang || 'pt';
+      await ctx.reply(text[lang] || text.en);
+    }
+  } catch (error) {
+    logger.error('[BOT] Check payment failed:', { error: error.message, telegram_id });
+    await ctx.reply('❌ Erro ao verificar status / Error checking status');
+  }
+});
+
+// ==================== PREMIUM ACTION CALLBACKS ====================
+
+// Action button: View Premium Status
+bot.action('action:premium_status', async (ctx) => {
+  const telegram_id = ctx.from.id;
+
+  try {
+    const { getPremiumDetails } = await import('../services/payments/index.js');
+    const premiumInfo = await getPremiumDetails(telegram_id);
+
+    if (premiumInfo) {
+      const text = {
+        pt: `✅ <b>Você é Premium!</b>\n\n` +
+            `⏰ Expira em: ${premiumInfo.expires_at.toLocaleDateString('pt-BR')}\n` +
+            `📅 Dias restantes: ${premiumInfo.days_remaining}`,
+        fr: `✅ <b>Vous êtes Premium!</b>\n\n` +
+            `⏰ Expire le: ${premiumInfo.expires_at.toLocaleDateString('fr-FR')}\n` +
+            `📅 Jours restants: ${premiumInfo.days_remaining}`,
+        en: `✅ <b>You are Premium!</b>\n\n` +
+            `⏰ Expires: ${premiumInfo.expires_at.toLocaleDateString('en-US')}\n` +
+            `📅 Days remaining: ${premiumInfo.days_remaining}`
+      };
+      const lang = ctx.state.lang || 'pt';
+      await ctx.answerCbQuery();
+      await ctx.reply(text[lang] || text.en, { parse_mode: 'HTML' });
+    } else {
+      const text = {
+        pt: '❌ Você não tem uma assinatura Premium ativa.\nUse /premium para assinar.',
+        fr: '❌ Vous n\'avez pas d\'abonnement Premium actif.\nUtilisez /premium pour vous abonner.',
+        en: '❌ You don\'t have an active Premium subscription.\nUse /premium to subscribe.'
+      };
+      const lang = ctx.state.lang || 'pt';
+      await ctx.answerCbQuery();
+      await ctx.reply(text[lang] || text.en);
+    }
+  } catch (error) {
+    logger.error('[BOT] Premium status check failed:', { error: error.message, telegram_id });
+    await ctx.answerCbQuery();
+    await ctx.reply('❌ Erro ao verificar status / Error checking status');
+  }
+});
+
+// Action button: Start Conversion
+bot.action('action:convert', async (ctx) => {
+  const msg = getMsg(ctx);
+
+  await ctx.answerCbQuery();
+
+  // Show conversion prompt
+  const text = {
+    pt: '💱 <b>Conversão de Moeda</b>\n\n' +
+        'Digite o valor que você quer converter:\n\n' +
+        'Exemplos:\n' +
+        '• <code>100 EUR</code> → valor em BRL\n' +
+        '• <code>500 BRL</code> → valor em EUR\n' +
+        '• <code>1000</code> → assume EUR',
+    fr: '💱 <b>Conversion de Devise</b>\n\n' +
+        'Entrez le montant que vous souhaitez convertir:\n\n' +
+        'Exemples:\n' +
+        '• <code>100 EUR</code> → valeur en BRL\n' +
+        '• <code>500 BRL</code> → valeur en EUR\n' +
+        '• <code>1000</code> → suppose EUR',
+    en: '💱 <b>Currency Conversion</b>\n\n' +
+        'Enter the amount you want to convert:\n\n' +
+        'Examples:\n' +
+        '• <code>100 EUR</code> → value in BRL\n' +
+        '• <code>500 BRL</code> → value in EUR\n' +
+        '• <code>1000</code> → assumes EUR'
+  };
+
+  const lang = ctx.state.lang || 'pt';
+  await ctx.reply(text[lang] || text.en, { parse_mode: 'HTML' });
 });
 
 // ==================== ALERTS CALLBACKS ====================
@@ -1291,7 +2277,7 @@ bot.on('inline_query', async (ctx) => {
            code.startsWith('pt') ? 'pt' : 'en';
   }
   
-  lang = lang || 'en'; // Fallback anglais
+  lang = lang || 'pt'; // Fallback anglais
   
   try {
     // Récupérer les taux
@@ -1301,8 +2287,13 @@ bot.on('inline_query', async (ctx) => {
     ]);
     
     if (!rates) {
+      const errorText = {
+        fr: "⚠️ Taux indisponibles",
+        pt: "⚠️ Taxas indisponíveis",
+        en: "⚠️ Rates unavailable"
+      };
       return ctx.answerInlineQuery([], {
-        switch_pm_text: "⚠️ Taux indisponibles",
+        switch_pm_text: errorText[lang] || errorText.en,
         switch_pm_parameter: "inline_error",
         cache_time: 1
       });
@@ -1395,44 +2386,69 @@ bot.on('text', async (ctx) => {
     
     if (text.startsWith('/')) return;
     
-    // PRIORITÉ 1: Montant attendu
+    // PRIORITÉ 1: Support message attendu
+    if (ctx.session?.awaitingSupportMessage) {
+      const lang = ctx.state.lang || 'pt';
+      const telegram_id = ctx.from.id;
+
+      const confirmations = {
+        pt: '✅ Mensagem enviada! Obrigado pelo feedback.',
+        fr: '✅ Message envoyé ! Merci pour le retour.',
+        en: '✅ Message sent! Thanks for the feedback.'
+      };
+
+      try {
+        await db.createSupportTicket(telegram_id, 'custom', text);
+        await ctx.reply(confirmations[lang]);
+        delete ctx.session.awaitingSupportMessage;
+      } catch (error) {
+        logger.error('[BOT] Failed to create custom support ticket:', { error: error.message, telegram_id });
+        await ctx.reply('❌ Erro / Erreur / Error');
+      }
+      return;
+    }
+
+    // PRIORITÉ 2: Montant attendu
     if (ctx.session?.awaitingAmount) {
-      const amount = parseFloat(text.replace(/[^\d.]/g, ''));
-      if (amount && isFinite(amount)) {
+      const amount = parseAndValidateAmount(text);
+      if (amount) {
         const isTargetMode = ctx.session.targetMode || false;
         await showComparison(ctx, ctx.session.awaitingAmount, amount, isTargetMode);
         delete ctx.session.awaitingAmount;
         delete ctx.session.targetMode;
       } else {
-        await ctx.reply("⚠️ Montant invalide. Entre un nombre (ex. 1000)");
+        const msg = getMsg(ctx);
+        await ctx.reply(msg.ERROR_INVALID_AMOUNT || "⚠️ Montant invalide. Entre un nombre entre 1 et 1,000,000 (ex. 1000)");
       }
       return;
     }
-    
-    // PRIORITÉ 2: Custom alert threshold
+
+    // PRIORITÉ 3: Custom alert threshold
     if (ctx.session?.awaitingCustomPercent) {
       const { pair, refType } = ctx.session.awaitingCustomPercent;
       const msg = getMsg(ctx);
-      
+
       const match = ctx.message.text.trim().match(/^\+?(\d+(?:[.,]\d+)?)$/);
       if (!match) {
         return ctx.reply('⚠️ Format invalide. Entre un nombre (ex: 3.5)');
       }
-      
+
       const percent = parseFloat(match[1].replace(',', '.'));
-      
-      // ✅ SUPPRIMÉ : Validation min/max
-      // Laisse l'utilisateur libre
-      
+      const validPercent = validateThreshold(percent, 'relative', pair);
+
+      if (!validPercent) {
+        return ctx.reply('⚠️ Valeur invalide. Entre un pourcentage entre 0.1% et 50% (ex: 3.5)');
+      }
+
       delete ctx.session.awaitingCustomPercent;
-      
+
       const alertData = {
         pair,
         threshold_type: 'relative',
-        threshold_value: percent,
+        threshold_value: validPercent,
         reference_type: refType
       };
-      
+
       const kb = buildKeyboards(msg, 'alert_choose_cooldown_v2', { alertData });
       return ctx.reply(msg.ALERT_CHOOSE_COOLDOWN, { parse_mode: 'HTML', ...kb });
     }
@@ -1441,26 +2457,31 @@ bot.on('text', async (ctx) => {
     if (ctx.session?.awaitingAbsoluteThreshold) {
       const { pair } = ctx.session.awaitingAbsoluteThreshold;
       const msg = getMsg(ctx);
-      
+
       const match = ctx.message.text.trim().match(/^(\d+(?:[.,]\d+)?)$/);
       if (!match) {
         return ctx.reply('⚠️ Format invalide. Entre un nombre décimal (ex: 6.30)');
       }
-      
+
       const threshold = parseFloat(match[1].replace(',', '.'));
-      
-      // ✅ SUPPRIMÉ : Validation min/max
-      // Laisse l'utilisateur libre
-      
+      const validThreshold = validateThreshold(threshold, 'absolute', pair);
+
+      if (!validThreshold) {
+        const range = pair === 'eurbrl'
+          ? 'entre 3.0 et 10.0'
+          : 'entre 0.10 et 0.35';
+        return ctx.reply(`⚠️ Valeur invalide. Entre un taux ${range} (ex: ${pair === 'eurbrl' ? '6.30' : '0.165'})`);
+      }
+
       delete ctx.session.awaitingAbsoluteThreshold;
-      
+
       const alertData = {
         pair,
         threshold_type: 'absolute',
-        threshold_value: threshold,
+        threshold_value: validThreshold,
         reference_type: null
       };
-      
+
       const kb = buildKeyboards(msg, 'alert_choose_cooldown_v2', { alertData });
       return ctx.reply(msg.ALERT_CHOOSE_COOLDOWN, { parse_mode: 'HTML', ...kb });
     }
@@ -1513,13 +2534,24 @@ if (ctx.session?.awaitingFaqQuestion) {
   const userLang = ctx.state.lang;
   
   // Log la question dans la console (ou DB si tu veux)
-  console.log('[FAQ-QUESTION] User:', userId, username);
-  console.log('[FAQ-QUESTION] Lang:', userLang);
-  console.log('[FAQ-QUESTION] Question:', question);
-  
-  // TODO: Envoyer notification à toi (admin)
-  // Exemple: await bot.telegram.sendMessage(ADMIN_TELEGRAM_ID, `❓ Question de @${username}:\n\n${question}`);
-  
+  logger.info('[FAQ-QUESTION] User:', { userId, username, lang: userLang });
+  logger.info('[FAQ-QUESTION] Question:', { question });
+
+  // Send notification to admin
+  if (process.env.ADMIN_TELEGRAM_ID) {
+    try {
+      const adminId = parseInt(process.env.ADMIN_TELEGRAM_ID);
+      const adminMessage = `❓ <b>New FAQ Question</b>\n\n<b>From:</b> ${username ? '@' + username : 'User ' + userId}\n<b>Language:</b> ${userLang}\n<b>Question:</b>\n${question}`;
+
+      await bot.telegram.sendMessage(adminId, adminMessage, { parse_mode: 'HTML' });
+      logger.info('[FAQ-QUESTION] Admin notification sent');
+    } catch (error) {
+      logger.error('[FAQ-QUESTION] Failed to send admin notification:', { error: error.message });
+    }
+  } else {
+    logger.warn('[FAQ-QUESTION] ADMIN_TELEGRAM_ID not configured, skipping admin notification');
+  }
+
   delete ctx.session.awaitingFaqQuestion;
   
   const msg = getMsg(ctx);
@@ -1529,14 +2561,14 @@ if (ctx.session?.awaitingFaqQuestion) {
 
 // NOUVEAU: Montant pour /convert
 if (ctx.session?.awaitingConvertAmount) {
-  const amount = parseFloat(text.replace(/[^\d.]/g, ''));
-  if (amount && isFinite(amount)) {
+  const amount = parseAndValidateAmount(text);
+  if (amount) {
     delete ctx.session.awaitingConvertAmount;
     ctx.session.awaitingConvertRoute = amount;
     const kb = buildKeyboards(msg, 'route_choice', { amount, locale });
     return ctx.reply(msg.askRoute(amount, locale), { parse_mode: 'HTML', ...kb });
   } else {
-    return ctx.reply("⚠️ Montant invalide. Entre un nombre (ex. 1000)");
+    return ctx.reply(msg.ERROR_INVALID_AMOUNT || "⚠️ Montant invalide. Entre un nombre entre 1 et 1,000,000 (ex. 1000)");
   }
 }
 
@@ -1574,27 +2606,92 @@ if (ctx.session?.awaitingConvertRoute) {
     }
     
     switch (intent.intent) {
-      case 'greeting':
+      case 'greeting': {
+        let languageChanged = false;
+
         if (intent.entities.language && intent.entities.language !== ctx.state.lang) {
           if (intent.confidence >= 0.85) {
+            logger.info('[LANG] Language changed via NLU greeting:', {
+              userId: ctx.from.id,
+              from: ctx.state.lang,
+              to: intent.entities.language,
+              confidence: intent.confidence,
+              message: text
+            });
             await db.updateUser(ctx.from.id, { language: intent.entities.language });
             ctx.state.lang = intent.entities.language;
+            languageChanged = true;
+          } else {
+            logger.info('[LANG] Language change blocked (low confidence):', {
+              userId: ctx.from.id,
+              detected: intent.entities.language,
+              current: ctx.state.lang,
+              confidence: intent.confidence
+            });
           }
         }
-        
+
         const greetingMsg = getMsg(ctx);
+
+        // If language changed, show main menu instead of language selector
+        if (languageChanged) {
+          const confirmationMessages = {
+            pt: '🌐 <i>Idioma alterado para Português</i>',
+            fr: '🌐 <i>Langue changée en Français</i>',
+            en: '🌐 <i>Language changed to English</i>'
+          };
+          await ctx.reply(confirmationMessages[ctx.state.lang], { parse_mode: 'HTML' });
+
+          const mainKb = buildKeyboards(greetingMsg, 'main', {
+            locale: getLocale(ctx.state.lang),
+            isPremium: ctx.state.isPremium
+          });
+          return ctx.reply(greetingMsg.promptAmt, { parse_mode: 'HTML', ...mainKb });
+        }
+
+        // No language change - show language selector
         const greetingKb = buildKeyboards(greetingMsg, 'lang_select');
         return ctx.reply(greetingMsg.INTRO_TEXT, { parse_mode: 'HTML', ...greetingKb });
+      }
         
-        case 'compare':
+        case 'compare': {
+          let languageChangedInCompare = false;
+
           if (intent.entities.language && intent.entities.language !== ctx.state.lang) {
             const isFirstMessage = ctx.session.messageHistory.length <= 1;
             const isHighConfidence = intent.confidence >= 0.85;
-            
+
             if (isFirstMessage || isHighConfidence) {
+              logger.info('[LANG] Language changed via NLU compare:', {
+                userId: ctx.from.id,
+                from: ctx.state.lang,
+                to: intent.entities.language,
+                confidence: intent.confidence,
+                isFirstMessage,
+                message: text
+              });
               await db.updateUser(ctx.from.id, { language: intent.entities.language });
               ctx.state.lang = intent.entities.language;
+              languageChangedInCompare = true;
+            } else {
+              logger.info('[LANG] Language change blocked (not first message and low confidence):', {
+                userId: ctx.from.id,
+                detected: intent.entities.language,
+                current: ctx.state.lang,
+                confidence: intent.confidence,
+                isFirstMessage
+              });
             }
+          }
+
+          // Show subtle notification if language changed
+          if (languageChangedInCompare) {
+            const confirmationMessages = {
+              pt: '🌐 <i>Idioma alterado para Português</i>',
+              fr: '🌐 <i>Langue changée en Français</i>',
+              en: '🌐 <i>Language changed to English</i>'
+            };
+            await ctx.reply(confirmationMessages[ctx.state.lang], { parse_mode: 'HTML' });
           }
           
           const currentMsg = getMsg(ctx);
@@ -1661,7 +2758,8 @@ if (ctx.session?.awaitingConvertRoute) {
           fallbackMsg[ctx.state.lang] || fallbackMsg.pt,
           { parse_mode: 'HTML', ...kb }
         );
-        
+      }
+
       case 'help':
         const helpMsg = getMsg(ctx);
         return ctx.reply(helpMsg.ABOUT_TEXT, { parse_mode: 'HTML' });
@@ -1670,7 +2768,83 @@ if (ctx.session?.awaitingConvertRoute) {
         const aboutMsg = getMsg(ctx);
         const aboutKb = buildKeyboards(aboutMsg, 'about');
         return ctx.reply(aboutMsg.ABOUT_TEXT, { parse_mode: 'HTML', ...aboutKb });
-        
+
+      case 'change_language': {
+        const targetLang = intent.entities.language;
+
+        if (!targetLang || !['fr', 'pt', 'en'].includes(targetLang)) {
+          // Language not detected or invalid - show language selector
+          const langSelectMsg = getMsg(ctx);
+          const langSelectKb = buildKeyboards(langSelectMsg, 'lang_select');
+          return ctx.reply(langSelectMsg.INTRO_TEXT, { parse_mode: 'HTML', ...langSelectKb });
+        }
+
+        // Change user language in database
+        await db.updateUser(ctx.from.id, { language: targetLang });
+        const oldLang = ctx.state.lang;
+        ctx.state.lang = targetLang;
+
+        logger.info('[LANG] Language changed via explicit request:', {
+          userId: ctx.from.id,
+          from: oldLang,
+          to: targetLang,
+          message: text
+        });
+
+        // Subtle confirmation message in the NEW language
+        const confirmationMessages = {
+          pt: '🌐 <i>Idioma alterado para Português</i>',
+          fr: '🌐 <i>Langue changée en Français</i>',
+          en: '🌐 <i>Language changed to English</i>'
+        };
+
+        // Get message object in NEW language
+        const newMsg = getMsg(ctx);
+        const mainKb = buildKeyboards(newMsg, 'main', {
+          locale: getLocale(targetLang),
+          isPremium: ctx.state.isPremium
+        });
+
+        // Send confirmation + main menu in new language (use promptAmt, not INTRO_TEXT)
+        await ctx.reply(confirmationMessages[targetLang], { parse_mode: 'HTML' });
+        return ctx.reply(newMsg.promptAmt, { parse_mode: 'HTML', ...mainKb });
+      }
+
+      case 'premium_status':
+        const telegram_id = ctx.from.id;
+
+        try {
+          const { getPremiumDetails } = await import('../services/payments/index.js');
+          const premiumInfo = await getPremiumDetails(telegram_id);
+
+          if (premiumInfo) {
+            const statusText = {
+              pt: `✅ <b>Você é Premium!</b>\n\n` +
+                  `⏰ Expira em: ${premiumInfo.expires_at.toLocaleDateString('pt-BR')}\n` +
+                  `📅 Dias restantes: ${premiumInfo.days_remaining}`,
+              fr: `✅ <b>Vous êtes Premium!</b>\n\n` +
+                  `⏰ Expire le: ${premiumInfo.expires_at.toLocaleDateString('fr-FR')}\n` +
+                  `📅 Jours restants: ${premiumInfo.days_remaining}`,
+              en: `✅ <b>You are Premium!</b>\n\n` +
+                  `⏰ Expires: ${premiumInfo.expires_at.toLocaleDateString('en-US')}\n` +
+                  `📅 Days remaining: ${premiumInfo.days_remaining}`
+            };
+            const lang = ctx.state.lang || 'pt';
+            return ctx.reply(statusText[lang] || statusText.en, { parse_mode: 'HTML' });
+          } else {
+            const noStatusText = {
+              pt: '❌ Você não tem uma assinatura Premium ativa.\nUse /premium para assinar.',
+              fr: '❌ Vous n\'avez pas d\'abonnement Premium actif.\nUtilisez /premium pour vous abonner.',
+              en: '❌ You don\'t have an active Premium subscription.\nUse /premium to subscribe.'
+            };
+            const lang = ctx.state.lang || 'pt';
+            return ctx.reply(noStatusText[lang] || noStatusText.en);
+          }
+        } catch (error) {
+          logger.error('[BOT] Premium status check failed:', { error: error.message, telegram_id });
+          return ctx.reply('❌ Erro ao verificar status / Error checking status');
+        }
+
       case 'clarification':
         const clarMsg = getMsg(ctx);
         const clarKb = buildKeyboards(clarMsg, 'main', { locale: getLocale(ctx.state.lang) });
@@ -1753,7 +2927,16 @@ bot.action('feedback:wrong', async (ctx) => {
 
 bot.catch((err, ctx) => {
   console.error('[BOT] Error:', err);
-  ctx.reply("❌ Une erreur est survenue.").catch(() => {});
+
+  // Try to get user's language for error message
+  const lang = ctx.state?.lang || 'pt';
+  const errorMessages = {
+    fr: "❌ Une erreur est survenue. Réessaie dans un instant.",
+    pt: "❌ Ocorreu um erro. Tente novamente em um momento.",
+    en: "❌ An error occurred. Please try again in a moment."
+  };
+
+  ctx.reply(errorMessages[lang] || errorMessages.en).catch(() => {});
 });
 
 // ==================== EXPORTS ====================
