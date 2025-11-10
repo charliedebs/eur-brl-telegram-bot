@@ -55,23 +55,21 @@ async function fetchHistoricalRates(symbol, days = 365) {
 }
 
 /**
- * Save historical rates to database
+ * Save historical rates to database for all pairs
  */
 async function backfillRates(days = 365) {
   logger.info(`\n📥 [BACKFILL] Starting backfill for last ${days} days...`);
 
+  const pairs = {
+    'EURBRL=X': { direct: 'eurbrl', inverse: 'brleur' },
+    'EURUSD=X': { direct: 'eurusd', inverse: 'usdeur' },
+    'USDBRL=X': { direct: 'usdbrl', inverse: 'brlusd' }
+  };
+
+  let totalInserted = 0;
+  let totalSkipped = 0;
+
   try {
-    // Fetch EUR/BRL historical data
-    logger.info('[BACKFILL] Fetching EUR/BRL from Yahoo Finance...');
-    const eurBrlRates = await fetchHistoricalRates('EURBRL=X', days);
-
-    if (eurBrlRates.length === 0) {
-      logger.error('[BACKFILL] ❌ Failed to fetch EUR/BRL data');
-      return { success: false, error: 'No data fetched' };
-    }
-
-    logger.info(`[BACKFILL] ✅ Fetched ${eurBrlRates.length} EUR/BRL data points`);
-
     // Check what dates we already have
     const { data: existing } = await db.supabase
       .from('rates_history')
@@ -85,70 +83,90 @@ async function backfillRates(days = 365) {
 
     logger.info(`[BACKFILL] Found ${existingDates.size} existing dates in database`);
 
-    // Insert only missing dates
-    let inserted = 0;
-    let skipped = 0;
+    // Process each pair
+    for (const [symbol, pairNames] of Object.entries(pairs)) {
+      logger.info(`\n[BACKFILL] 📡 Fetching ${symbol}...`);
 
-    for (const { date, rate } of eurBrlRates) {
-      const dateStr = date.toDateString();
+      const rates = await fetchHistoricalRates(symbol, days);
 
-      if (existingDates.has(dateStr)) {
-        skipped++;
+      if (rates.length === 0) {
+        logger.error(`[BACKFILL] ❌ Failed to fetch ${symbol} data`);
         continue;
       }
 
-      // Calculate BRL/EUR
-      const brlEurRate = 1 / rate;
+      logger.info(`[BACKFILL] ✅ Fetched ${rates.length} data points for ${symbol}`);
 
-      // Insert EUR/BRL
-      const { error: errorEur } = await db.supabase
-        .from('rates_history')
-        .insert({
-          pair: 'eurbrl',
-          rate: rate,
-          source: 'yahoo_backfill',
-          timestamp: date.toISOString()
-        });
+      let inserted = 0;
+      let skipped = 0;
 
-      if (errorEur) {
-        logger.error(`[BACKFILL] Failed to insert EUR/BRL for ${dateStr}:`, { error: errorEur.message });
-        continue;
+      for (const { date, rate } of rates) {
+        const dateStr = date.toDateString();
+
+        if (existingDates.has(dateStr)) {
+          skipped++;
+          continue;
+        }
+
+        // Calculate inverse rate
+        const inverseRate = 1 / rate;
+
+        // Insert direct pair
+        const { error: errorDirect } = await db.supabase
+          .from('rates_history')
+          .insert({
+            pair: pairNames.direct,
+            rate: rate,
+            source: 'yahoo_backfill',
+            timestamp: date.toISOString()
+          });
+
+        if (errorDirect) {
+          logger.error(`[BACKFILL] Failed to insert ${pairNames.direct} for ${dateStr}:`, { error: errorDirect.message });
+          continue;
+        }
+
+        // Insert inverse pair
+        const { error: errorInverse } = await db.supabase
+          .from('rates_history')
+          .insert({
+            pair: pairNames.inverse,
+            rate: inverseRate,
+            source: 'yahoo_backfill',
+            timestamp: date.toISOString()
+          });
+
+        if (errorInverse) {
+          logger.error(`[BACKFILL] Failed to insert ${pairNames.inverse} for ${dateStr}:`, { error: errorInverse.message });
+        }
+
+        inserted++;
+
+        // Rate limit: avoid overwhelming the database
+        if (inserted % 10 === 0) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          process.stdout.write(`\r[BACKFILL] ${symbol}: Inserted ${inserted}, Skipped ${skipped}`);
+        }
       }
 
-      // Insert BRL/EUR
-      const { error: errorBrl } = await db.supabase
-        .from('rates_history')
-        .insert({
-          pair: 'brleur',
-          rate: brlEurRate,
-          source: 'yahoo_backfill',
-          timestamp: date.toISOString()
-        });
+      console.log(''); // New line after progress
+      logger.info(`[BACKFILL] ${symbol} complete: Inserted ${inserted}, Skipped ${skipped}`);
 
-      if (errorBrl) {
-        logger.error(`[BACKFILL] Failed to insert BRL/EUR for ${dateStr}:`, { error: errorBrl.message });
-      }
+      totalInserted += inserted;
+      totalSkipped += skipped;
 
-      inserted++;
-
-      // Rate limit: avoid overwhelming the database
-      if (inserted % 10 === 0) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        process.stdout.write(`\r[BACKFILL] Inserted: ${inserted}, Skipped: ${skipped}`);
-      }
+      // Delay between different pairs
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
 
-    console.log(''); // New line after progress
-    logger.info(`\n[BACKFILL] ✅ Complete!`);
-    logger.info(`  - Inserted: ${inserted} new dates`);
-    logger.info(`  - Skipped: ${skipped} existing dates`);
-    logger.info(`  - Total in range: ${eurBrlRates.length}`);
+    logger.info(`\n[BACKFILL] ✅ ALL PAIRS COMPLETE!`);
+    logger.info(`  - Total inserted: ${totalInserted} dates`);
+    logger.info(`  - Total skipped: ${totalSkipped} existing dates`);
+    logger.info(`  - Pairs: EUR/BRL, EUR/USD, USD/BRL (+ inverses)`);
 
     return {
       success: true,
-      inserted,
-      skipped,
-      total: eurBrlRates.length
+      inserted: totalInserted,
+      skipped: totalSkipped
     };
 
   } catch (error) {
@@ -166,7 +184,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const days = daysArg ? parseInt(daysArg.split('=')[1]) : 365;
 
   console.log('📊 Rate History Backfill Tool\n');
-  console.log(`📅 Fetching last ${days} days of EUR/BRL rates from Yahoo Finance`);
+  console.log(`📅 Fetching last ${days} days of rates from Yahoo Finance`);
+  console.log(`💱 Pairs: EUR/BRL, EUR/USD, USD/BRL (+ inverses)`);
   console.log(`💾 Storing in Supabase rates_history table\n`);
 
   backfillRates(days)
