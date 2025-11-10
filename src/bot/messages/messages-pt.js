@@ -324,9 +324,43 @@ export const messagesPt = {
     <i>Para cancelar, clique em "Voltar"</i>`,
     
       FAQ_QUESTION_RECEIVED: `✅ PERGUNTA RECEBIDA
-    
+
     Obrigado! Respondemos em 24-48h.`,
-    
+
+      FAQ_MIN_AMOUNT: `💰 QUAL O VALOR MÍNIMO?
+
+<b>Resumo rápido:</b> A partir de €300-400, on-chain compensa.
+
+<b>Por quê?</b>
+
+As taxas de rede blockchain são fixas (~1 USDC ≈ €0,95).
+Com valores pequenos, essa taxa fixa pesa muito.
+
+📊 <b>Comparação prática:</b>
+
+<b>Transferência de €50:</b>
+• Taxa rede: €0,95 = 1,9%
+• Taxas trading: ~0,2%
+• <b>Total on-chain: ~2,1%</b>
+• Wise: ~2,5%
+→ Economia mínima, não vale o esforço
+
+<b>Transferência de €500:</b>
+• Taxa rede: €0,95 = 0,19%
+• Taxas trading: ~0,2%
+• <b>Total on-chain: ~0,4%</b>
+• Wise: ~2,5%
+→ <b>Economia de ~€10!</b> 💰
+
+<b>Transferência de €5.000:</b>
+• Taxa rede: €0,95 = 0,019%
+• Taxas trading: ~0,2%
+• <b>Total on-chain: ~0,22%</b>
+• Wise: ~2,5%
+→ <b>Economia de ~€115!</b> 🎉
+
+<b>Conclusão:</b> Quanto maior o valor, maior a economia percentual.`,
+
       // ✅ TELA 10: WHAT_IS_EXCHANGE
       WHAT_IS_EXCHANGE: `🏦 O que é um exchange?
     
