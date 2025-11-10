@@ -277,11 +277,11 @@ Cliquez sur les liens ci-dessous pour accéder aux études et rapports officiels
 📍 <b>Le processus en 3 étapes</b>
 1️⃣ Brésil → Change tes BRL en USDC (Pix)
 2️⃣ Blockchain → Envoie tes USDC
-3️⃣ Europe → Convertis USDC en EUR (SEPA)
+3️⃣ Europe → Convertis USDC en EUR (virement bancaire)
 
 ✅ <b>Ce dont tu as besoin</b>
 • 🇧🇷 Exchange au Brésil acceptant dépôt BRL (Pix)
-• 🇪🇺 Exchange en Europe acceptant retrait EUR (SEPA)
+• 🇪🇺 Exchange en Europe acceptant retrait EUR (virement bancaire - SEPA)
 
 💡 On a des recommandations !
 
@@ -297,7 +297,7 @@ Cliquez sur les liens ci-dessous pour accéder aux études et rapports officiels
 3️⃣ Brésil → Convertis USDC en BRL (Pix)
 
 ✅ <b>Ce dont tu as besoin</b>
-• 🇪🇺 Exchange en Europe acceptant dépôt EUR (SEPA)
+• 🇪🇺 Exchange en Europe acceptant dépôt EUR (virement bancaire - SEPA)
 • 🇧🇷 Exchange au Brésil acceptant retrait BRL (Pix)
 
 💡 On a des recommandations !
@@ -430,7 +430,7 @@ Pour notre cas :`;
     if (route === 'brleur') {
       return `${baseText}
 • Exchange Brésil = tu déposes BRL (Pix), tu achètes USDC
-• Exchange Europe = tu reçois USDC, tu les vends en EUR, tu retires par SEPA
+• Exchange Europe = tu reçois USDC, tu les vends en EUR, tu retires par virement bancaire (SEPA)
 
 C'est réglementé et sûr (si tu choisis des plateformes reconnues).
 
@@ -454,7 +454,7 @@ Nos recommandations :
 • Kraken (👋 On utilise) — Virement gratuit, sérieux, USDC dispo
 • Bitstamp — Vétéran UE, sérieux, virements supportés
 
-À vérifier : SEPA ok (même avec résidence BR) • USDC dispo • frais raisonnables • réputation
+À vérifier : Virement bancaire/SEPA ok (même avec résidence BR) • USDC dispo • frais raisonnables • réputation
 
 ⚠️ Certains exchanges (ex: Binance) n'acceptent que dépôt EUR par carte avec >2% de frais si résidence BR.`,
 
@@ -473,7 +473,7 @@ Autres solutions :
 
 Nos liens de parrainage financent ce service (gratuits pour toi, parfois bonus).
 
-⚠️ Rappel : un exchange sert à un côté. Il faut un 🇪🇺 (SEPA) + un 🇧🇷 (Pix).`,
+⚠️ Rappel : un exchange sert à un côté. Il faut un 🇪🇺 (virement bancaire) + un 🇧🇷 (Pix).`,
 
   WHAT_IS_USDC: (route = 'eurbrl') => {
     const baseText = `🪙 C'est quoi l'USDC ?
@@ -523,7 +523,7 @@ Tu l'utilises comme "monnaie pivot" : EUR → USDC → BRL.`;
     if (route === 'brleur') {
       return `✅ Tu as (ou tu vas avoir) :
 • Un compte 🇧🇷 pour déposer tes BRL (Pix → USDC)
-• Un compte 🇪🇺 pour retirer tes EUR (USDC → SEPA)
+• Un compte 🇪🇺 pour retirer tes EUR (USDC → virement bancaire)
 
 🌐 Tu fais ton premier pas on-chain.
 C'est plus qu'un simple transfert :
@@ -536,7 +536,7 @@ C'est plus qu'un simple transfert :
 
     // Default: eurbrl
     return `✅ Tu as (ou tu vas avoir) :
-• Un compte 🇪🇺 pour déposer tes EUR (SEPA → USDC)
+• Un compte 🇪🇺 pour déposer tes EUR (virement bancaire → USDC)
 • Un compte 🇧🇷 pour retirer tes BRL (USDC → Pix)
 
 🌐 Tu fais ton premier pas on-chain.
@@ -570,7 +570,7 @@ Estimation de ton solde : R$ ${formatAmount(amount, 0, locale)}
 
 • Va dans la section "Dépôt / Deposit / Fiat".
 • Choisis EUR comme devise.
-• Méthode la plus simple : virement SEPA (rapide, frais bas ou nuls).
+• Méthode la plus simple : virement bancaire / SEPA (rapide, frais bas ou nuls).
 
 💡 "Fiat" = les monnaies classiques (EUR, USD, BRL…).
 
@@ -720,7 +720,7 @@ Estimation : tu recevras ~${formatAmount(usdcAmount - 1, 2, locale)} USDC côté
 • En général, la transaction prend 1–2 minutes, parfois jusqu'à 10 min.
 • Tu verras ton solde USDC apparaître côté 🇪🇺.
 
-✅ Résultat : tes USDC sont arrivés → prêt pour l'étape 3 (vente en EUR + retrait SEPA).`;
+✅ Résultat : tes USDC sont arrivés → prêt pour l'étape 3 (vente en EUR + retrait bancaire).`;
     }
 
     // Default: eurbrl
@@ -782,13 +782,13 @@ Estimation de ton solde : ~R$ ${formatAmount(finalAmount, 2, locale)}
 
 • Une fois tes USDC vendus, ton solde apparaît en EUR.
 • Va dans Retrait / Withdrawal / Withdraw.
-• Choisis SEPA comme méthode.
+• Choisis virement bancaire (SEPA) comme méthode.
 
 👉 Entre tes coordonnées bancaires (IBAN, etc.)… Retrait bancaire classique.
 
 💡 D'ailleurs : assure-toi que ton IBAN est correct, comme pour tout virement bancaire.
 
-👉 Généralement, les retraits SEPA sont gratuits ou ont des frais très bas sur la plupart des exchanges européens.
+👉 Généralement, les retraits bancaires sont gratuits ou ont des frais très bas sur la plupart des exchanges européens.
 
 Estimation de ton solde reçu : ~€${formatAmount(finalNet, 2, locale)} nets
 *⚠️ Allez, on ne devrait pas être trop loin de la réalité ;)*`;
@@ -830,7 +830,7 @@ Nos estimations sont prudentes et proches du réel. Tu ne devrais avoir aucune m
 
 • Tu as converti tes BRL en USDC côté 🇧🇷.
 • Tu les as envoyés on-chain.
-• Tu les as vendus contre EUR et retirés via SEPA côté 🇪🇺.
+• Tu les as vendus contre EUR et retirés via virement bancaire côté 🇪🇺.
 
 ✨ Résultat : rapide, sûr et à moindre coût.
 
@@ -1384,7 +1384,7 @@ btn: {
   langEN: '🇬🇧 English',
   about: 'ℹ️ À propos',
   eurbrl: (amt, locale) => `🇪🇺 EUR → 🇧🇷 BRL (Pix) · €${formatAmount(amt, 0, locale)}`,
-  brleur: (amt, locale) => `🇧🇷 BRL → 🇪🇺 EUR (SEPA) · R$ ${formatAmount(amt, 0, locale)}`,
+  brleur: (amt, locale) => `🇧🇷 BRL → 🇪🇺 EUR (virement) · R$ ${formatAmount(amt, 0, locale)}`,
   
   // ✅ Boutons renommés (Écran 3)
   contOn: '🚀 Convertir on-chain',
@@ -1446,12 +1446,12 @@ btn: {
   step2_2Done: '✅ J\'ai saisi mon montant',
   step2_3Done: '✅ J\'ai confirmé le transfert',
   step3Start: (route = 'eurbrl') => route === 'brleur'
-    ? '🇪🇺 Étape 3 — Vendre USDC & retirer en SEPA'
+    ? '🇪🇺 Étape 3 — Vendre USDC & retirer par virement'
     : '🇧🇷 Étape 3 — Vendre USDC & retirer en Pix',
   step3_1Done: '✅ J\'ai trouvé le marché',
   step3_2Done: '✅ J\'ai passé mon ordre',
   step3_3Done: (route = 'eurbrl') => route === 'brleur'
-    ? '✅ J\'ai lancé mon SEPA'
+    ? '✅ J\'ai lancé mon virement'
     : '✅ J\'ai lancé mon Pix',
   whyNotExact: '🤔 Pourquoi pas le solde exact ?',
   setAlert: '⏰ Activer mon alerte',

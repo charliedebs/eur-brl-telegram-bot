@@ -274,11 +274,11 @@ export const messagesEn = {
     📍 <b>The 3-step process</b>
     1️⃣ Brazil → Exchange your BRL to USDC (Pix)
     2️⃣ Blockchain → Send your USDC
-    3️⃣ Europe → Convert USDC to EUR (SEPA)
+    3️⃣ Europe → Convert USDC to EUR (bank transfer)
 
     ✅ <b>What you need</b>
     • 🇧🇷 Exchange in Brazil accepting BRL deposits (Pix)
-    • 🇪🇺 Exchange in Europe accepting EUR withdrawals (SEPA)
+    • 🇪🇺 Exchange in Europe accepting EUR withdrawals (bank transfer - SEPA)
 
     💡 We have recommendations!
 
@@ -294,7 +294,7 @@ export const messagesEn = {
     3️⃣ Brazil → Convert USDC to BRL (Pix)
 
     ✅ <b>What you need</b>
-    • 🇪🇺 Exchange in Europe accepting EUR deposits (SEPA)
+    • 🇪🇺 Exchange in Europe accepting EUR deposits (bank transfer - SEPA)
     • 🇧🇷 Exchange in Brazil accepting BRL withdrawals (Pix)
 
     💡 We have recommendations!
@@ -427,7 +427,7 @@ We only recommend platforms we actually use and trust. Service quality always co
         if (route === 'brleur') {
           return `${baseText}
     • Brazil exchange = you deposit BRL (Pix), buy USDC
-    • Europe exchange = you receive USDC, sell for EUR, withdraw via SEPA
+    • Europe exchange = you receive USDC, sell for EUR, withdraw via bank transfer (SEPA)
 
     It's regulated and safe (if you choose recognized platforms).
 
@@ -451,7 +451,7 @@ We only recommend platforms we actually use and trust. Service quality always co
     • Kraken (👋 We use) — Free transfer, serious, USDC available
     • Bitstamp — EU veteran, serious, transfers supported
     
-    Check: SEPA ok (even with BR residency) • USDC available • reasonable fees • reputation
+    Check: Bank transfer/SEPA ok (even with BR residency) • USDC available • reasonable fees • reputation
     
     ⚠️ Some exchanges (e.g. Binance) only accept EUR deposit by card with >2% fees if BR residency.`,
     
@@ -470,7 +470,7 @@ We only recommend platforms we actually use and trust. Service quality always co
     
     Our referral links fund this service (free for you, sometimes bonuses).
     
-    ⚠️ Reminder: one exchange serves one side. You need a 🇪🇺 (SEPA) + a 🇧🇷 (Pix).`,
+    ⚠️ Reminder: one exchange serves one side. You need a 🇪🇺 (bank transfer) + a 🇧🇷 (Pix).`,
     
       WHAT_IS_USDC: (route = 'eurbrl') => {
         const baseText = `🪙 What is USDC?
@@ -520,7 +520,7 @@ We only recommend platforms we actually use and trust. Service quality always co
         if (route === 'brleur') {
           return `✅ You have (or will have):
     • A 🇧🇷 account to deposit your BRL (Pix → USDC)
-    • A 🇪🇺 account to withdraw your EUR (USDC → SEPA)
+    • A 🇪🇺 account to withdraw your EUR (USDC → bank transfer)
 
     🌐 You're taking your first on-chain step.
     It's more than just a transfer:
@@ -533,7 +533,7 @@ We only recommend platforms we actually use and trust. Service quality always co
 
         // Default: eurbrl
         return `✅ You have (or will have):
-    • A 🇪🇺 account to deposit your EUR (SEPA → USDC)
+    • A 🇪🇺 account to deposit your EUR (bank transfer → USDC)
     • A 🇧🇷 account to withdraw your BRL (USDC → Pix)
 
     🌐 You're taking your first on-chain step.
@@ -566,7 +566,7 @@ We only recommend platforms we actually use and trust. Service quality always co
 
     • Go to the "Deposit / Fiat" section.
     • Choose EUR as currency.
-    • Simplest method: SEPA transfer (fast, low or no fees).
+    • Simplest method: bank transfer / SEPA (fast, low or no fees).
 
     💡 "Fiat" = traditional currencies (EUR, USD, BRL…).
 
@@ -716,7 +716,7 @@ We only recommend platforms we actually use and trust. Service quality always co
     • Usually, the transaction takes 1-2 minutes, sometimes up to 10 min.
     • You'll see your USDC balance appear 🇪🇺 side.
 
-    ✅ Result: your USDC arrived → ready for step 3 (EUR sale + SEPA withdrawal).`;
+    ✅ Result: your USDC arrived → ready for step 3 (EUR sale + bank transfer withdrawal).`;
         }
 
         // Default: eurbrl
@@ -778,13 +778,13 @@ We only recommend platforms we actually use and trust. Service quality always co
 
     • Once your USDC are sold, your balance appears in EUR.
     • Go to Withdrawal / Withdraw.
-    • Choose SEPA as method.
+    • Choose bank transfer (SEPA) as method.
 
     👉 Enter your bank details (IBAN, etc.)… Classic banking withdrawal.
 
     💡 By the way: make sure your IBAN is correct, just like with any bank transfer.
 
-    👉 Usually, SEPA withdrawals are free or have very low fees on most European exchanges.
+    👉 Usually, bank transfer withdrawals are free or have very low fees on most European exchanges.
 
     Received balance estimate: ~€${formatAmount(finalNet, 2, locale)} net
     *⚠️ Well, we shouldn't be too far from reality ;)*`;
@@ -826,7 +826,7 @@ We only recommend platforms we actually use and trust. Service quality always co
 
     • You converted your BRL to USDC 🇧🇷 side.
     • You sent them on-chain.
-    • You sold them for EUR and withdrew via SEPA 🇪🇺 side.
+    • You sold them for EUR and withdrew via bank transfer 🇪🇺 side.
 
     ✨ Result: fast, secure, and low cost.
 
@@ -1371,7 +1371,7 @@ Pay once, use for the chosen period, no automatic renewal.
         langEN: '🇬🇧 English',
         about: 'ℹ️ About',
         eurbrl: (amt, locale) => `🇪🇺 EUR → 🇧🇷 BRL (Pix) · €${formatAmount(amt, 0, locale)}`,
-        brleur: (amt, locale) => `🇧🇷 BRL → 🇪🇺 EUR (SEPA) · R$ ${formatAmount(amt, 0, locale)}`,
+        brleur: (amt, locale) => `🇧🇷 BRL → 🇪🇺 EUR (bank transfer) · R$ ${formatAmount(amt, 0, locale)}`,
         
         // ✅ Renamed buttons
         contOn: '🚀 Convert on-chain',
@@ -1433,12 +1433,12 @@ Pay once, use for the chosen period, no automatic renewal.
         step2_2Done: '✅ I entered my amount',
         step2_3Done: '✅ I confirmed the transfer',
         step3Start: (route = 'eurbrl') => route === 'brleur'
-          ? '🇪🇺 Step 3 — Sell USDC & withdraw via SEPA'
+          ? '🇪🇺 Step 3 — Sell USDC & withdraw via bank transfer'
           : '🇧🇷 Step 3 — Sell USDC & withdraw via Pix',
         step3_1Done: '✅ I found the market',
         step3_2Done: '✅ I placed my order',
         step3_3Done: (route = 'eurbrl') => route === 'brleur'
-          ? '✅ I initiated my SEPA'
+          ? '✅ I initiated my bank transfer'
           : '✅ I initiated my Pix',
         whyNotExact: '🤔 Why not exact balance?',
         setAlert: '⏰ Activate my alert',
