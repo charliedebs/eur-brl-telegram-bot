@@ -146,75 +146,126 @@ function requireAdminAuth(req, res, next) {
   next();
 }
 
-// Serve admin dashboard (with basic password protection)
-app.get('/admin', (req, res) => {
-  // Simple password check via query param or header
-  const password = req.query.password || req.headers['x-admin-password'];
+// Debug route to check file system
+app.get('/admin/debug', async (req, res) => {
+  try {
+    const fs = await import('fs/promises');
+    const dashboardPath = join(__dirname, 'admin', 'dashboard.html');
 
-  if (password !== ADMIN_PASSWORD) {
-    return res.status(401).send(`
+    // Check if file exists
+    try {
+      await fs.access(dashboardPath);
+      res.json({
+        exists: true,
+        path: dashboardPath,
+        dirname: __dirname,
+        message: 'Dashboard file exists'
+      });
+    } catch {
+      // List files in directory to help debug
+      const srcFiles = await fs.readdir(__dirname);
+      res.json({
+        exists: false,
+        path: dashboardPath,
+        dirname: __dirname,
+        srcFiles,
+        message: 'Dashboard file not found'
+      });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Serve admin dashboard (with basic password protection)
+app.get('/admin', async (req, res) => {
+  try {
+    // Simple password check via query param or header
+    const password = req.query.password || req.headers['x-admin-password'];
+
+    if (password !== ADMIN_PASSWORD) {
+      return res.status(401).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Admin Login</title>
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              min-height: 100vh;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              margin: 0;
+            }
+            .login-box {
+              background: white;
+              padding: 40px;
+              border-radius: 20px;
+              box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+              text-align: center;
+              max-width: 400px;
+            }
+            h1 { color: #333; margin-bottom: 10px; }
+            input {
+              width: 100%;
+              padding: 15px;
+              margin: 20px 0;
+              border: 2px solid #e0e0e0;
+              border-radius: 10px;
+              font-size: 16px;
+            }
+            button {
+              width: 100%;
+              padding: 15px;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+              border: none;
+              border-radius: 10px;
+              font-size: 16px;
+              font-weight: 600;
+              cursor: pointer;
+            }
+            button:hover { opacity: 0.9; }
+          </style>
+        </head>
+        <body>
+          <div class="login-box">
+            <h1>🔐 Admin Access</h1>
+            <p style="color: #666; margin-bottom: 20px;">Enter admin password</p>
+            <form method="GET">
+              <input type="password" name="password" placeholder="Password" required autofocus>
+              <button type="submit">🔓 Unlock Dashboard</button>
+            </form>
+          </div>
+        </body>
+        </html>
+      `);
+    }
+
+    const fs = await import('fs/promises');
+    const dashboardPath = join(__dirname, 'admin', 'dashboard.html');
+
+    // Check if file exists before sending
+    await fs.access(dashboardPath);
+    res.sendFile(dashboardPath);
+  } catch (error) {
+    logger.error('[ADMIN] Dashboard error:', { error: error.message });
+    res.status(500).send(`
       <!DOCTYPE html>
       <html>
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Admin Login</title>
-        <style>
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0;
-          }
-          .login-box {
-            background: white;
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            text-align: center;
-            max-width: 400px;
-          }
-          h1 { color: #333; margin-bottom: 10px; }
-          input {
-            width: 100%;
-            padding: 15px;
-            margin: 20px 0;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 16px;
-          }
-          button {
-            width: 100%;
-            padding: 15px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-          }
-          button:hover { opacity: 0.9; }
-        </style>
-      </head>
+      <head><title>Error</title></head>
       <body>
-        <div class="login-box">
-          <h1>🔐 Admin Access</h1>
-          <p style="color: #666; margin-bottom: 20px;">Enter admin password</p>
-          <form method="GET">
-            <input type="password" name="password" placeholder="Password" required autofocus>
-            <button type="submit">🔓 Unlock Dashboard</button>
-          </form>
-        </div>
+        <h1>Admin Dashboard Error</h1>
+        <p>Could not load dashboard. Error: ${error.message}</p>
+        <p>Check <a href="/admin/debug">/admin/debug</a> for details.</p>
       </body>
       </html>
     `);
   }
-
-  res.sendFile(join(__dirname, 'admin', 'dashboard.html'));
 });
 
 // API: Get current rates
