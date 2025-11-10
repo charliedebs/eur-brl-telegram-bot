@@ -116,7 +116,6 @@ async function backfillRates(days = 365) {
           .insert({
             pair: pairNames.direct,
             rate: rate,
-            source: 'yahoo_backfill',
             timestamp: date.toISOString()
           });
 
@@ -131,7 +130,6 @@ async function backfillRates(days = 365) {
           .insert({
             pair: pairNames.inverse,
             rate: inverseRate,
-            source: 'yahoo_backfill',
             timestamp: date.toISOString()
           });
 
