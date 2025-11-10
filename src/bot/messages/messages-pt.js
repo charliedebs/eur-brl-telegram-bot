@@ -1412,9 +1412,15 @@ Pague uma vez, use pelo período escolhido, sem renovação automática.
         openMercadoBitcoin: '🔗 Abrir Mercado Bitcoin',
         openFoxbit: '🔗 Abrir Foxbit',
         
-        startStep1: '🚀 Depositar & converter meus EUR em USDC',
-        step1Done: '✅ Depositei meus EUR',
-        step1_2Done: '✅ Encontrei o mercado EUR/USDC',
+        startStep1: (route = 'eurbrl') => route === 'brleur'
+          ? '🚀 Depositar & converter meus BRL em USDC'
+          : '🚀 Depositar & converter meus EUR em USDC',
+        step1Done: (route = 'eurbrl') => route === 'brleur'
+          ? '✅ Depositei meus BRL'
+          : '✅ Depositei meus EUR',
+        step1_2Done: (route = 'eurbrl') => route === 'brleur'
+          ? '✅ Encontrei o mercado BRL/USDC'
+          : '✅ Encontrei o mercado EUR/USDC',
         step1_3Done: '✅ Comprei meus USDC',
         marketVsLimit: 'ℹ️ Market vs Limit',
         nextStep2: '👉 Ir para etapa 2 (transferência)',
@@ -1426,10 +1432,14 @@ Pague uma vez, use pelo período escolhido, sem renovação automática.
         step2Done: '✅ Tenho meu endereço → continuar',
         step2_2Done: '✅ Inseri meu valor',
         step2_3Done: '✅ Confirmei a transferência',
-        step3Start: '🇧🇷 Etapa 3 — Vender USDC & sacar via Pix',
+        step3Start: (route = 'eurbrl') => route === 'brleur'
+          ? '🇪🇺 Etapa 3 — Vender USDC & sacar via SEPA'
+          : '🇧🇷 Etapa 3 — Vender USDC & sacar via Pix',
         step3_1Done: '✅ Encontrei o mercado',
         step3_2Done: '✅ Fiz minha ordem',
-        step3_3Done: '✅ Iniciei meu Pix',
+        step3_3Done: (route = 'eurbrl') => route === 'brleur'
+          ? '✅ Iniciei meu SEPA'
+          : '✅ Iniciei meu Pix',
         whyNotExact: '🤔 Por que não o saldo exato?',
         setAlert: '⏰ Ativar meu alerta',
         premium: '🚀 Descobrir Premium',

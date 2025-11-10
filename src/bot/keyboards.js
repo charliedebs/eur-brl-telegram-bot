@@ -227,14 +227,14 @@ case 'what_exchange':
     // Écran 7 : Transition
     case 'guide_transition':
       return Markup.inlineKeyboard([
-        [Markup.button.callback(msg.btn.startStep1, `guide:step:1.1:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.startStep1(route), `guide:step:1.1:${route}:${amount}`)],
         [Markup.button.callback(msg.btn.back, `action:onchain_intro:${route}:${amount}`)],
       ]);
     
     // Étapes du guide
     case 'step_1_1':
       return Markup.inlineKeyboard([
-        [Markup.button.callback(msg.btn.step1Done, `guide:step:1.2:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.step1Done(route), `guide:step:1.2:${route}:${amount}`)],
         [Markup.button.url(msg.btn.openKraken, LINKS.KRAKEN)],
         [Markup.button.callback(msg.btn.skipToStep2, `guide:step:2.1:${route}:${amount}`)],
         [Markup.button.callback(msg.btn.back, `action:start_guide:${route}:${amount}`)],
@@ -242,7 +242,7 @@ case 'what_exchange':
     
       case 'step_1_2':
         return Markup.inlineKeyboard([
-          [Markup.button.callback(msg.btn.step1_2Done, `guide:step:1.3:${route}:${amount}`)],
+          [Markup.button.callback(msg.btn.step1_2Done(route), `guide:step:1.3:${route}:${amount}`)],
           [Markup.button.callback(msg.btn.skipToStep2, `guide:step:2.1:${route}:${amount}`)],
           [Markup.button.callback(msg.btn.back, `guide:step:1.1:${route}:${amount}`)],
         ]);
@@ -285,7 +285,7 @@ case 'what_exchange':
     
     case 'step_2_4':
       return Markup.inlineKeyboard([
-        [Markup.button.callback(msg.btn.step3Start, `guide:step:3.1:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.step3Start(route), `guide:step:3.1:${route}:${amount}`)],
         [Markup.button.callback(msg.btn.back, `guide:step:2.3:${route}:${amount}`)],
       ]);
     
@@ -304,7 +304,7 @@ case 'what_exchange':
     
     case 'step_3_3':
       return Markup.inlineKeyboard([
-        [Markup.button.callback(msg.btn.step3_3Done, `guide:step:3.4:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.step3_3Done(route), `guide:step:3.4:${route}:${amount}`)],
         [Markup.button.callback(msg.btn.whyNotExact, 'action:why_not_exact')],
         [Markup.button.callback(msg.btn.back, `guide:step:3.2:${route}:${amount}`)],
       ]);

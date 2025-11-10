@@ -519,7 +519,23 @@ Tu l'utilises comme "monnaie pivot" : EUR → USDC → BRL.`;
 <i>Astuce : si tu veux « juste échanger », choisis Market.</i>`,
 
   // ✅ ÉCRAN 13 : Validé tel quel
-  GUIDE_TRANSITION: (route = 'eurbrl') => `✅ Tu as (ou tu vas avoir) :
+  GUIDE_TRANSITION: (route = 'eurbrl') => {
+    if (route === 'brleur') {
+      return `✅ Tu as (ou tu vas avoir) :
+• Un compte 🇧🇷 pour déposer tes BRL (Pix → USDC)
+• Un compte 🇪🇺 pour retirer tes EUR (USDC → SEPA)
+
+🌐 Tu fais ton premier pas on-chain.
+C'est plus qu'un simple transfert :
+• tu découvres une technologie qui change déjà la finance mondiale,
+• tu rejoins des millions d'utilisateurs, d'entreprises et d'institutions,
+• tu gardes plus de valeur pour toi (et moins pour les intermédiaires 💸).
+
+🚀 Maintenant, on commence concrètement : première étape → déposer tes BRL sur ton compte 🇧🇷 et les convertir en USDC.`;
+    }
+
+    // Default: eurbrl
+    return `✅ Tu as (ou tu vas avoir) :
 • Un compte 🇪🇺 pour déposer tes EUR (SEPA → USDC)
 • Un compte 🇧🇷 pour retirer tes BRL (USDC → Pix)
 
@@ -529,10 +545,28 @@ C'est plus qu'un simple transfert :
 • tu rejoins des millions d'utilisateurs, d'entreprises et d'institutions,
 • tu gardes plus de valeur pour toi (et moins pour les intermédiaires 💸).
 
-🚀 Maintenant, on commence concrètement : première étape → déposer tes EUR sur ton compte 🇪🇺 et les convertir en USDC.`,
+🚀 Maintenant, on commence concrètement : première étape → déposer tes EUR sur ton compte 🇪🇺 et les convertir en USDC.`;
+  },
 
   // Étapes du guide (inchangées sauf notes finales)
-  STEP_1_1: (amount, locale, route = 'eurbrl') => `1️⃣ Déposer tes EUR sur ton compte exchange
+  STEP_1_1: (amount, locale, route = 'eurbrl') => {
+    if (route === 'brleur') {
+      return `1️⃣ Déposer tes BRL sur ton compte exchange
+
+• Va dans la section "Dépôt / Deposit / Fiat".
+• Choisis BRL comme devise.
+• Méthode la plus simple : Pix (instantané, généralement gratuit).
+
+💡 "Fiat" = les monnaies classiques (EUR, USD, BRL…).
+
+👉 Recommandé : Binance BR.
+
+Estimation de ton solde : R$ ${formatAmount(amount, 0, locale)}
+*⚠️ C'est une estimation, proche du réel. Les frais et délais bancaires peuvent légèrement varier.*`;
+    }
+
+    // Default: eurbrl
+    return `1️⃣ Déposer tes EUR sur ton compte exchange
 
 • Va dans la section "Dépôt / Deposit / Fiat".
 • Choisis EUR comme devise.
@@ -543,9 +577,24 @@ C'est plus qu'un simple transfert :
 👉 Recommandé : Kraken.
 
 Estimation de ton solde : €${formatAmount(amount, 0, locale)}
-*⚠️ C'est une estimation, proche du réel. Les frais et délais bancaires peuvent légèrement varier.*`,
+*⚠️ C'est une estimation, proche du réel. Les frais et délais bancaires peuvent légèrement varier.*`;
+  },
 
-  STEP_1_2: (amount, locale, route = 'eurbrl') => `2️⃣ Accéder au marché pour acheter USDC
+  STEP_1_2: (amount, locale, route = 'eurbrl') => {
+    if (route === 'brleur') {
+      return `2️⃣ Accéder au marché pour acheter USDC
+
+• Dans ton exchange, cherche "Trader / Marché / Trade".
+• Sélectionne la paire BRL/USDC.
+
+💡 Un marché crypto, c'est comme un bureau de change : tu échanges une monnaie contre une autre.
+
+Estimation de ton solde : R$ ${formatAmount(amount, 0, locale)} (prêt pour achat USDC)
+*⚠️ Estimation indicative.*`;
+    }
+
+    // Default: eurbrl
+    return `2️⃣ Accéder au marché pour acheter USDC
 
 • Dans ton exchange, cherche "Trader / Marché / Trade".
 • Sélectionne la paire EUR/USDC.
@@ -553,7 +602,8 @@ Estimation de ton solde : €${formatAmount(amount, 0, locale)}
 💡 Un marché crypto, c'est comme un bureau de change : tu échanges une monnaie contre une autre.
 
 Estimation de ton solde : €${formatAmount(amount, 0, locale)} (prêt pour achat USDC)
-*⚠️ Estimation indicative.*`,
+*⚠️ Estimation indicative.*`;
+  },
 
   STEP_1_3: (usdcAmount, locale, route = 'eurbrl') => `3️⃣ Acheter tes USDC
 
@@ -566,14 +616,45 @@ Estimation de ton solde : €${formatAmount(amount, 0, locale)} (prêt pour acha
 Estimation de ton solde : ~${formatAmount(usdcAmount, 2, locale)} USDC
 *⚠️ Estimation proche du réel. Les frais & prix peuvent légèrement varier.*`,
 
-  STEP_1_4: (route = 'eurbrl') => `✅ Bien joué ! Tu as maintenant des USDC dans ton compte 🇪🇺.
+  STEP_1_4: (route = 'eurbrl') => {
+    if (route === 'brleur') {
+      return `✅ Bien joué ! Tu as maintenant des USDC dans ton compte 🇧🇷.
 
 ✨ Les USDC sont des "stablecoins" : ~1 USDC = 1 USD.
 C'est la clé pour transférer ton argent de manière rapide et peu coûteuse.
 
-Prochaine étape : les envoyer on-chain vers le Brésil.`,
+Prochaine étape : les envoyer on-chain vers l'Europe.`;
+    }
 
-  STEP_2_1: (route = 'eurbrl') => `✨ C'est l'étape "on-chain" → rapide et peu coûteuse, mais demande un peu de concentration.
+    // Default: eurbrl
+    return `✅ Bien joué ! Tu as maintenant des USDC dans ton compte 🇪🇺.
+
+✨ Les USDC sont des "stablecoins" : ~1 USDC = 1 USD.
+C'est la clé pour transférer ton argent de manière rapide et peu coûteuse.
+
+Prochaine étape : les envoyer on-chain vers le Brésil.`;
+  },
+
+  STEP_2_1: (route = 'eurbrl') => {
+    if (route === 'brleur') {
+      return `✨ C'est l'étape "on-chain" → rapide et peu coûteuse, mais demande un peu de concentration.
+Contrairement à une banque, si tu fais une erreur, il n'y a pas de SAV pour récupérer tes fonds.
+
+1️⃣ Récupérer ton adresse de dépôt 🇪🇺
+
+• Dans ton exchange européen, cherche "Dépôt / Crypto".
+• Choisis USDC comme crypto à déposer.
+• Sélectionne le réseau de transfert.
+
+💡 Nous recommandons Polygon (MATIC) → rapide, fiable, frais bas (~1 USDC).
+
+• Copie soigneusement l'adresse.
+
+💡 Imagine que c'est comme ton IBAN bancaire, mais version blockchain (une longue suite de lettres et chiffres).`;
+    }
+
+    // Default: eurbrl
+    return `✨ C'est l'étape "on-chain" → rapide et peu coûteuse, mais demande un peu de concentration.
 Contrairement à une banque, si tu fais une erreur, il n'y a pas de SAV pour récupérer tes fonds.
 
 1️⃣ Récupérer ton adresse de dépôt 🇧🇷
@@ -586,9 +667,29 @@ Contrairement à une banque, si tu fais une erreur, il n'y a pas de SAV pour ré
 
 • Copie soigneusement l'adresse.
 
-💡 Imagine que c'est comme ton IBAN bancaire, mais version blockchain (une longue suite de lettres et chiffres).`,
+💡 Imagine que c'est comme ton IBAN bancaire, mais version blockchain (une longue suite de lettres et chiffres).`;
+  },
 
-  STEP_2_2: (usdcAmount, locale, route = 'eurbrl') => `2️⃣ Envoyer depuis ton exchange 🇪🇺
+  STEP_2_2: (usdcAmount, locale, route = 'eurbrl') => {
+    if (route === 'brleur') {
+      return `2️⃣ Envoyer depuis ton exchange 🇧🇷
+
+• Va dans "Retrait / Withdraw" → USDC.
+• Colle l'adresse copiée.
+• Choisis le même réseau que celui du dépôt (ex. Polygon).
+
+💡 Le réseau, c'est comme les rails d'un train : si ce n'est pas les mêmes des deux côtés, l'argent part ailleurs et il est perdu.
+
+• Indique ton montant. Tu peux tout envoyer, ou commencer par un test (ex. 10 USDC).
+
+👉 Le test coûte un peu plus cher (frais fixes ~1 USDC s'appliquent deux fois), mais c'est une bonne pratique courante en crypto.
+
+Estimation : tu recevras ~${formatAmount(usdcAmount - 1, 2, locale)} USDC côté 🇪🇺
+*⚠️ Estimation proche du réel (frais réseau ~1 USDC).*`;
+    }
+
+    // Default: eurbrl
+    return `2️⃣ Envoyer depuis ton exchange 🇪🇺
 
 • Va dans "Retrait / Withdraw" → USDC.
 • Colle l'adresse copiée.
@@ -601,7 +702,8 @@ Contrairement à une banque, si tu fais une erreur, il n'y a pas de SAV pour ré
 👉 Le test coûte un peu plus cher (frais fixes ~1 USDC s'appliquent deux fois), mais c'est une bonne pratique courante en crypto.
 
 Estimation : tu recevras ~${formatAmount(usdcAmount - 1, 2, locale)} USDC côté 🇧🇷
-*⚠️ Estimation proche du réel (frais réseau ~1 USDC).*`,
+*⚠️ Estimation proche du réel (frais réseau ~1 USDC).*`;
+  },
 
   STEP_2_3: `3️⃣ Vérifier et confirmer
 
@@ -611,31 +713,89 @@ Estimation : tu recevras ~${formatAmount(usdcAmount - 1, 2, locale)} USDC côté
 
 👉 Une fois que tu as bien vérifié, tu peux confirmer le transfert.`,
 
-  STEP_2_4: (route = 'eurbrl') => `4️⃣ Attendre l'arrivée
+  STEP_2_4: (route = 'eurbrl') => {
+    if (route === 'brleur') {
+      return `4️⃣ Attendre l'arrivée
+
+• En général, la transaction prend 1–2 minutes, parfois jusqu'à 10 min.
+• Tu verras ton solde USDC apparaître côté 🇪🇺.
+
+✅ Résultat : tes USDC sont arrivés → prêt pour l'étape 3 (vente en EUR + retrait SEPA).`;
+    }
+
+    // Default: eurbrl
+    return `4️⃣ Attendre l'arrivée
 
 • En général, la transaction prend 1–2 minutes, parfois jusqu'à 10 min.
 • Tu verras ton solde USDC apparaître côté 🇧🇷.
 
-✅ Résultat : tes USDC sont arrivés → prêt pour l'étape 3 (vente en BRL + retrait Pix).`,
+✅ Résultat : tes USDC sont arrivés → prêt pour l'étape 3 (vente en BRL + retrait Pix).`;
+  },
 
-  STEP_3_1: (route = 'eurbrl') => `1️⃣ Trouver le marché USDC/BRL 🇧🇷
+  STEP_3_1: (route = 'eurbrl') => {
+    if (route === 'brleur') {
+      return `1️⃣ Trouver le marché USDC/EUR 🇪🇺
+
+• Dans ton exchange européen, va dans Trader / Market / Marché.
+• Sélectionne la paire USDC/EUR.
+
+👉 Prochaine étape : tes USDC se transforment enfin en EUR 🎉`;
+    }
+
+    // Default: eurbrl
+    return `1️⃣ Trouver le marché USDC/BRL 🇧🇷
 
 • Dans ton exchange brésilien, va dans Trader / Mercado / Marché.
 • Sélectionne la paire USDC/BRL.
 
-👉 Prochaine étape : tes USDC se transforment enfin en BRL 🎉`,
+👉 Prochaine étape : tes USDC se transforment enfin en BRL 🎉`;
+  },
 
-  STEP_3_2: (finalAmount, locale, route = 'eurbrl') => `2️⃣ Passer ton ordre
+  STEP_3_2: (finalAmount, locale, route = 'eurbrl') => {
+    if (route === 'brleur') {
+      return `2️⃣ Passer ton ordre
 
 • "Au marché / Market" → instantané, au prix actuel (simple, recommandé).
 • "Limite / Limit" → tu fixes ton prix, utile pour grosses sommes.
 
 👉 Pour la plupart des gens, "ordre au marché" = le plus simple et rapide.
 
-Estimation de ton solde : ~R$ ${formatAmount(brlAmount, 2, locale)}
-*⚠️ Estimation proche du réel (frais ~0,1%).*`,
+Estimation de ton solde : ~€${formatAmount(finalAmount, 2, locale)}
+*⚠️ Estimation proche du réel (frais ~0,1%).*`;
+    }
 
-  STEP_3_3: (finalNet, locale, route = 'eurbrl') => `3️⃣ Retirer ton argent en R$
+    // Default: eurbrl
+    return `2️⃣ Passer ton ordre
+
+• "Au marché / Market" → instantané, au prix actuel (simple, recommandé).
+• "Limite / Limit" → tu fixes ton prix, utile pour grosses sommes.
+
+👉 Pour la plupart des gens, "ordre au marché" = le plus simple et rapide.
+
+Estimation de ton solde : ~R$ ${formatAmount(finalAmount, 2, locale)}
+*⚠️ Estimation proche du réel (frais ~0,1%).*`;
+  },
+
+  STEP_3_3: (finalNet, locale, route = 'eurbrl') => {
+    if (route === 'brleur') {
+      return `3️⃣ Retirer ton argent en EUR
+
+• Une fois tes USDC vendus, ton solde apparaît en EUR.
+• Va dans Retrait / Withdrawal / Withdraw.
+• Choisis SEPA comme méthode.
+
+👉 Entre tes coordonnées bancaires (IBAN, etc.)… Retrait bancaire classique.
+
+💡 D'ailleurs : assure-toi que ton IBAN est correct, comme pour tout virement bancaire.
+
+👉 Généralement, les retraits SEPA sont gratuits ou ont des frais très bas sur la plupart des exchanges européens.
+
+Estimation de ton solde reçu : ~€${formatAmount(finalNet, 2, locale)} nets
+*⚠️ Allez, on ne devrait pas être trop loin de la réalité ;)*`;
+    }
+
+    // Default: eurbrl
+    return `3️⃣ Retirer ton argent en R$
 
 • Une fois tes USDC vendus, ton solde apparaît en BRL.
 • Va dans Retrait / Saque / Withdraw.
@@ -648,8 +808,9 @@ Estimation de ton solde : ~R$ ${formatAmount(brlAmount, 2, locale)}
 👉 Généralement, les frais sont très bas (ex. Binance ~R$3,50 par retrait Pix).
 Ça devrait être gratuit honnêtement… mais bon 😅
 
-Estimation de ton solde reçu : ~R$ ${formatAmount(brlNet, 2, locale)} nets
-*⚠️ Allez, on ne devrait pas être trop loin de la réalité ;)*`,
+Estimation de ton solde reçu : ~R$ ${formatAmount(finalNet, 2, locale)} nets
+*⚠️ Allez, on ne devrait pas être trop loin de la réalité ;)*`;
+  },
 
   WHY_NOT_EXACT: `🤔 Pourquoi on ne peut pas te donner le montant exact ?
 
@@ -663,7 +824,24 @@ Les variables qui bougent en temps réel :
 
 Nos estimations sont prudentes et proches du réel. Tu ne devrais avoir aucune mauvaise surprise.`,
 
-  STEP_3_4: (route = 'eurbrl') => `✅ Ton transfert est terminé !
+  STEP_3_4: (route = 'eurbrl') => {
+    if (route === 'brleur') {
+      return `✅ Ton transfert est terminé !
+
+• Tu as converti tes BRL en USDC côté 🇧🇷.
+• Tu les as envoyés on-chain.
+• Tu les as vendus contre EUR et retirés via SEPA côté 🇪🇺.
+
+✨ Résultat : rapide, sûr et à moindre coût.
+
+🌍 Tu viens de faire un vrai passage par la blockchain.
+Ce que tu as appris aujourd'hui sera de plus en plus utilisé dans le futur : tu viens de prendre une longueur d'avance.
+
+🙌 On espère que tu as kiffé l'expérience !`;
+    }
+
+    // Default: eurbrl
+    return `✅ Ton transfert est terminé !
 
 • Tu as converti tes EUR en USDC côté 🇪🇺.
 • Tu les as envoyés on-chain.
@@ -674,7 +852,8 @@ Nos estimations sont prudentes et proches du réel. Tu ne devrais avoir aucune m
 🌍 Tu viens de faire un vrai passage par la blockchain.
 Ce que tu as appris aujourd'hui sera de plus en plus utilisé dans le futur : tu viens de prendre une longueur d'avance.
 
-🙌 On espère que tu as kiffé l'expérience !`,
+🙌 On espère que tu as kiffé l'expérience !`;
+  },
 
   // Premium et alertes
   PREMIUM_PRICING: `💎 PASSER À PREMIUM
@@ -1246,9 +1425,15 @@ btn: {
   openMercadoBitcoin: '🔗 Ouvrir Mercado Bitcoin',
   openFoxbit: '🔗 Ouvrir Foxbit',
   
-  startStep1: '🚀 Déposer & convertir mes EUR en USDC',
-  step1Done: '✅ J\'ai déposé mes EUR',
-  step1_2Done: '✅ J\'ai trouvé le marché EUR/USDC',
+  startStep1: (route = 'eurbrl') => route === 'brleur'
+    ? '🚀 Déposer & convertir mes BRL en USDC'
+    : '🚀 Déposer & convertir mes EUR en USDC',
+  step1Done: (route = 'eurbrl') => route === 'brleur'
+    ? '✅ J\'ai déposé mes BRL'
+    : '✅ J\'ai déposé mes EUR',
+  step1_2Done: (route = 'eurbrl') => route === 'brleur'
+    ? '✅ J\'ai trouvé le marché BRL/USDC'
+    : '✅ J\'ai trouvé le marché EUR/USDC',
   step1_3Done: '✅ J\'ai acheté mes USDC',
   marketVsLimit: 'ℹ️ Market vs Limit',
   nextStep2: '👉 Passer à l\'étape 2 (transfert)',
@@ -1260,10 +1445,14 @@ btn: {
   step2Done: '✅ J\'ai mon adresse → continuer',
   step2_2Done: '✅ J\'ai saisi mon montant',
   step2_3Done: '✅ J\'ai confirmé le transfert',
-  step3Start: '🇧🇷 Étape 3 — Vendre USDC & retirer en Pix',
+  step3Start: (route = 'eurbrl') => route === 'brleur'
+    ? '🇪🇺 Étape 3 — Vendre USDC & retirer en SEPA'
+    : '🇧🇷 Étape 3 — Vendre USDC & retirer en Pix',
   step3_1Done: '✅ J\'ai trouvé le marché',
   step3_2Done: '✅ J\'ai passé mon ordre',
-  step3_3Done: '✅ J\'ai lancé mon Pix',
+  step3_3Done: (route = 'eurbrl') => route === 'brleur'
+    ? '✅ J\'ai lancé mon SEPA'
+    : '✅ J\'ai lancé mon Pix',
   whyNotExact: '🤔 Pourquoi pas le solde exact ?',
   setAlert: '⏰ Activer mon alerte',
   premium: '🚀 Découvrir Premium',
