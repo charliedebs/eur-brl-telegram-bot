@@ -1102,6 +1102,7 @@ btn: {
   calcdetails: '🔍 Détails du calcul on-chain',
   swapMode: '🔄 Inverser',
   change: '✏️ Changer montant',
+  moreOptions: '⚙️ Plus d\'options',
   
   back: '⬅️ Retour',
   subscribe: '💳 S\'abonner',
@@ -1161,10 +1162,10 @@ btn: {
   switchToSubscription: '🔄 Passer en abonnement récurrent',
 
   // Subscription plans (recurring)
-  subMPMonthly: '💳 R$ 6/mois',
-  subMPQuarterly: '💳 R$ 15/3 mois (-17%)',
-  subMPSemiannual: '💳 R$ 28/6 mois (-22%)',
-  subMPAnnual: '💳 R$ 50/12 mois (-31%)',
+  subMPMonthly: '🔄 R$ 6/mois',
+  subMPQuarterly: '🔄 R$ 15/3 mois (-17%)',
+  subMPSemiannual: '🔄 R$ 28/6 mois (-22%)',
+  subMPAnnual: '🔄 R$ 50/12 mois (-31%)',
   subPPQuarterly: '💳 €4/3 mois',
   subPPSemiannual: '💳 €7/6 mois',
   subPPAnnual: '💳 €12/12 mois',

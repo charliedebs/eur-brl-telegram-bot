@@ -1089,6 +1089,7 @@ Pay once, use for the chosen period, no automatic renewal.
         calcdetails: '🔍 On-chain calculation details',
         swapMode: '🔄 Swap',
         change: '✏️ Change amount',
+        moreOptions: '⚙️ More options',
         
         back: '⬅️ Back',
         subscribe: '💳 Subscribe',
@@ -1148,10 +1149,10 @@ Pay once, use for the chosen period, no automatic renewal.
         switchToSubscription: '🔄 Switch to recurring subscription',
 
         // Subscription plans (recurring)
-        subMPMonthly: '💳 R$ 6/month',
-        subMPQuarterly: '💳 R$ 15/3 months (-17%)',
-        subMPSemiannual: '💳 R$ 28/6 months (-22%)',
-        subMPAnnual: '💳 R$ 50/12 months (-31%)',
+        subMPMonthly: '🔄 R$ 6/month',
+        subMPQuarterly: '🔄 R$ 15/3 months (-17%)',
+        subMPSemiannual: '🔄 R$ 28/6 months (-22%)',
+        subMPAnnual: '🔄 R$ 50/12 months (-31%)',
         subPPQuarterly: '💳 €4/3 months',
         subPPSemiannual: '💳 €7/6 months',
         subPPAnnual: '💳 €12/12 months',

@@ -1039,10 +1039,28 @@ bot.action(/^action:change_amount:(.+)$/, async (ctx) => {
 bot.action(/^action:swap_mode:(.+):(\d+)$/, async (ctx) => {
   const route = ctx.match[1];
   const amount = parseFloat(ctx.match[2]);
-  
+
   // Inverser le mode : si on était en mode "send", passer en "target" et vice-versa
   const currentMode = ctx.session.lastIsTargetMode || false;
   await showComparison(ctx, route, amount, !currentMode);
+  await ctx.answerCbQuery();
+});
+
+bot.action(/^action:more_options:(.+):(\d+)$/, async (ctx) => {
+  const msg = getMsg(ctx);
+  const route = ctx.match[1];
+  const amount = parseFloat(ctx.match[2]);
+
+  const moreOptionsText = {
+    pt: '⚙️ <b>Mais opções</b>\n\nEscolha uma ação:',
+    fr: '⚙️ <b>Plus d\'options</b>\n\nChoisis une action :',
+    en: '⚙️ <b>More options</b>\n\nChoose an action:'
+  };
+
+  const text = moreOptionsText[ctx.state.lang] || moreOptionsText.pt;
+  const kb = buildKeyboards(msg, 'more_options', { route, amount });
+
+  await ctx.editMessageText(text, { parse_mode: 'HTML', ...kb });
   await ctx.answerCbQuery();
 });
 

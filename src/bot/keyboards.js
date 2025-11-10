@@ -56,10 +56,17 @@ export function buildKeyboards(msg, type, options = {}) {
         [Markup.button.callback(msg.btn.contOn, `action:continue_onchain:${route}:${amount}`)],
         [Markup.button.callback(msg.btn.calcdetails, `action:calc_details:${route}:${amount}`)],
         [Markup.button.callback(msg.btn.stayOff, `action:stay_offchain:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.moreOptions, `action:more_options:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.sources, 'action:sources')],
+      ]);
+
+    // Écran 2ter : More options (from comparison)
+    case 'more_options':
+      return Markup.inlineKeyboard([
         [Markup.button.callback(msg.btn.swapMode, `action:swap_mode:${route}:${amount}`)],
         [Markup.button.callback(msg.btn.change, `action:change_amount:${route}`)],
-        [Markup.button.callback(msg.btn.sources, 'action:sources')],
         [Markup.button.callback(msg.btn.myAlerts, 'alert:list')],
+        [Markup.button.callback(msg.btn.back, `action:back_comparison:${route}:${amount}`)],
       ]);
     
     // Écran 2bis : Sources
