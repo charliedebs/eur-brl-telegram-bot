@@ -390,32 +390,8 @@ case 'what_exchange':
         [Markup.button.callback(msg.btn.pairBrlEur, 'alert:create:brleur')],
         [Markup.button.callback(msg.btn.back, 'alert:list')]
       ]);
-    
-    // Choix du preset après sélection pair
-    case 'alert_create':
-      const pair = options.pair || 'eurbrl';
-      return Markup.inlineKeyboard([
-        [Markup.button.callback(msg.btn.conservative, `alert:preset:conservative:${pair}`)],
-        [Markup.button.callback(msg.btn.balanced, `alert:preset:balanced:${pair}`)],
-        [Markup.button.callback(msg.btn.aggressive, `alert:preset:aggressive:${pair}`)],
-        [Markup.button.callback(msg.btn.custom, `alert:preset:custom:${pair}`)],
-        [Markup.button.callback(msg.btn.back, 'alert:choose_pair')]
-      ]);
-    
-    // Choix du cooldown (pour custom uniquement)
-    case 'alert_choose_cooldown':
-      const alertData = options.alertData || {};
-      const { pair: p, threshold } = alertData;
-      return Markup.inlineKeyboard([
-        [Markup.button.callback(msg.btn.chooseCooldown15, `alert:cooldown:15:${p}:${threshold}`)],
-        [Markup.button.callback(msg.btn.chooseCooldown1h, `alert:cooldown:60:${p}:${threshold}`)],
-        [Markup.button.callback(msg.btn.chooseCooldown6h, `alert:cooldown:360:${p}:${threshold}`)],
-        [Markup.button.callback(msg.btn.chooseCooldown24h, `alert:cooldown:1440:${p}:${threshold}`)],
-        [Markup.button.callback(msg.btn.chooseCooldown1week, `alert:cooldown:10080:${p}:${threshold}`)],
-        [Markup.button.callback(msg.btn.back, `alert:create:${p}`)]
-      ]);
-    
 
+      // Alert creation flow keyboards
       case 'alert_choose_type': {
         const { pair } = options;
         return Markup.inlineKeyboard([
