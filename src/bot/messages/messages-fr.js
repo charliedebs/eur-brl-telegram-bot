@@ -12,7 +12,9 @@ Ce bot compare les taux EUR↔BRL et te guide pour des transferts on-chain (via 
 
 Les taux on-chain sont souvent meilleurs que les plateformes traditionnelles. C'est légal, sûr et utilisé par de nombreuses institutions.
 
-Service gratuit, financé par des liens de parrainage.`,
+Service gratuit, financé par des liens de parrainage.
+
+<i>⚖️ Ce service est informatif uniquement. Pas de conseil financier. Vérifie toujours les taux et conditions sur les plateformes avant d'opérer.</i>`,
 
   ERROR_RATES_UNAVAILABLE: `⚠️ Taux crypto indisponibles. Réessaie dans un instant.`,
   ERROR_INVALID_AMOUNT: `⚠️ Montant invalide. Entre un nombre (ex. 1000)`,
@@ -658,6 +660,8 @@ Annulable à tout moment via Mercado Pago
 💡 Les abonnements se renouvellent automatiquement via Mercado Pago.
 Tu peux annuler quand tu veux, directement dans l'app Mercado Pago.
 
+<i>⚖️ Service numérique à accès immédiat. Aucun remboursement après activation. En payant, tu acceptes les conditions d'utilisation.</i>
+
 ❓ Problème avec le paiement ? Utilise le bouton "Aide" ci-dessous.`,
 
   PREMIUM_ONESHOT_PRICING: `💎 PASSER À PREMIUM
@@ -681,6 +685,8 @@ Payez une fois, utilisez pour la période choisie, sans renouvellement automatiq
 • R$ 60 - 12 mois
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<i>⚖️ Service numérique à accès immédiat. Aucun remboursement après activation. En payant, tu acceptes les conditions d'utilisation.</i>
 
 ❓ Problème avec le paiement ? Utilise le bouton "Aide" ci-dessous.`,
   

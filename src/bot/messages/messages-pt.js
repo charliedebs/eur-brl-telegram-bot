@@ -7,12 +7,14 @@ export const messagesPt = {
     🌐 Escolha o idioma · Choisis ta langue · Choose your language`,
     
       ABOUT_TEXT: `💡 Sobre
-    
+
     Este bot compara taxas EUR↔BRL e te guia em transferências on-chain (via blockchain).
-    
+
     As taxas on-chain costumam ser melhores que as plataformas tradicionais. É legal, seguro e usado por muitas instituições.
-    
-    Serviço gratuito, financiado por links de indicação.`,
+
+    Serviço gratuito, financiado por links de indicação.
+
+    <i>⚖️ Este serviço é apenas informativo. Não é aconselhamento financeiro. Sempre verifique taxas e condições nas plataformas antes de operar.</i>`,
     
       ERROR_RATES_UNAVAILABLE: `⚠️ Taxas crypto indisponíveis. Tente novamente em instantes.`,
       ERROR_INVALID_AMOUNT: `⚠️ Valor inválido. Digite um número (ex. 1000)`,
@@ -654,6 +656,8 @@ Cancelável a qualquer momento via Mercado Pago
 💡 As assinaturas se renovam automaticamente via Mercado Pago.
 Você pode cancelar quando quiser, direto no app do Mercado Pago.
 
+<i>⚖️ Serviço digital de acesso imediato. Sem reembolsos após ativação. Ao pagar, você concorda com os termos de uso.</i>
+
 ❓ Problemas com o pagamento? Use o botão "Ajuda" abaixo.`,
 
   PREMIUM_ONESHOT_PRICING: `💎 ASSINAR PREMIUM
@@ -676,6 +680,8 @@ Pague uma vez, use pelo período escolhido, sem renovação automática.
 • R$ 60 - 12 meses
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<i>⚖️ Serviço digital de acesso imediato. Sem reembolsos após ativação. Ao pagar, você concorda com os termos de uso.</i>
 
 ❓ Problemas com o pagamento? Use o botão "Ajuda" abaixo.`,
     

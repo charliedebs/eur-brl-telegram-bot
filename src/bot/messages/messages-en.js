@@ -7,12 +7,14 @@ export const messagesEn = {
     🌐 Choose your language · Choisis ta langue · Escolha o idioma`,
     
       ABOUT_TEXT: `💡 About
-    
+
     This bot compares EUR↔BRL rates and guides you through on-chain transfers (via blockchain).
-    
+
     On-chain rates are often better than traditional platforms. It's legal, secure, and used by many institutions.
-    
-    Free service, funded by referral links.`,
+
+    Free service, funded by referral links.
+
+    <i>⚖️ This service is informational only. Not financial advice. Always verify rates and conditions on platforms before operating.</i>`,
     
       ERROR_RATES_UNAVAILABLE: `⚠️ Crypto rates unavailable. Try again in a moment.`,
       ERROR_INVALID_AMOUNT: `⚠️ Invalid amount. Enter a number (e.g. 1000)`,
@@ -654,6 +656,8 @@ Cancel anytime via Mercado Pago
 💡 Subscriptions renew automatically via Mercado Pago.
 You can cancel anytime, directly in the Mercado Pago app.
 
+<i>⚖️ Digital service with immediate access. No refunds after activation. By paying, you agree to the terms of use.</i>
+
 ❓ Payment issues? Use the "Help" button below.`,
 
   PREMIUM_ONESHOT_PRICING: `💎 GO PREMIUM
@@ -677,6 +681,8 @@ Pay once, use for the chosen period, no automatic renewal.
 • R$ 60 - 12 months
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<i>⚖️ Digital service with immediate access. No refunds after activation. By paying, you agree to the terms of use.</i>
 
 ❓ Payment issues? Use the "Help" button below.`,
     
