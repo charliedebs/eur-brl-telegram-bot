@@ -120,6 +120,166 @@ app.post('/webhook/telegram', (req, res) => {
 });
 
 // ==========================================
+// ADMIN DASHBOARD
+// ==========================================
+
+// Simple authentication middleware
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'change-me-in-production';
+
+function requireAdminAuth(req, res, next) {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized - Missing token' });
+  }
+
+  const token = authHeader.substring(7);
+  if (token !== ADMIN_PASSWORD) {
+    return res.status(403).json({ error: 'Forbidden - Invalid token' });
+  }
+
+  next();
+}
+
+// Serve admin dashboard (with basic password protection)
+app.get('/admin', (req, res) => {
+  // Simple password check via query param or header
+  const password = req.query.password || req.headers['x-admin-password'];
+
+  if (password !== ADMIN_PASSWORD) {
+    return res.status(401).send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Admin Login</title>
+        <style>
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+          }
+          .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 400px;
+          }
+          h1 { color: #333; margin-bottom: 10px; }
+          input {
+            width: 100%;
+            padding: 15px;
+            margin: 20px 0;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+          }
+          button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+          }
+          button:hover { opacity: 0.9; }
+        </style>
+      </head>
+      <body>
+        <div class="login-box">
+          <h1>🔐 Admin Access</h1>
+          <p style="color: #666; margin-bottom: 20px;">Enter admin password</p>
+          <form method="GET">
+            <input type="password" name="password" placeholder="Password" required autofocus>
+            <button type="submit">🔓 Unlock Dashboard</button>
+          </form>
+        </div>
+      </body>
+      </html>
+    `);
+  }
+
+  res.sendFile(new URL('./admin/dashboard.html', import.meta.url).pathname);
+});
+
+// API: Get current rates
+app.get('/api/admin/current-rates', async (req, res) => {
+  try {
+    const { getRates } = await import('./services/rates.js');
+    const rates = await getRates();
+
+    if (!rates) {
+      return res.status(503).json({ error: 'Rates unavailable' });
+    }
+
+    res.json({
+      eurbrl: rates.cross,
+      brleur: 1 / rates.cross,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    logger.error('[ADMIN] Failed to fetch rates:', { error: error.message });
+    res.status(500).json({ error: 'Internal error' });
+  }
+});
+
+// API: Get user count by audience
+app.get('/api/admin/user-count', async (req, res) => {
+  try {
+    const { DatabaseService } = await import('./services/database.js');
+    const db = new DatabaseService();
+    const audience = req.query.audience || 'all';
+
+    let count = 0;
+
+    if (audience === 'all') {
+      const users = await db.getAllActiveUsers();
+      count = users.length;
+    } else if (audience === 'premium') {
+      const users = await db.getPremiumUsers();
+      count = users.length;
+    } else if (audience === 'free') {
+      const allUsers = await db.getAllActiveUsers();
+      const premiumUsers = await db.getPremiumUsers();
+      const premiumIds = new Set(premiumUsers.map(u => u.telegram_id));
+      count = allUsers.filter(u => !premiumIds.has(u.telegram_id)).length;
+    }
+
+    res.json({ audience, count });
+  } catch (error) {
+    logger.error('[ADMIN] Failed to get user count:', { error: error.message });
+    res.status(500).json({ error: 'Internal error' });
+  }
+});
+
+// API: Trigger alert
+app.post('/api/admin/trigger-alert', async (req, res) => {
+  try {
+    const { audience = 'all', pairs = ['eurbrl', 'brleur'] } = req.body;
+
+    logger.info('[ADMIN] Triggering alert:', { audience, pairs });
+
+    const { triggerManualAlert } = await import('./jobs/triggered-alerts.js');
+    const result = await triggerManualAlert({ audience, pairs });
+
+    res.json(result);
+  } catch (error) {
+    logger.error('[ADMIN] Failed to trigger alert:', { error: error.message });
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ==========================================
 // PAYMENT WEBHOOKS
 // ==========================================
 

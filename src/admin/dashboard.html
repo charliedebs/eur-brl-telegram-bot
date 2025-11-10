@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EUR/BRL Bot - Admin Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .current-rate {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-left: 4px solid #667eea;
+        }
+
+        .rate-display {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .rate-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .rate-info {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .alert-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .alert-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .alert-card:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        .alert-card.selected {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .alert-card-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .alert-card-desc {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .alert-card-audience {
+            display: inline-block;
+            padding: 4px 8px;
+            background: #667eea;
+            color: white;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .pair-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .checkbox-label:hover {
+            background: #e9ecef;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .preview-box {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #28a745;
+        }
+
+        .preview-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .preview-content {
+            font-size: 14px;
+            color: #666;
+            white-space: pre-line;
+            line-height: 1.6;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .result {
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📢 Triggered Alerts Dashboard</h1>
+        <p class="subtitle">Send manual marketing alerts to your users</p>
+
+        <!-- Current Rate Display -->
+        <div class="current-rate">
+            <div class="rate-display">
+                <div>
+                    <div style="font-size: 14px; color: #666; margin-bottom: 5px;">EUR → BRL</div>
+                    <div class="rate-value" id="rate-eurbrl">Loading...</div>
+                </div>
+                <div>
+                    <div style="font-size: 14px; color: #666; margin-bottom: 5px;">BRL → EUR</div>
+                    <div class="rate-value" id="rate-brleur">Loading...</div>
+                </div>
+            </div>
+            <div class="rate-info" id="rate-time">Last updated: --</div>
+        </div>
+
+        <!-- Alert Type Selection -->
+        <div class="section">
+            <div class="section-title">1️⃣ Select Audience</div>
+            <div class="alert-grid">
+                <div class="alert-card" data-audience="all">
+                    <div class="alert-card-title">🌍 All Users</div>
+                    <div class="alert-card-desc">Send to everyone (Free + Premium)</div>
+                    <span class="alert-card-audience">ALL</span>
+                </div>
+                <div class="alert-card" data-audience="premium">
+                    <div class="alert-card-title">💎 Premium Only</div>
+                    <div class="alert-card-desc">Send to premium subscribers only</div>
+                    <span class="alert-card-audience">PREMIUM</span>
+                </div>
+                <div class="alert-card" data-audience="free">
+                    <div class="alert-card-title">🆓 Free Users</div>
+                    <div class="alert-card-desc">Send to non-premium users only</div>
+                    <span class="alert-card-audience">FREE</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pair Selection -->
+        <div class="section">
+            <div class="section-title">2️⃣ Select Currency Pairs</div>
+            <div class="pair-selector">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="pair" value="eurbrl" checked>
+                    <span>🇪🇺 EUR → 🇧🇷 BRL</span>
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" name="pair" value="brleur" checked>
+                    <span>🇧🇷 BRL → 🇪🇺 EUR</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="section">
+            <div class="section-title">3️⃣ Preview</div>
+            <div class="preview-box">
+                <div class="preview-title">📊 What users will receive:</div>
+                <div class="preview-content" id="preview">
+                    Select audience and pairs above to see preview
+                </div>
+            </div>
+            <div class="preview-box">
+                <div class="preview-title">📈 Alert will include:</div>
+                <div class="stats" id="stats-preview">
+                    <div class="stat-card">
+                        <div class="stat-label">30d Average</div>
+                        <div class="stat-value">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">90d Average</div>
+                        <div class="stat-value">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">12m Range</div>
+                        <div class="stat-value">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Target Users</div>
+                        <div class="stat-value" id="user-count">--</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Send Button -->
+        <button class="btn btn-primary" id="send-btn" disabled>
+            📤 Send Triggered Alert
+        </button>
+
+        <!-- Loading -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div>Sending alerts...</div>
+        </div>
+
+        <!-- Result -->
+        <div class="result" id="result"></div>
+    </div>
+
+    <script>
+        let selectedAudience = null;
+        let currentRates = null;
+
+        // Fetch current rates
+        async function loadRates() {
+            try {
+                const response = await fetch('/api/admin/current-rates');
+                const data = await response.json();
+                currentRates = data;
+
+                document.getElementById('rate-eurbrl').textContent = data.eurbrl.toFixed(4);
+                document.getElementById('rate-brleur').textContent = data.brleur.toFixed(4);
+                document.getElementById('rate-time').textContent = `Last updated: ${new Date(data.timestamp).toLocaleString()}`;
+
+                updatePreview();
+            } catch (error) {
+                console.error('Failed to load rates:', error);
+            }
+        }
+
+        // Handle audience selection
+        document.querySelectorAll('.alert-card').forEach(card => {
+            card.addEventListener('click', function() {
+                document.querySelectorAll('.alert-card').forEach(c => c.classList.remove('selected'));
+                this.classList.add('selected');
+                selectedAudience = this.dataset.audience;
+                updatePreview();
+            });
+        });
+
+        // Handle pair selection
+        document.querySelectorAll('input[name="pair"]').forEach(checkbox => {
+            checkbox.addEventListener('change', updatePreview);
+        });
+
+        // Update preview
+        async function updatePreview() {
+            if (!selectedAudience || !currentRates) {
+                document.getElementById('send-btn').disabled = true;
+                return;
+            }
+
+            const selectedPairs = Array.from(document.querySelectorAll('input[name="pair"]:checked'))
+                .map(cb => cb.value);
+
+            if (selectedPairs.length === 0) {
+                document.getElementById('send-btn').disabled = true;
+                return;
+            }
+
+            document.getElementById('send-btn').disabled = false;
+
+            // Update preview text
+            const audienceText = {
+                'all': 'All users (Free + Premium)',
+                'premium': 'Premium users only',
+                'free': 'Free users only'
+            }[selectedAudience];
+
+            const pairsText = selectedPairs.map(p =>
+                p === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'
+            ).join(' and ');
+
+            document.getElementById('preview').textContent =
+                `✅ Sending to: ${audienceText}\n` +
+                `💱 Pairs: ${pairsText}\n\n` +
+                `📊 Message includes:\n` +
+                `• Current exchange rate\n` +
+                `• 30-day, 90-day, and 12-month statistics\n` +
+                `• Min/Max rates for each period\n` +
+                `• Percentage deviation from averages\n` +
+                `• Example savings calculation\n` +
+                `• Quick action buttons`;
+
+            // Fetch user count
+            try {
+                const response = await fetch(`/api/admin/user-count?audience=${selectedAudience}`);
+                const data = await response.json();
+                document.getElementById('user-count').textContent = data.count;
+            } catch (error) {
+                document.getElementById('user-count').textContent = '?';
+            }
+        }
+
+        // Send alert
+        document.getElementById('send-btn').addEventListener('click', async function() {
+            if (!confirm('Are you sure you want to send this alert to users?')) {
+                return;
+            }
+
+            const selectedPairs = Array.from(document.querySelectorAll('input[name="pair"]:checked'))
+                .map(cb => cb.value);
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('result').style.display = 'none';
+            this.disabled = true;
+
+            try {
+                const response = await fetch('/api/admin/trigger-alert', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        audience: selectedAudience,
+                        pairs: selectedPairs
+                    })
+                });
+
+                const result = await response.json();
+
+                document.getElementById('loading').style.display = 'none';
+                const resultDiv = document.getElementById('result');
+                resultDiv.style.display = 'block';
+
+                if (result.success) {
+                    resultDiv.className = 'result success';
+                    const totalSent = result.results.reduce((sum, r) => sum + r.sent, 0);
+                    resultDiv.innerHTML = `
+                        <strong>✅ Alert sent successfully!</strong><br>
+                        Delivered to ${totalSent} users<br>
+                        ${result.results.map(r => `${r.pair.toUpperCase()}: ${r.sent} users`).join('<br>')}
+                    `;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ Error: ${result.error}`;
+                }
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                const resultDiv = document.getElementById('result');
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Failed to send alert: ${error.message}`;
+            } finally {
+                this.disabled = false;
+            }
+        });
+
+        // Load rates on page load
+        loadRates();
+        setInterval(loadRates, 60000); // Refresh every minute
+    </script>
+</body>
+</html>

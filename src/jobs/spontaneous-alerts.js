@@ -1,5 +1,5 @@
 // src/jobs/spontaneous-alerts.js
-// Alertes SPONTANÉES : Free (>5% avg90d) + Premium (>3% avg30d)
+// Alertes SPONTANÉES : Free (>3% avg90d, cooldown 14j) + Premium (>3% avg30d, cooldown 6h)
 // Appliqué aux 2 routes : EURBRL + BRLEUR
 
 import 'dotenv/config';
@@ -14,28 +14,27 @@ import { logger } from '../utils/logger.js';
 const db = new DatabaseService();
 
 // ==========================================
-// SPONTANÉES FREE : >5% vs avg90d, cooldown 14j
+// SPONTANÉES FREE : >3% vs avg90d, cooldown 14j
 // ==========================================
 
 async function shouldSendFreeAlert(pair, currentRate) {
   try {
-    // 1. Record 90 jours + variation >5% vs avg90d
+    // 1. Record 90 jours + variation >3% vs avg90d
     const history90d = await db.getRateHistory(pair, 90);
     if (history90d.length < 60) {
       logger.warn(`[FREE-SPONTANEOUS] Not enough data for ${pair} (${history90d.length}/90)`);
       return false;
     }
-    
+
     const rates = history90d.map(h => parseFloat(h.rate));
     const max90d = Math.max(...rates);
     const avg90d = rates.reduce((a, b) => a + b, 0) / rates.length;
-    
-    // Besoin d'être proche du max (99.5%) ET >5% vs moyenne
-    const isNearMax = currentRate >= max90d * 0.995;
+
+    // Variation >3% vs moyenne 90d (removed "near max" requirement)
     const variationVsAvg = ((currentRate - avg90d) / avg90d) * 100;
-    const isSignificant = variationVsAvg > 5;
-    
-    if (!isNearMax || !isSignificant) {
+    const isSignificant = variationVsAvg > 3;
+
+    if (!isSignificant) {
       return { send: false };
     }
     
@@ -66,8 +65,13 @@ async function shouldSendFreeAlert(pair, currentRate) {
 
 async function broadcastFreeAlert(pair, currentRate, stats) {
   try {
-    const users = await db.getAllActiveUsers();
-    logger.info(`[FREE-SPONTANEOUS] Broadcasting ${pair} to ${users.length} users...`);
+    // ⚠️ IMPORTANT: Only send to FREE users (exclude premium)
+    const allUsers = await db.getAllActiveUsers();
+    const premiumUsers = await db.getPremiumUsers();
+    const premiumIds = new Set(premiumUsers.map(u => u.telegram_id));
+    const users = allUsers.filter(u => !premiumIds.has(u.telegram_id));
+
+    logger.info(`[FREE-SPONTANEOUS] Broadcasting ${pair} to ${users.length} free users (excluded ${premiumIds.size} premium)...`);
     
     const amountExample = pair === 'eurbrl' ? 1000 : 5000;
     const savings = (currentRate - stats.avg90d) * amountExample;
