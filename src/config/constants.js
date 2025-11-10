@@ -16,7 +16,6 @@ export const LINKS = {
   // Off-chain providers
   WISE: 'https://wise.com/invite/dic/charlied197',
   REMITLY: 'https://www.remitly.com/',
-  INSTAREM: 'https://www.instarem.com/',
 };
 
 // Fee structure for on-chain calculations
@@ -42,12 +41,11 @@ export const LANGUAGES = {
 };
 
 // Providers to show in comparisons
-export const PROVIDERS = ['Wise', 'Remitly', 'Instarem'];
+export const PROVIDERS = ['Wise', 'Remitly'];
 
 export const PROVIDER_LINKS = {
   'Wise': 'https://wise.com/invite/dic/charlied197',
   'Remitly': 'https://remit.ly/gmt9kg4h',
-  'Instarem': 'https://www.instarem.com/',
   'PayPal': 'https://www.paypal.com/',
   'Western Union': 'https://www.westernunion.com/',
   'Skrill': 'https://www.skrill.com/',

@@ -240,21 +240,30 @@ Cliquez sur les liens ci-dessous pour accéder aux études et rapports officiels
       }
     }).join('\n\n');
     
-    const onchainCompare = onchainAmount 
+    const onchainCompare = onchainAmount
       ? `~${formatAmount(onchainAmount, 0, locale)}${route === 'eurbrl' ? ' R$' : '€'}`
       : '—';
-    
-    const offchainBest = displayProviders[0]?.out 
+
+    const offchainBest = displayProviders[0]?.out
       ? formatAmount(displayProviders[0].out, 0, locale)
       : '—';
-    
-    // ✅ Footer avec rappel on-chain + reformulation
-    const footer = `
 
-💡 Plus cher que l'on-chain (~${offchainBest}${route === 'eurbrl' ? ' R$' : '€'} vs ~${onchainCompare} on-chain)
+    // Calculate savings
+    let savingsText = '';
+    if (displayProviders[0]?.out && onchainAmount) {
+      const difference = onchainAmount - displayProviders[0].out;
+      const percentSavings = ((difference / displayProviders[0].out) * 100).toFixed(1);
+      const currency = route === 'eurbrl' ? ' R$' : '€';
+
+      if (difference > 0) {
+        savingsText = `\n\n⚠️ <b>L'off-chain coûte ${currency} ${formatAmount(Math.abs(difference), 2, locale)} de plus !</b>\n💰 Économise ~${percentSavings}% en choisissant l'on-chain →`;
+      }
+    }
+
+    const footer = `${savingsText}
 
 <i>*Données fournies par Wise Comparisons</i>`;
-    
+
     return `${title}\n\n${providersList}${footer}`;
   },
 
@@ -1100,7 +1109,6 @@ btn: {
   sources: '📊 Sources des données',
   openWise: '🔗 Ouvrir Wise',
   openRemitly: '🔗 Ouvrir Remitly',
-  openInstarem: '🔗 Ouvrir Instarem',
   seeOnchain: '🚀 Voir route on-chain',
   
   // ✅ Nouveaux boutons (Écran 6)
@@ -1147,7 +1155,7 @@ btn: {
   premium: '🚀 Découvrir Premium',
   giveFeedback: '💬 Donner une suggestion',
   seePremium: '💎 Voir Premium',
-  seeOneshot: '💰 Ou essaie sans abonnement →',
+  seeOneshot: '💰 Ou paiement unique (sans renouvellement auto) →',
   backToSubscriptions: '⬅️ Retour aux abonnements',
   addMoreTime: '💰 Ajouter plus de temps (paiement unique)',
   switchToSubscription: '🔄 Passer en abonnement récurrent',

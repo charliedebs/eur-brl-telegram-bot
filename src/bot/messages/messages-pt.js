@@ -241,16 +241,26 @@ export const messagesPt = {
           ? `~${formatAmount(onchainAmount, 0, locale)}${route === 'eurbrl' ? ' R$' : '€'}`
           : '—';
         
-        const offchainBest = displayProviders[0]?.out 
+        const offchainBest = displayProviders[0]?.out
           ? formatAmount(displayProviders[0].out, 0, locale)
           : '—';
-        
-        const footer = `
-    
-    💡 Mais caro que on-chain (~${offchainBest}${route === 'eurbrl' ? ' R$' : '€'} vs ~${onchainCompare} on-chain)
-    
+
+        // Calculate savings
+        let savingsText = '';
+        if (displayProviders[0]?.out && onchainAmount) {
+          const difference = onchainAmount - displayProviders[0].out;
+          const percentSavings = ((difference / displayProviders[0].out) * 100).toFixed(1);
+          const currency = route === 'eurbrl' ? 'R$' : '€';
+
+          if (difference > 0) {
+            savingsText = `\n\n⚠️ <b>Off-chain custa ${currency} ${formatAmount(Math.abs(difference), 2, locale)} a mais!</b>\n💰 Economize ~${percentSavings}% escolhendo on-chain →`;
+          }
+        }
+
+        const footer = `${savingsText}
+
     <i>*Dados fornecidos por Wise Comparisons</i>`;
-        
+
         return `${title}\n\n${providersList}${footer}`;
       },
     
@@ -1086,7 +1096,6 @@ Pague uma vez, use pelo período escolhido, sem renovação automática.
         sources: '📊 Fontes dos dados',
         openWise: '🔗 Abrir Wise',
         openRemitly: '🔗 Abrir Remitly',
-        openInstarem: '🔗 Abrir Instarem',
         seeOnchain: '🚀 Ver rota on-chain',
         
         // ✅ Novos botões
@@ -1133,7 +1142,7 @@ Pague uma vez, use pelo período escolhido, sem renovação automática.
         premium: '🚀 Descobrir Premium',
         giveFeedback: '💬 Dar uma sugestão',
         seePremium: '💎 Ver Premium',
-        seeOneshot: '💰 Ou experimente sem assinatura →',
+        seeOneshot: '💰 Ou pagamento único (sem renovação automática) →',
         backToSubscriptions: '⬅️ Voltar às assinaturas',
         addMoreTime: '💰 Adicionar mais tempo (pagamento único)',
         switchToSubscription: '🔄 Passar para assinatura recorrente',

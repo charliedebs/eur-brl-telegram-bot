@@ -241,16 +241,26 @@ export const messagesEn = {
           ? `~${formatAmount(onchainAmount, 0, locale)}${route === 'eurbrl' ? ' R$' : '€'}`
           : '—';
         
-        const offchainBest = displayProviders[0]?.out 
+        const offchainBest = displayProviders[0]?.out
           ? formatAmount(displayProviders[0].out, 0, locale)
           : '—';
-        
-        const footer = `
-    
-    💡 More expensive than on-chain (~${offchainBest}${route === 'eurbrl' ? ' R$' : '€'} vs ~${onchainCompare} on-chain)
-    
+
+        // Calculate savings
+        let savingsText = '';
+        if (displayProviders[0]?.out && onchainAmount) {
+          const difference = onchainAmount - displayProviders[0].out;
+          const percentSavings = ((difference / displayProviders[0].out) * 100).toFixed(1);
+          const currency = route === 'eurbrl' ? 'R$' : '€';
+
+          if (difference > 0) {
+            savingsText = `\n\n⚠️ <b>Off-chain costs ${currency} ${formatAmount(Math.abs(difference), 2, locale)} more!</b>\n💰 Save ~${percentSavings}% by choosing on-chain →`;
+          }
+        }
+
+        const footer = `${savingsText}
+
     <i>*Data provided by Wise Comparisons</i>`;
-        
+
         return `${title}\n\n${providersList}${footer}`;
       },
     
@@ -1060,7 +1070,7 @@ Pay once, use for the chosen period, no automatic renewal.
       Price: from 5 R$/month`,
     
     
-      CONVERT_ASK_AMOUNT: "💱 What amount do you want to convert?\n\Example: 253 or 1500 brl",
+      CONVERT_ASK_AMOUNT: "💱 What amount do you want to convert?\n\nExample: 253 or 1500 brl",
       RATE_LABEL: "Rate", // ou "Taxa" (PT), "Rate" (EN)
       BETTER_BY: "better by", // ou "melhor em" (PT), "better by" (EN)
     
@@ -1086,7 +1096,6 @@ Pay once, use for the chosen period, no automatic renewal.
         sources: '📊 Data sources',
         openWise: '🔗 Open Wise',
         openRemitly: '🔗 Open Remitly',
-        openInstarem: '🔗 Open Instarem',
         seeOnchain: '🚀 See on-chain route',
         
         // ✅ New buttons
@@ -1133,7 +1142,7 @@ Pay once, use for the chosen period, no automatic renewal.
         premium: '🚀 Discover Premium',
         giveFeedback: '💬 Give feedback',
         seePremium: '💎 See Premium',
-        seeOneshot: '💰 Or try without subscription →',
+        seeOneshot: '💰 Or one-time payment (no auto-renewal) →',
         backToSubscriptions: '⬅️ Back to subscriptions',
         addMoreTime: '💰 Add more time (one-time payment)',
         switchToSubscription: '🔄 Switch to recurring subscription',
