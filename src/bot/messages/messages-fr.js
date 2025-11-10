@@ -330,6 +330,40 @@ Tu recevras une réponse dans les 24-48h.
 
 Merci ! On te répond dans les 24-48h.`,
 
+  FAQ_MIN_AMOUNT: `💰 C'EST QUOI LE MONTANT MINIMUM ?
+
+<b>Résumé rapide :</b> À partir de 300-400€, l'on-chain devient rentable.
+
+<b>Pourquoi ?</b>
+
+Les frais de réseau blockchain sont fixes (~1 USDC ≈ 0,95€).
+Avec de petits montants, ces frais fixes pèsent lourd.
+
+📊 <b>Comparaison pratique :</b>
+
+<b>Transfert de 50€ :</b>
+• Frais réseau : 0,95€ = 1,9%
+• Frais trading : ~0,2%
+• <b>Total on-chain : ~2,1%</b>
+• Wise : ~2,5%
+→ Économie minimale, pas worth l'effort
+
+<b>Transfert de 500€ :</b>
+• Frais réseau : 0,95€ = 0,19%
+• Frais trading : ~0,2%
+• <b>Total on-chain : ~0,4%</b>
+• Wise : ~2,5%
+→ <b>Économie de ~10€ !</b> 💰
+
+<b>Transfert de 5 000€ :</b>
+• Frais réseau : 0,95€ = 0,019%
+• Frais trading : ~0,2%
+• <b>Total on-chain : ~0,22%</b>
+• Wise : ~2,5%
+→ <b>Économie de ~115€ !</b> 🎉
+
+<b>Conclusion :</b> Plus le montant est élevé, plus l'économie en pourcentage est importante.`,
+
   // ✅ ÉCRAN 10 : WHAT_IS_EXCHANGE (ajout phrase)
   WHAT_IS_EXCHANGE: `🏦 C'est quoi un exchange ?
 
@@ -1122,6 +1156,7 @@ btn: {
   
   whatIsUSDC: '🪙 Qu\'est-ce que l\'USDC ?',
   whatIsExchange: '🏦 Qu\'est-ce qu\'un exchange ?',
+  minAmount: '💰 C\'est quoi le montant minimum ?',
   proofSources: '📊 Preuves & sources',
   openKraken: '🔗 Ouvrir Kraken',
   openBinanceEU: '🔗 Ouvrir Binance (UE)',

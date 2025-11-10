@@ -1143,6 +1143,7 @@ Pague uma vez, use pelo período escolhido, sem renovação automática.
         
         whatIsUSDC: '🪙 O que é USDC?',
         whatIsExchange: '🏦 O que é um exchange?',
+        minAmount: '💰 Qual o valor mínimo?',
         proofSources: '📊 Provas & fontes',
         openKraken: '🔗 Abrir Kraken',
         openBinanceEU: '🔗 Abrir Binance (UE)',

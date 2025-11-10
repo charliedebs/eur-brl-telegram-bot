@@ -326,7 +326,41 @@ export const messagesEn = {
       FAQ_QUESTION_RECEIVED: `✅ QUESTION RECEIVED
     
     Thank you! We'll answer within 24-48h.`,
-    
+
+      FAQ_MIN_AMOUNT: `💰 WHAT'S THE MINIMUM AMOUNT?
+
+<b>Quick summary:</b> From €300-400, on-chain becomes worthwhile.
+
+<b>Why?</b>
+
+Blockchain network fees are fixed (~1 USDC ≈ €0.95).
+With small amounts, this fixed fee weighs heavily.
+
+📊 <b>Practical comparison:</b>
+
+<b>Transfer of €50:</b>
+• Network fee: €0.95 = 1.9%
+• Trading fees: ~0.2%
+• <b>Total on-chain: ~2.1%</b>
+• Wise: ~2.5%
+→ Minimal savings, not worth the effort
+
+<b>Transfer of €500:</b>
+• Network fee: €0.95 = 0.19%
+• Trading fees: ~0.2%
+• <b>Total on-chain: ~0.4%</b>
+• Wise: ~2.5%
+→ <b>Save ~€10!</b> 💰
+
+<b>Transfer of €5,000:</b>
+• Network fee: €0.95 = 0.019%
+• Trading fees: ~0.2%
+• <b>Total on-chain: ~0.22%</b>
+• Wise: ~2.5%
+→ <b>Save ~€115!</b> 🎉
+
+<b>Conclusion:</b> The larger the amount, the greater the percentage savings.`,
+
       // ✅ SCREEN 10: WHAT_IS_EXCHANGE
       WHAT_IS_EXCHANGE: `🏦 What is an exchange?
     
@@ -1109,6 +1143,7 @@ Pay once, use for the chosen period, no automatic renewal.
         
         whatIsUSDC: '🪙 What is USDC?',
         whatIsExchange: '🏦 What is an exchange?',
+        minAmount: '💰 What\'s the minimum amount?',
         proofSources: '📊 Proof & sources',
         openKraken: '🔗 Open Kraken',
         openBinanceEU: '🔗 Open Binance (EU)',

@@ -885,8 +885,17 @@ bot.action('action:faq_menu', async (ctx) => {
 bot.action('action:faq_why_onchain', async (ctx) => {
   const msg = getMsg(ctx);
   const kb = buildKeyboards(msg, 'faq_why_onchain');
-  
+
   await ctx.editMessageText(msg.FAQ_WHY_ONCHAIN, { parse_mode: 'HTML', ...kb });
+  await ctx.answerCbQuery();
+});
+
+// Handler : Minimum amount FAQ
+bot.action('action:faq_min_amount', async (ctx) => {
+  const msg = getMsg(ctx);
+  const kb = buildKeyboards(msg, 'faq_menu');
+
+  await ctx.editMessageText(msg.FAQ_MIN_AMOUNT, { parse_mode: 'HTML', ...kb });
   await ctx.answerCbQuery();
 });
 
