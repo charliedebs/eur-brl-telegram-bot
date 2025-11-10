@@ -55,7 +55,12 @@ const WEBHOOK_DOMAIN = process.env.TELEGRAM_WEBHOOK_DOMAIN;
 app.use(express.json());
 
 app.get('/', (req, res) => {
-  res.json({ status: 'ok', bot: 'EUR/BRL Bot running' });
+  res.json({
+    status: 'ok',
+    bot: 'EUR/BRL Bot running',
+    version: 'v2.1.0-admin',
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Health check endpoint with detailed status
@@ -145,6 +150,15 @@ function requireAdminAuth(req, res, next) {
 
   next();
 }
+
+// Simple test route to verify deployment
+app.get('/admin/test', (req, res) => {
+  res.json({
+    message: 'Admin routes are working!',
+    version: 'v2.1.0-admin',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Debug route to check file system
 app.get('/admin/debug', async (req, res) => {
