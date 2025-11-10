@@ -1,0 +1,6 @@
+{
+  "freeThreshold": 3,
+  "premiumThreshold": 2,
+  "freeCooldown": 14,
+  "premiumCooldown": 6
+}

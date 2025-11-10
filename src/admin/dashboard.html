@@ -268,8 +268,53 @@
 </head>
 <body>
     <div class="container">
-        <h1>📢 Triggered Alerts Dashboard</h1>
-        <p class="subtitle">Send manual marketing alerts to your users</p>
+        <h1>📢 Admin Dashboard</h1>
+        <p class="subtitle">Manage alerts and spontaneous alert parameters</p>
+
+        <!-- Spontaneous Alert Parameters -->
+        <div class="current-rate" style="border-left-color: #28a745;">
+            <div class="section-title" style="margin-bottom: 15px;">⚙️ Spontaneous Alert Parameters</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
+                <div>
+                    <label style="display: block; font-size: 12px; color: #666; margin-bottom: 5px;">
+                        🆓 Free Threshold (% vs avg90d)
+                    </label>
+                    <input type="number" id="free-threshold" min="1" max="10" step="0.5" value="3"
+                           style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 14px;">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 12px; color: #666; margin-bottom: 5px;">
+                        💎 Premium Threshold (% vs avg30d)
+                    </label>
+                    <input type="number" id="premium-threshold" min="1" max="10" step="0.5" value="2"
+                           style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 14px;">
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
+                <div>
+                    <label style="display: block; font-size: 12px; color: #666; margin-bottom: 5px;">
+                        🆓 Free Cooldown (days)
+                    </label>
+                    <input type="number" id="free-cooldown" min="1" max="30" step="1" value="14"
+                           style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 14px;">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 12px; color: #666; margin-bottom: 5px;">
+                        💎 Premium Cooldown (hours)
+                    </label>
+                    <input type="number" id="premium-cooldown" min="1" max="48" step="1" value="6"
+                           style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 14px;">
+                </div>
+            </div>
+            <button onclick="updateParameters()"
+                    style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%;">
+                💾 Save Parameters
+            </button>
+            <div id="params-result" style="margin-top: 10px; padding: 10px; border-radius: 6px; display: none;"></div>
+            <div style="margin-top: 10px; font-size: 12px; color: #666;">
+                ℹ️ Changes update the config file - restart required to apply
+            </div>
+        </div>
 
         <!-- Current Rate Display -->
         <div class="current-rate">
@@ -284,6 +329,11 @@
                 </div>
             </div>
             <div class="rate-info" id="rate-time">Last updated: --</div>
+        </div>
+
+        <div style="border-top: 2px solid #e0e0e0; margin: 30px 0; padding-top: 30px;">
+            <h2 style="font-size: 22px; margin-bottom: 10px;">📢 Triggered Alerts</h2>
+            <p style="color: #666; font-size: 14px; margin-bottom: 20px;">Send manual marketing alerts to your users</p>
         </div>
 
         <!-- Alert Type Selection -->
@@ -507,8 +557,68 @@
             }
         });
 
+        // Update spontaneous alert parameters
+        async function updateParameters() {
+            const params = {
+                freeThreshold: parseFloat(document.getElementById('free-threshold').value),
+                premiumThreshold: parseFloat(document.getElementById('premium-threshold').value),
+                freeCooldown: parseInt(document.getElementById('free-cooldown').value),
+                premiumCooldown: parseInt(document.getElementById('premium-cooldown').value)
+            };
+
+            const resultDiv = document.getElementById('params-result');
+            resultDiv.style.display = 'block';
+            resultDiv.style.background = '#fff3cd';
+            resultDiv.style.border = '1px solid #ffc107';
+            resultDiv.style.color = '#856404';
+            resultDiv.textContent = '⏳ Updating parameters...';
+
+            try {
+                const response = await fetch('/api/admin/update-params', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(params)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    resultDiv.style.background = '#d4edda';
+                    resultDiv.style.border = '1px solid #c3e6cb';
+                    resultDiv.style.color = '#155724';
+                    resultDiv.innerHTML = `✅ Parameters saved successfully!<br><small>Restart server to apply changes</small>`;
+                } else {
+                    resultDiv.style.background = '#f8d7da';
+                    resultDiv.style.border = '1px solid #f5c6cb';
+                    resultDiv.style.color = '#721c24';
+                    resultDiv.textContent = `❌ Error: ${result.error}`;
+                }
+            } catch (error) {
+                resultDiv.style.background = '#f8d7da';
+                resultDiv.style.border = '1px solid #f5c6cb';
+                resultDiv.style.color = '#721c24';
+                resultDiv.textContent = `❌ Failed: ${error.message}`;
+            }
+        }
+
+        // Load parameters on page load
+        async function loadParameters() {
+            try {
+                const response = await fetch('/api/admin/get-params');
+                const params = await response.json();
+
+                document.getElementById('free-threshold').value = params.freeThreshold || 3;
+                document.getElementById('premium-threshold').value = params.premiumThreshold || 2;
+                document.getElementById('free-cooldown').value = params.freeCooldown || 14;
+                document.getElementById('premium-cooldown').value = params.premiumCooldown || 6;
+            } catch (error) {
+                console.error('Failed to load parameters:', error);
+            }
+        }
+
         // Load rates on page load
         loadRates();
+        loadParameters();
         setInterval(loadRates, 60000); // Refresh every minute
     </script>
 </body>

@@ -1,8 +1,13 @@
 import 'dotenv/config';
 import express from 'express';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { bot } from './bot/index.js';
 import { startCronJobs } from './jobs/scheduler.js';
 import { logger } from './utils/logger.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Import WhatsApp bot (optional)
 let whatsappBot = null;
@@ -209,7 +214,7 @@ app.get('/admin', (req, res) => {
     `);
   }
 
-  res.sendFile(new URL('./admin/dashboard.html', import.meta.url).pathname);
+  res.sendFile(join(__dirname, 'admin', 'dashboard.html'));
 });
 
 // API: Get current rates
@@ -275,6 +280,75 @@ app.post('/api/admin/trigger-alert', async (req, res) => {
     res.json(result);
   } catch (error) {
     logger.error('[ADMIN] Failed to trigger alert:', { error: error.message });
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// API: Get spontaneous alert parameters
+app.get('/api/admin/get-params', async (req, res) => {
+  try {
+    const fs = await import('fs/promises');
+    const paramsPath = join(__dirname, 'config', 'alert-params.json');
+
+    const data = await fs.readFile(paramsPath, 'utf8');
+    const params = JSON.parse(data);
+
+    res.json(params);
+  } catch (error) {
+    logger.error('[ADMIN] Failed to get parameters:', { error: error.message });
+    // Return defaults if file doesn't exist
+    res.json({
+      freeThreshold: 3,
+      premiumThreshold: 2,
+      freeCooldown: 14,
+      premiumCooldown: 6
+    });
+  }
+});
+
+// API: Update spontaneous alert parameters
+app.post('/api/admin/update-params', async (req, res) => {
+  try {
+    const { freeThreshold, premiumThreshold, freeCooldown, premiumCooldown } = req.body;
+
+    // Validate parameters
+    if (freeThreshold < 1 || freeThreshold > 10) {
+      return res.status(400).json({ success: false, error: 'Free threshold must be between 1 and 10' });
+    }
+    if (premiumThreshold < 1 || premiumThreshold > 10) {
+      return res.status(400).json({ success: false, error: 'Premium threshold must be between 1 and 10' });
+    }
+    if (freeCooldown < 1 || freeCooldown > 30) {
+      return res.status(400).json({ success: false, error: 'Free cooldown must be between 1 and 30 days' });
+    }
+    if (premiumCooldown < 1 || premiumCooldown > 48) {
+      return res.status(400).json({ success: false, error: 'Premium cooldown must be between 1 and 48 hours' });
+    }
+
+    const params = {
+      freeThreshold,
+      premiumThreshold,
+      freeCooldown,
+      premiumCooldown
+    };
+
+    const fs = await import('fs/promises');
+    const paramsPath = join(__dirname, 'config', 'alert-params.json');
+
+    // Ensure directory exists
+    try {
+      await fs.mkdir(join(__dirname, 'config'), { recursive: true });
+    } catch (err) {
+      // Directory might already exist
+    }
+
+    await fs.writeFile(paramsPath, JSON.stringify(params, null, 2));
+
+    logger.info('[ADMIN] Parameters updated:', params);
+
+    res.json({ success: true, params });
+  } catch (error) {
+    logger.error('[ADMIN] Failed to update parameters:', { error: error.message });
     res.status(500).json({ success: false, error: error.message });
   }
 });
