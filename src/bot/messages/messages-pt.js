@@ -515,89 +515,191 @@ Só recomendamos plataformas que realmente usamos e confiamos. A qualidade do se
     
     <i>Dica: se você quer "só trocar", escolha Market.</i>`,
     
-      // ✅ TELA 13: GUIDE_TRANSITION
-      GUIDE_TRANSITION: `✅ Você tem (ou vai ter):
-    • Uma conta 🇪🇺 para depositar seus EUR (SEPA → USDC)
-    • Uma conta 🇧🇷 para sacar seus BRL (USDC → Pix)
-    
+      // ✅ TELA 13: GUIDE_TRANSITION (direction-aware)
+      GUIDE_TRANSITION: (route = 'eurbrl') => {
+        if (route === 'brleur') {
+          return `✅ Você tem (ou vai ter):
+    • Uma conta 🇧🇷 para depositar seus BRL (Pix → USDC)
+    • Uma conta 🇪🇺 para sacar seus EUR (USDC → SEPA)
+
     🌐 Você está dando seu primeiro passo on-chain.
     É mais que uma simples transferência:
     • você descobre uma tecnologia que já está mudando as finanças globais,
     • você se junta a milhões de usuários, empresas e instituições,
     • você mantém mais valor para você (e menos para os intermediários 💸).
+
+    🚀 Agora, começamos concretamente: primeira etapa → depositar seus BRL na sua conta 🇧🇷 e convertê-los em USDC.`;
+        }
+
+        // Default: eurbrl
+        return `✅ Você tem (ou vai ter):
+    • Uma conta 🇪🇺 para depositar seus EUR (SEPA → USDC)
+    • Uma conta 🇧🇷 para sacar seus BRL (USDC → Pix)
+
+    🌐 Você está dando seu primeiro passo on-chain.
+    É mais que uma simples transferência:
+    • você descobre uma tecnologia que já está mudando as finanças globais,
+    • você se junta a milhões de usuários, empresas e instituições,
+    • você mantém mais valor para você (e menos para os intermediários 💸).
+
+    🚀 Agora, começamos concretamente: primeira etapa → depositar seus EUR na sua conta 🇪🇺 e convertê-los em USDC.`;
+      },
     
-    🚀 Agora, começamos concretamente: primeira etapa → depositar seus EUR na sua conta 🇪🇺 e convertê-los em USDC.`,
-    
-      STEP_1_1: (amount, locale) => `1️⃣ Depositar seus EUR na conta exchange
-    
+      STEP_1_1: (amount, locale, route = 'eurbrl') => {
+        if (route === 'brleur') {
+          return `1️⃣ Depositar seus BRL na conta exchange
+
+    • Vá na seção "Depósito / Deposit / Fiat".
+    • Escolha BRL como moeda.
+    • Método mais simples: Pix (instantâneo, geralmente gratuito).
+
+    💡 "Fiat" = as moedas tradicionais (EUR, USD, BRL…).
+
+    👉 Recomendado: Binance BR.
+
+    Estimativa do seu saldo: R$ ${formatAmount(amount, 0, locale)}
+    *⚠️ É uma estimativa, próxima do real. Taxas e prazos bancários podem variar levemente.*`;
+        }
+
+        // Default: eurbrl
+        return `1️⃣ Depositar seus EUR na conta exchange
+
     • Vá na seção "Depósito / Deposit / Fiat".
     • Escolha EUR como moeda.
     • Método mais simples: transferência SEPA (rápida, taxas baixas ou nulas).
-    
+
     💡 "Fiat" = as moedas tradicionais (EUR, USD, BRL…).
-    
+
     👉 Recomendado: Kraken.
-    
+
     Estimativa do seu saldo: €${formatAmount(amount, 0, locale)}
-    *⚠️ É uma estimativa, próxima do real. Taxas e prazos bancários podem variar levemente.*`,
+    *⚠️ É uma estimativa, próxima do real. Taxas e prazos bancários podem variar levemente.*`;
+      },
     
-      STEP_1_2: (amount, locale) => `2️⃣ Acessar o mercado para comprar USDC
-    
+      STEP_1_2: (amount, locale, route = 'eurbrl') => {
+        if (route === 'brleur') {
+          return `2️⃣ Acessar o mercado para comprar USDC
+
+    • No seu exchange, procure "Trader / Mercado / Trade".
+    • Selecione o par BRL/USDC ou USDC/BRL.
+
+    💡 Um mercado crypto é como um bureau de câmbio: você troca uma moeda por outra.
+
+    Estimativa do seu saldo: R$ ${formatAmount(amount, 0, locale)} (pronto para compra USDC)
+    *⚠️ Estimativa indicativa.*`;
+        }
+
+        // Default: eurbrl
+        return `2️⃣ Acessar o mercado para comprar USDC
+
     • No seu exchange, procure "Trader / Mercado / Trade".
     • Selecione o par EUR/USDC.
-    
+
     💡 Um mercado crypto é como um bureau de câmbio: você troca uma moeda por outra.
-    
+
     Estimativa do seu saldo: €${formatAmount(amount, 0, locale)} (pronto para compra USDC)
-    *⚠️ Estimativa indicativa.*`,
+    *⚠️ Estimativa indicativa.*`;
+      },
     
-      STEP_1_3: (usdcAmount, locale) => `3️⃣ Comprar seus USDC
-    
+      STEP_1_3: (usdcAmount, locale, route = 'eurbrl') => `3️⃣ Comprar seus USDC
+
     • Escolha o tipo de ordem:
       • A mercado (Market) → instantâneo, simples, recomendado.
       • Limite (Limit) → você fixa seu preço, útil para grandes valores/liquidez.
-    
+
     👉 Para começar: ordem a mercado.
-    
+
     Estimativa do seu saldo: ~${formatAmount(usdcAmount, 2, locale)} USDC
     *⚠️ Estimativa próxima do real. Taxas e preços podem variar levemente.*`,
     
-      STEP_1_4: `✅ Muito bem! Você agora tem USDC na sua conta 🇪🇺.
-    
+      STEP_1_4: (route = 'eurbrl') => {
+        if (route === 'brleur') {
+          return `✅ Muito bem! Você agora tem USDC na sua conta 🇧🇷.
+
     ✨ USDC são "stablecoins": ~1 USDC = 1 USD.
     É a chave para transferir seu dinheiro de forma rápida e de baixo custo.
+
+    Próxima etapa: enviá-los on-chain para a Europa.`;
+        }
+
+        // Default: eurbrl
+        return `✅ Muito bem! Você agora tem USDC na sua conta 🇪🇺.
+
+    ✨ USDC são "stablecoins": ~1 USDC = 1 USD.
+    É a chave para transferir seu dinheiro de forma rápida e de baixo custo.
+
+    Próxima etapa: enviá-los on-chain para o Brasil.`;
+      },
     
-    Próxima etapa: enviá-los on-chain para o Brasil.`,
-    
-      STEP_2_1: `✨ Esta é a etapa "on-chain" → rápida e de baixo custo, mas requer um pouco de concentração.
+      STEP_2_1: (route = 'eurbrl') => {
+        if (route === 'brleur') {
+          return `✨ Esta é a etapa "on-chain" → rápida e de baixo custo, mas requer um pouco de concentração.
     Diferente de um banco, se você cometer um erro, não há SAC para recuperar seus fundos.
-    
+
+    1️⃣ Recuperar seu endereço de depósito 🇪🇺
+
+    • No seu exchange europeu, procure "Depósito / Crypto".
+    • Escolha USDC como crypto a depositar.
+    • Selecione a rede de transferência.
+
+    💡 Recomendamos Polygon (MATIC) → rápida, confiável, taxas baixas (~1 USDC).
+
+    • Copie cuidadosamente o endereço.
+
+    💡 Imagine que é como seu IBAN bancário, mas versão blockchain (uma longa sequência de letras e números).`;
+        }
+
+        // Default: eurbrl
+        return `✨ Esta é a etapa "on-chain" → rápida e de baixo custo, mas requer um pouco de concentração.
+    Diferente de um banco, se você cometer um erro, não há SAC para recuperar seus fundos.
+
     1️⃣ Recuperar seu endereço de depósito 🇧🇷
-    
+
     • No seu exchange brasileiro, procure "Depósito / Crypto".
     • Escolha USDC como crypto a depositar.
     • Selecione a rede de transferência.
-    
+
     💡 Recomendamos Polygon (MATIC) → rápida, confiável, taxas baixas (~1 USDC).
-    
+
     • Copie cuidadosamente o endereço.
+
+    💡 Imagine que é como seu IBAN bancário, mas versão blockchain (uma longa sequência de letras e números).`;
+      },
     
-    💡 Imagine que é como seu IBAN bancário, mas versão blockchain (uma longa sequência de letras e números).`,
-    
-      STEP_2_2: (usdcAmount, locale) => `2️⃣ Enviar do seu exchange 🇪🇺
-    
+      STEP_2_2: (usdcAmount, locale, route = 'eurbrl') => {
+        if (route === 'brleur') {
+          return `2️⃣ Enviar do seu exchange 🇧🇷
+
     • Vá em "Saque / Withdraw" → USDC.
     • Cole o endereço copiado.
     • Escolha a mesma rede do depósito (ex. Polygon).
-    
+
     💡 A rede é como os trilhos de um trem: se não forem os mesmos dos dois lados, o dinheiro vai para outro lugar e se perde.
-    
+
     • Indique seu valor. Você pode enviar tudo, ou começar com um teste (ex. 10 USDC).
-    
+
     👉 O teste custa um pouco mais (taxas fixas ~1 USDC aplicam-se duas vezes), mas é uma boa prática comum em crypto.
-    
+
+    Estimativa: você receberá ~${formatAmount(usdcAmount - 1, 2, locale)} USDC lado 🇪🇺
+    *⚠️ Estimativa próxima do real (taxa de rede ~1 USDC).*`;
+        }
+
+        // Default: eurbrl
+        return `2️⃣ Enviar do seu exchange 🇪🇺
+
+    • Vá em "Saque / Withdraw" → USDC.
+    • Cole o endereço copiado.
+    • Escolha a mesma rede do depósito (ex. Polygon).
+
+    💡 A rede é como os trilhos de um trem: se não forem os mesmos dos dois lados, o dinheiro vai para outro lugar e se perde.
+
+    • Indique seu valor. Você pode enviar tudo, ou começar com um teste (ex. 10 USDC).
+
+    👉 O teste custa um pouco mais (taxas fixas ~1 USDC aplicam-se duas vezes), mas é uma boa prática comum em crypto.
+
     Estimativa: você receberá ~${formatAmount(usdcAmount - 1, 2, locale)} USDC lado 🇧🇷
-    *⚠️ Estimativa próxima do real (taxa de rede ~1 USDC).*`,
+    *⚠️ Estimativa próxima do real (taxa de rede ~1 USDC).*`;
+      },
     
       STEP_2_3: `3️⃣ Verificar e confirmar
     
@@ -607,45 +709,104 @@ Só recomendamos plataformas que realmente usamos e confiamos. A qualidade do se
     
     👉 Uma vez que você verificou bem, pode confirmar a transferência.`,
     
-      STEP_2_4: `4️⃣ Aguardar a chegada
-    
+      STEP_2_4: (route = 'eurbrl') => {
+        if (route === 'brleur') {
+          return `4️⃣ Aguardar a chegada
+
+    • Geralmente, a transação leva 1-2 minutos, às vezes até 10 min.
+    • Você verá seu saldo USDC aparecer lado 🇪🇺.
+
+    ✅ Resultado: seus USDC chegaram → pronto para a etapa 3 (venda em EUR + saque SEPA).`;
+        }
+
+        // Default: eurbrl
+        return `4️⃣ Aguardar a chegada
+
     • Geralmente, a transação leva 1-2 minutos, às vezes até 10 min.
     • Você verá seu saldo USDC aparecer lado 🇧🇷.
+
+    ✅ Resultado: seus USDC chegaram → pronto para a etapa 3 (venda em BRL + saque Pix).`;
+      },
     
-    ✅ Resultado: seus USDC chegaram → pronto para a etapa 3 (venda em BRL + saque Pix).`,
-    
-      STEP_3_1: `1️⃣ Encontrar o mercado USDC/BRL 🇧🇷
-    
+      STEP_3_1: (route = 'eurbrl') => {
+        if (route === 'brleur') {
+          return `1️⃣ Encontrar o mercado USDC/EUR 🇪🇺
+
+    • No seu exchange europeu, vá em Trader / Mercado / Market.
+    • Selecione o par USDC/EUR.
+
+    👉 Próxima etapa: seus USDC finalmente se transformam em EUR 🎉`;
+        }
+
+        // Default: eurbrl
+        return `1️⃣ Encontrar o mercado USDC/BRL 🇧🇷
+
     • No seu exchange brasileiro, vá em Trader / Mercado / Market.
     • Selecione o par USDC/BRL.
+
+    👉 Próxima etapa: seus USDC finalmente se transformam em BRL 🎉`;
+      },
     
-    👉 Próxima etapa: seus USDC finalmente se transformam em BRL 🎉`,
-    
-      STEP_3_2: (brlAmount, locale) => `2️⃣ Fazer sua ordem
-    
+      STEP_3_2: (finalAmount, locale, route = 'eurbrl') => {
+        if (route === 'brleur') {
+          return `2️⃣ Fazer sua ordem
+
     • "A mercado / Market" → instantâneo, ao preço atual (simples, recomendado).
     • "Limite / Limit" → você fixa seu preço, útil para grandes valores.
-    
+
     👉 Para a maioria das pessoas, "ordem a mercado" = o mais simples e rápido.
+
+    Estimativa do seu saldo: ~€${formatAmount(finalAmount, 2, locale)}
+    *⚠️ Estimativa próxima do real (taxas ~0,1%).*`;
+        }
+
+        // Default: eurbrl
+        return `2️⃣ Fazer sua ordem
+
+    • "A mercado / Market" → instantâneo, ao preço atual (simples, recomendado).
+    • "Limite / Limit" → você fixa seu preço, útil para grandes valores.
+
+    👉 Para a maioria das pessoas, "ordem a mercado" = o mais simples e rápido.
+
+    Estimativa do seu saldo: ~R$ ${formatAmount(finalAmount, 2, locale)}
+    *⚠️ Estimativa próxima do real (taxas ~0,1%).*`;
+      },
     
-    Estimativa do seu saldo: ~R$ ${formatAmount(brlAmount, 2, locale)}
-    *⚠️ Estimativa próxima do real (taxas ~0,1%).*`,
-    
-      STEP_3_3: (brlNet, locale) => `3️⃣ Sacar seu dinheiro em R$
-    
+      STEP_3_3: (finalNet, locale, route = 'eurbrl') => {
+        if (route === 'brleur') {
+          return `3️⃣ Sacar seu dinheiro em EUR
+
+    • Uma vez seus USDC vendidos, seu saldo aparece em EUR.
+    • Vá em Saque / Withdraw.
+    • Escolha SEPA como método.
+
+    👉 Digite seu IBAN bancário europeu… você já conhece bem 😉
+
+    💡 Aliás: como para um endereço crypto, se o IBAN estiver errado, o dinheiro vai para o lugar errado.
+
+    👉 Geralmente, as taxas são muito baixas ou gratuitas (ex. Kraken transferência SEPA gratuita).
+
+    Estimativa do seu saldo recebido: ~€${formatAmount(finalNet, 2, locale)} líquidos
+    *⚠️ Bom, não devemos estar muito longe da realidade ;)*`;
+        }
+
+        // Default: eurbrl
+        return `3️⃣ Sacar seu dinheiro em R$
+
     • Uma vez seus USDC vendidos, seu saldo aparece em BRL.
     • Vá em Saque / Withdraw.
     • Escolha Pix como método.
-    
+
     👉 Digite sua chave Pix (CPF, email, tel, chave aleatória)… mas isso você já sabe fazer 😉
-    
+
     💡 Aliás: como para um endereço crypto, se a chave estiver errada, o dinheiro vai para o lugar errado.
-    
+
     👉 Geralmente, as taxas são muito baixas (ex. Binance ~R$3,50 por saque Pix).
     Deveria ser gratuito honestamente… mas enfim 😅
-    
-    Estimativa do seu saldo recebido: ~R$ ${formatAmount(brlNet, 2, locale)} líquidos
-    *⚠️ Bom, não devemos estar muito longe da realidade ;)*`,
+
+    Estimativa do seu saldo recebido: ~R$ ${formatAmount(finalNet, 2, locale)} líquidos
+    *⚠️ Bom, não devemos estar muito longe da realidade ;)*`;
+      },
     
       WHY_NOT_EXACT: `🤔 Por que não podemos dar o valor exato?
     
@@ -659,18 +820,36 @@ Só recomendamos plataformas que realmente usamos e confiamos. A qualidade do se
     
     Nossas estimativas são prudentes e próximas do real. Você não deve ter surpresas desagradáveis.`,
     
-      STEP_3_4: `✅ Sua transferência está concluída!
-    
+      STEP_3_4: (route = 'eurbrl') => {
+        if (route === 'brleur') {
+          return `✅ Sua transferência está concluída!
+
+    • Você converteu seus BRL em USDC lado 🇧🇷.
+    • Você os enviou on-chain.
+    • Você os vendeu por EUR e sacou via SEPA lado 🇪🇺.
+
+    ✨ Resultado: rápido, seguro e de baixo custo.
+
+    🌍 Você acabou de fazer uma verdadeira passagem pela blockchain.
+    O que você aprendeu hoje será cada vez mais usado no futuro: você acabou de dar um passo à frente.
+
+    🙌 Esperamos que você tenha curtido a experiência!`;
+        }
+
+        // Default: eurbrl
+        return `✅ Sua transferência está concluída!
+
     • Você converteu seus EUR em USDC lado 🇪🇺.
     • Você os enviou on-chain.
     • Você os vendeu por BRL e sacou via Pix lado 🇧🇷.
-    
+
     ✨ Resultado: rápido, seguro e de baixo custo.
-    
+
     🌍 Você acabou de fazer uma verdadeira passagem pela blockchain.
     O que você aprendeu hoje será cada vez mais usado no futuro: você acabou de dar um passo à frente.
-    
-    🙌 Esperamos que você tenha curtido a experiência!`,
+
+    🙌 Esperamos que você tenha curtido a experiência!`;
+      },
     
       // Premium e alertas
       PREMIUM_PRICING: `💎 ASSINAR PREMIUM
