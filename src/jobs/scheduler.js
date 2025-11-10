@@ -19,8 +19,8 @@ export function startCronJobs() {
 
   // ==========================================
   // JOB 2 : Alertes SPONTANÉES (toutes les 6h)
-  // Free: >5% avg90d + cooldown 14j
-  // Premium: >3% avg30d + cooldown 6h
+  // Free: >3% avg90d + cooldown 14j
+  // Premium: >2% avg30d + cooldown 6h
   // ==========================================
   cron.schedule('0 */6 * * *', async () => {
     await checkSpontaneousAlerts();
@@ -28,11 +28,11 @@ export function startCronJobs() {
   logger.info('✅ Job 2: Spontaneous Alerts (Free + Premium) - Every 6 hours');
 
   // ==========================================
-  // JOB 3 : Alertes PROGRAMMÉES Premium (toutes les 2h)
+  // JOB 3 : Alertes PROGRAMMÉES Premium (toutes les 15min)
   // User configure seuil/preset/cooldown
   // ==========================================
   cron.schedule('*/15 * * * *', checkProgrammedAlerts);
-  logger.info('✅ Job 3: Programmed Alerts (Premium) - Every 2 hours');
+  logger.info('✅ Job 3: Programmed Alerts (Premium) - Every 15 minutes');
 
   logger.info('\n' + '='.repeat(60));
   logger.info('📋 SUMMARY');
@@ -43,7 +43,7 @@ export function startCronJobs() {
   logger.info('Next executions (UTC):');
   logger.info('  - Rates History: Every 2 hours (00:00, 02:00, 04:00...)');
   logger.info('  - Spontaneous Alerts: Every 6 hours (00:00, 06:00, 12:00, 18:00)');
-  logger.info('  - Programmed Alerts: Every 2 hours (00:00, 02:00, 04:00...)');
+  logger.info('  - Programmed Alerts: Every 15 minutes (:00, :15, :30, :45)');
   logger.info('='.repeat(60) + '\n');
 }
 
