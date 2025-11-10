@@ -121,6 +121,7 @@ case 'faq_menu':
     [Markup.button.callback(msg.btn.whatIsUSDC, 'action:what_usdc')],
     [Markup.button.callback(msg.btn.whatIsExchange, 'action:what_exchange')],
     [Markup.button.callback(msg.btn.minAmount, 'action:faq_min_amount')],
+    [Markup.button.callback(msg.btn.aboutReferrals, 'action:about_referrals')],
     [Markup.button.callback(msg.btn.whyOnchain, 'action:faq_why_onchain')],
     [Markup.button.callback(msg.btn.askQuestion, 'action:faq_send_question')],
     [Markup.button.callback(msg.btn.back, `action:onchain_intro:${route}:${amount}`)],

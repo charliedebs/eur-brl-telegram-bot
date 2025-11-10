@@ -361,6 +361,32 @@ With small amounts, this fixed fee weighs heavily.
 
 <b>Conclusion:</b> The larger the amount, the greater the percentage savings.`,
 
+      REFERRAL_EXPLANATION: `🤝 ABOUT REFERRAL LINKS
+
+<b>Full transparency:</b>
+
+Some links in this bot are referral links (also called "affiliate links").
+
+<b>How does it work?</b>
+
+• When you sign up using one of these links, the bot creator receives a small commission or bonus
+• This costs you NOTHING extra - the price is exactly the same
+• In some cases, <b>you also get bonuses!</b>
+  → Example: Wise offers up to €75 after your first transfer
+  → Remitly offers discounts on initial transfers
+
+<b>Why do we do this?</b>
+
+• Keeping this bot 100% free requires time and resources
+• Referral links help cover server and development costs
+• It's a win-win: you get free access + potential bonuses, the bot keeps running
+
+<b>Our promise:</b>
+
+We only recommend platforms we actually use and trust. Service quality always comes first.
+
+💚 Thank you for supporting this project!`,
+
       // ✅ SCREEN 10: WHAT_IS_EXCHANGE
       WHAT_IS_EXCHANGE: `🏦 What is an exchange?
     
@@ -1144,6 +1170,7 @@ Pay once, use for the chosen period, no automatic renewal.
         whatIsUSDC: '🪙 What is USDC?',
         whatIsExchange: '🏦 What is an exchange?',
         minAmount: '💰 What\'s the minimum amount?',
+        aboutReferrals: '🤝 About referral links',
         proofSources: '📊 Proof & sources',
         openKraken: '🔗 Open Kraken',
         openBinanceEU: '🔗 Open Binance (EU)',

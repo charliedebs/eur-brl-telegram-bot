@@ -361,6 +361,32 @@ Com valores pequenos, essa taxa fixa pesa muito.
 
 <b>Conclusão:</b> Quanto maior o valor, maior a economia percentual.`,
 
+      REFERRAL_EXPLANATION: `🤝 SOBRE OS LINKS DE INDICAÇÃO
+
+<b>Transparência total:</b>
+
+Alguns links neste bot são links de indicação (também chamados de "afiliados" ou "referral links").
+
+<b>Como funciona?</b>
+
+• Quando você se cadastra usando um desses links, o criador do bot recebe uma pequena comissão ou bônus
+• Isso NÃO custa nada extra pra você - o preço é exatamente o mesmo
+• Em alguns casos, <b>você também ganha bônus!</b>
+  → Exemplo: Wise oferece até €75 após sua primeira transferência
+  → Remitly oferece descontos em transferências iniciais
+
+<b>Por que fazemos isso?</b>
+
+• Manter este bot 100% gratuito exige tempo e recursos
+• Links de indicação ajudam a cobrir custos de servidor e desenvolvimento
+• É uma forma win-win: você ganha acesso gratuito + possíveis bônus, o bot continua funcionando
+
+<b>Nossa promessa:</b>
+
+Só recomendamos plataformas que realmente usamos e confiamos. A qualidade do serviço vem sempre em primeiro lugar.
+
+💚 Obrigado por apoiar este projeto!`,
+
       // ✅ TELA 10: WHAT_IS_EXCHANGE
       WHAT_IS_EXCHANGE: `🏦 O que é um exchange?
     
@@ -1144,6 +1170,7 @@ Pague uma vez, use pelo período escolhido, sem renovação automática.
         whatIsUSDC: '🪙 O que é USDC?',
         whatIsExchange: '🏦 O que é um exchange?',
         minAmount: '💰 Qual o valor mínimo?',
+        aboutReferrals: '🤝 Sobre os links de indicação',
         proofSources: '📊 Provas & fontes',
         openKraken: '🔗 Abrir Kraken',
         openBinanceEU: '🔗 Abrir Binance (UE)',

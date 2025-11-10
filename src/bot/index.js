@@ -899,6 +899,15 @@ bot.action('action:faq_min_amount', async (ctx) => {
   await ctx.answerCbQuery();
 });
 
+// Handler : About referrals
+bot.action('action:about_referrals', async (ctx) => {
+  const msg = getMsg(ctx);
+  const kb = buildKeyboards(msg, 'faq_menu');
+
+  await ctx.editMessageText(msg.REFERRAL_EXPLANATION, { parse_mode: 'HTML', ...kb });
+  await ctx.answerCbQuery();
+});
+
 // Handler : Formulaire question
 bot.action('action:faq_send_question', async (ctx) => {
   const msg = getMsg(ctx);

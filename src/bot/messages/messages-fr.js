@@ -364,6 +364,32 @@ Avec de petits montants, ces frais fixes pèsent lourd.
 
 <b>Conclusion :</b> Plus le montant est élevé, plus l'économie en pourcentage est importante.`,
 
+  REFERRAL_EXPLANATION: `🤝 À PROPOS DES LIENS DE PARRAINAGE
+
+<b>Transparence totale :</b>
+
+Certains liens dans ce bot sont des liens de parrainage (aussi appelés "liens affiliés" ou "referral links").
+
+<b>Comment ça marche ?</b>
+
+• Quand tu t'inscris via un de ces liens, le créateur du bot reçoit une petite commission ou un bonus
+• Ça ne te coûte RIEN de plus - le prix est exactement le même
+• Dans certains cas, <b>tu gagnes aussi des bonus !</b>
+  → Exemple : Wise offre jusqu'à 75€ après ton premier transfert
+  → Remitly offre des réductions sur les premiers transferts
+
+<b>Pourquoi on fait ça ?</b>
+
+• Maintenir ce bot 100% gratuit demande du temps et des ressources
+• Les liens de parrainage aident à couvrir les coûts de serveur et développement
+• C'est gagnant-gagnant : tu as un accès gratuit + des bonus potentiels, le bot continue de fonctionner
+
+<b>Notre promesse :</b>
+
+On recommande uniquement des plateformes qu'on utilise vraiment et en qui on a confiance. La qualité du service passe toujours en premier.
+
+💚 Merci de soutenir ce projet !`,
+
   // ✅ ÉCRAN 10 : WHAT_IS_EXCHANGE (ajout phrase)
   WHAT_IS_EXCHANGE: `🏦 C'est quoi un exchange ?
 
@@ -1157,6 +1183,7 @@ btn: {
   whatIsUSDC: '🪙 Qu\'est-ce que l\'USDC ?',
   whatIsExchange: '🏦 Qu\'est-ce qu\'un exchange ?',
   minAmount: '💰 C\'est quoi le montant minimum ?',
+  aboutReferrals: '🤝 À propos des liens de parrainage',
   proofSources: '📊 Preuves & sources',
   openKraken: '🔗 Ouvrir Kraken',
   openBinanceEU: '🔗 Ouvrir Binance (UE)',
