@@ -516,19 +516,19 @@ We only recommend platforms we actually use and trust. Service quality always co
     <i>Tip: if you just want to "exchange", choose Market.</i>`,
     
       // ✅ SCREEN 13: GUIDE_TRANSITION
-      GUIDE_TRANSITION: `✅ You have (or will have):
+      GUIDE_TRANSITION: (route = 'eurbrl') => `✅ You have (or will have):
     • A 🇪🇺 account to deposit your EUR (SEPA → USDC)
     • A 🇧🇷 account to withdraw your BRL (USDC → Pix)
-    
+
     🌐 You're taking your first on-chain step.
     It's more than just a transfer:
     • you're discovering a technology that's already changing global finance,
     • you're joining millions of users, companies, and institutions,
     • you're keeping more value for yourself (and less for intermediaries 💸).
-    
+
     🚀 Now, let's start concretely: first step → deposit your EUR in your 🇪🇺 account and convert them to USDC.`,
     
-      STEP_1_1: (amount, locale) => `1️⃣ Deposit your EUR in the exchange account
+      STEP_1_1: (amount, locale, route = 'eurbrl') => `1️⃣ Deposit your EUR in the exchange account
     
     • Go to the "Deposit / Fiat" section.
     • Choose EUR as currency.
@@ -541,7 +541,7 @@ We only recommend platforms we actually use and trust. Service quality always co
     Balance estimate: €${formatAmount(amount, 0, locale)}
     *⚠️ This is an estimate, close to reality. Bank fees and delays may vary slightly.*`,
     
-      STEP_1_2: (amount, locale) => `2️⃣ Access the market to buy USDC
+      STEP_1_2: (amount, locale, route = 'eurbrl') => `2️⃣ Access the market to buy USDC
     
     • In your exchange, look for "Trader / Market / Trade".
     • Select the EUR/USDC pair.
@@ -551,7 +551,7 @@ We only recommend platforms we actually use and trust. Service quality always co
     Balance estimate: €${formatAmount(amount, 0, locale)} (ready for USDC purchase)
     *⚠️ Indicative estimate.*`,
     
-      STEP_1_3: (usdcAmount, locale) => `3️⃣ Buy your USDC
+      STEP_1_3: (usdcAmount, locale, route = 'eurbrl') => `3️⃣ Buy your USDC
     
     • Choose the order type:
       • Market → instant, simple, recommended.
@@ -562,14 +562,14 @@ We only recommend platforms we actually use and trust. Service quality always co
     Balance estimate: ~${formatAmount(usdcAmount, 2, locale)} USDC
     *⚠️ Estimate close to reality. Fees & prices may vary slightly.*`,
     
-      STEP_1_4: `✅ Well done! You now have USDC in your 🇪🇺 account.
-    
+      STEP_1_4: (route = 'eurbrl') => `✅ Well done! You now have USDC in your 🇪🇺 account.
+
     ✨ USDC are "stablecoins": ~1 USDC = 1 USD.
     This is the key to transferring your money quickly and at low cost.
-    
+
     Next step: send them on-chain to Brazil.`,
     
-      STEP_2_1: `✨ This is the "on-chain" step → fast and low cost, but requires some concentration.
+      STEP_2_1: (route = 'eurbrl') => `✨ This is the "on-chain" step → fast and low cost, but requires some concentration.
     Unlike a bank, if you make a mistake, there's no customer service to recover your funds.
     
     1️⃣ Get your 🇧🇷 deposit address
@@ -584,7 +584,7 @@ We only recommend platforms we actually use and trust. Service quality always co
     
     💡 Imagine it's like your bank IBAN, but blockchain version (a long sequence of letters and numbers).`,
     
-      STEP_2_2: (usdcAmount, locale) => `2️⃣ Send from your 🇪🇺 exchange
+      STEP_2_2: (usdcAmount, locale, route = 'eurbrl') => `2️⃣ Send from your 🇪🇺 exchange
     
     • Go to "Withdrawal / Withdraw" → USDC.
     • Paste the copied address.
@@ -607,21 +607,21 @@ We only recommend platforms we actually use and trust. Service quality always co
     
     👉 Once you've verified everything, you can confirm the transfer.`,
     
-      STEP_2_4: `4️⃣ Wait for arrival
-    
+      STEP_2_4: (route = 'eurbrl') => `4️⃣ Wait for arrival
+
     • Usually, the transaction takes 1-2 minutes, sometimes up to 10 min.
     • You'll see your USDC balance appear 🇧🇷 side.
-    
+
     ✅ Result: your USDC arrived → ready for step 3 (BRL sale + Pix withdrawal).`,
     
-      STEP_3_1: `1️⃣ Find the USDC/BRL market 🇧🇷
-    
+      STEP_3_1: (route = 'eurbrl') => `1️⃣ Find the USDC/BRL market 🇧🇷
+
     • In your Brazilian exchange, go to Trader / Market.
     • Select the USDC/BRL pair.
-    
+
     👉 Next step: your USDC finally turn into BRL 🎉`,
     
-      STEP_3_2: (brlAmount, locale) => `2️⃣ Place your order
+      STEP_3_2: (finalAmount, locale, route = 'eurbrl') => `2️⃣ Place your order
     
     • "Market" → instant, at current price (simple, recommended).
     • "Limit" → you set your price, useful for large amounts.
@@ -631,7 +631,7 @@ We only recommend platforms we actually use and trust. Service quality always co
     Balance estimate: ~R$ ${formatAmount(brlAmount, 2, locale)}
     *⚠️ Estimate close to reality (fees ~0.1%).*`,
     
-      STEP_3_3: (brlNet, locale) => `3️⃣ Withdraw your money in R$
+      STEP_3_3: (finalNet, locale, route = 'eurbrl') => `3️⃣ Withdraw your money in R$
     
     • Once your USDC are sold, your balance appears in BRL.
     • Go to Withdrawal / Withdraw.
@@ -659,17 +659,17 @@ We only recommend platforms we actually use and trust. Service quality always co
     
     Our estimates are prudent and close to reality. You shouldn't have any bad surprises.`,
     
-      STEP_3_4: `✅ Your transfer is complete!
-    
+      STEP_3_4: (route = 'eurbrl') => `✅ Your transfer is complete!
+
     • You converted your EUR to USDC 🇪🇺 side.
     • You sent them on-chain.
     • You sold them for BRL and withdrew via Pix 🇧🇷 side.
-    
+
     ✨ Result: fast, secure, and low cost.
-    
+
     🌍 You just made a real blockchain passage.
     What you learned today will be increasingly used in the future: you just took a step ahead.
-    
+
     🙌 We hope you enjoyed the experience!`,
     
       // Premium and alerts
