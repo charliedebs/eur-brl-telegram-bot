@@ -266,21 +266,41 @@ export const messagesEn = {
         return `${title}\n\n${providersList}${footer}`;
       },
     
-      // ✅ SCREEN 6: ONCHAIN_INTRO
-      ONCHAIN_INTRO: `🚀 ON-CHAIN ROUTE
-    
+      // ✅ SCREEN 6: ONCHAIN_INTRO (direction-aware)
+      ONCHAIN_INTRO: (route = 'eurbrl') => {
+        if (route === 'brleur') {
+          return `🚀 ON-CHAIN ROUTE
+
+    📍 <b>The 3-step process</b>
+    1️⃣ Brazil → Exchange your BRL to USDC (Pix)
+    2️⃣ Blockchain → Send your USDC
+    3️⃣ Europe → Convert USDC to EUR (SEPA)
+
+    ✅ <b>What you need</b>
+    • 🇧🇷 Exchange in Brazil accepting BRL deposits (Pix)
+    • 🇪🇺 Exchange in Europe accepting EUR withdrawals (SEPA)
+
+    💡 We have recommendations!
+
+    💡 <b>Fun fact:</b> On-chain fees (~0.5-1%) are 5 to 10 times cheaper than traditional transfers (2.5-6%)!`;
+        }
+
+        // Default: eurbrl
+        return `🚀 ON-CHAIN ROUTE
+
     📍 <b>The 3-step process</b>
     1️⃣ Europe → Exchange your EUR to USDC
     2️⃣ Blockchain → Send your USDC
     3️⃣ Brazil → Convert USDC to BRL (Pix)
-    
+
     ✅ <b>What you need</b>
     • 🇪🇺 Exchange in Europe accepting EUR deposits (SEPA)
     • 🇧🇷 Exchange in Brazil accepting BRL withdrawals (Pix)
-    
+
     💡 We have recommendations!
-    
-    💡 <b>Fun fact:</b> On-chain fees (~0.5-1%) are 5 to 10 times cheaper than traditional transfers (2.5-6%)!`,
+
+    💡 <b>Fun fact:</b> On-chain fees (~0.5-1%) are 5 to 10 times cheaper than traditional transfers (2.5-6%)!`;
+      },
     
       // ✅ SCREEN 7: FAQ_MENU
       FAQ_MENU: `🤔 ANY QUESTIONS?
@@ -389,25 +409,40 @@ We only recommend platforms we actually use and trust. Service quality always co
 
 💚 Thank you for supporting this project!`,
 
-      // ✅ SCREEN 10: WHAT_IS_EXCHANGE
-      WHAT_IS_EXCHANGE: `🏦 What is an exchange?
-    
+      // ✅ SCREEN 10: WHAT_IS_EXCHANGE (direction-aware)
+      WHAT_IS_EXCHANGE: (route = 'eurbrl') => {
+        const baseText = `🏦 What is an exchange?
+
     A crypto exchange is like a digital currency exchange office.
-    
+
     You can:
     • Deposit traditional money (EUR, BRL...)
     • Buy/sell cryptos (USDC, Bitcoin...)
     • Send them to other exchanges
-    
+
     The most known: Kraken, Binance, Coinbase, Bitso...
-    
-    For our case:
+
+    For our case:`;
+
+        if (route === 'brleur') {
+          return `${baseText}
+    • Brazil exchange = you deposit BRL (Pix), buy USDC
+    • Europe exchange = you receive USDC, sell for EUR, withdraw via SEPA
+
+    It's regulated and safe (if you choose recognized platforms).
+
+    👉 We'll recommend our favorites in the next screens.`;
+        }
+
+        // Default: eurbrl
+        return `${baseText}
     • Europe exchange = you deposit EUR, buy USDC
     • Brazil exchange = you receive USDC, sell for BRL, withdraw via Pix
-    
+
     It's regulated and safe (if you choose recognized platforms).
-    
-    👉 We'll recommend our favorites in the next screens.`,
+
+    👉 We'll recommend our favorites in the next screens.`;
+      },
     
       // ✅ SCREEN 11: EXCHANGES_EU
       EXCHANGES_EU: `🇪🇺 Exchanges to deposit/withdraw EUR
@@ -437,24 +472,34 @@ We only recommend platforms we actually use and trust. Service quality always co
     
     ⚠️ Reminder: one exchange serves one side. You need a 🇪🇺 (SEPA) + a 🇧🇷 (Pix).`,
     
-      WHAT_IS_USDC: `🪙 What is USDC?
-    
+      WHAT_IS_USDC: (route = 'eurbrl') => {
+        const baseText = `🪙 What is USDC?
+
     USDC = USD Coin, a "stablecoin" (stable crypto).
-    
+
     In practice:
     • 1 USDC always worth ~1 US dollar
     • Issued by Circle (regulated US company)
     • Reserves regularly verified
     • Accepted on all major exchanges
-    
+
     Why we choose USDC?
     • MiCA compliant (European crypto-asset regulation)
     • Usable legally and simply in Europe
     • Unlike Bitcoin which fluctuates, USDC remains stable
-    
+
     It's perfect for transferring money without variation risk.
-    
-    You use it as a "pivot currency": EUR → USDC → BRL.`,
+    `;
+
+        if (route === 'brleur') {
+          return `${baseText}
+    You use it as a "pivot currency": BRL → USDC → EUR.`;
+        }
+
+        // Default: eurbrl
+        return `${baseText}
+    You use it as a "pivot currency": EUR → USDC → BRL.`;
+      },
     
       MARKET_VS_LIMIT: `📈 Market vs Limit
     

@@ -269,8 +269,27 @@ Cliquez sur les liens ci-dessous pour accéder aux études et rapports officiels
     return `${title}\n\n${providersList}${footer}`;
   },
 
-  // ✅ ÉCRAN 6 : ONCHAIN_INTRO (modifié)
-  ONCHAIN_INTRO: `🚀 ROUTE ON-CHAIN
+  // ✅ ÉCRAN 6 : ONCHAIN_INTRO (direction-aware)
+  ONCHAIN_INTRO: (route = 'eurbrl') => {
+    if (route === 'brleur') {
+      return `🚀 ROUTE ON-CHAIN
+
+📍 <b>Le processus en 3 étapes</b>
+1️⃣ Brésil → Change tes BRL en USDC (Pix)
+2️⃣ Blockchain → Envoie tes USDC
+3️⃣ Europe → Convertis USDC en EUR (SEPA)
+
+✅ <b>Ce dont tu as besoin</b>
+• 🇧🇷 Exchange au Brésil acceptant dépôt BRL (Pix)
+• 🇪🇺 Exchange en Europe acceptant retrait EUR (SEPA)
+
+💡 On a des recommandations !
+
+💡 <b>Fun fact :</b> Les frais on-chain (~0,5-1%) sont 5 à 10 fois moins chers que les transferts classiques (2,5-6%) !`;
+    }
+
+    // Default: eurbrl
+    return `🚀 ROUTE ON-CHAIN
 
 📍 <b>Le processus en 3 étapes</b>
 1️⃣ Europe → Change tes EUR en USDC
@@ -283,7 +302,8 @@ Cliquez sur les liens ci-dessous pour accéder aux études et rapports officiels
 
 💡 On a des recommandations !
 
-💡 <b>Fun fact :</b> Les frais on-chain (~0,5-1%) sont 5 à 10 fois moins chers que les transferts classiques (2,5-6%) !`,
+💡 <b>Fun fact :</b> Les frais on-chain (~0,5-1%) sont 5 à 10 fois moins chers que les transferts classiques (2,5-6%) !`;
+  },
 
   // ✅ ÉCRAN 7 : FAQ_MENU (nouveau)
   FAQ_MENU: `🤔 UN DOUTE ?
@@ -392,8 +412,9 @@ On recommande uniquement des plateformes qu'on utilise vraiment et en qui on a c
 
 💚 Merci de soutenir ce projet !`,
 
-  // ✅ ÉCRAN 10 : WHAT_IS_EXCHANGE (ajout phrase)
-  WHAT_IS_EXCHANGE: `🏦 C'est quoi un exchange ?
+  // ✅ ÉCRAN 10 : WHAT_IS_EXCHANGE (direction-aware)
+  WHAT_IS_EXCHANGE: (route = 'eurbrl') => {
+    const baseText = `🏦 C'est quoi un exchange ?
 
 Un exchange crypto, c'est comme un bureau de change digital.
 
@@ -404,13 +425,27 @@ Tu peux :
 
 Les plus connus : Kraken, Binance, Coinbase, Bitso...
 
-Pour notre cas :
+Pour notre cas :`;
+
+    if (route === 'brleur') {
+      return `${baseText}
+• Exchange Brésil = tu déposes BRL (Pix), tu achètes USDC
+• Exchange Europe = tu reçois USDC, tu les vends en EUR, tu retires par SEPA
+
+C'est réglementé et sûr (si tu choisis des plateformes reconnues).
+
+👉 On va te recommander nos préférés dans les prochains écrans.`;
+    }
+
+    // Default: eurbrl
+    return `${baseText}
 • Exchange Europe = tu déposes EUR, tu achètes USDC
 • Exchange Brésil = tu reçois USDC, tu les vends en BRL, tu retires par Pix
 
 C'est réglementé et sûr (si tu choisis des plateformes reconnues).
 
-👉 On va te recommander nos préférés dans les prochains écrans.`,
+👉 On va te recommander nos préférés dans les prochains écrans.`;
+  },
 
   // ✅ ÉCRAN 11 : EXCHANGES_EU (reformulé)
   EXCHANGES_EU: `🇪🇺 Exchanges pour déposer/retirer EUR
@@ -440,7 +475,8 @@ Nos liens de parrainage financent ce service (gratuits pour toi, parfois bonus).
 
 ⚠️ Rappel : un exchange sert à un côté. Il faut un 🇪🇺 (SEPA) + un 🇧🇷 (Pix).`,
 
-  WHAT_IS_USDC: `🪙 C'est quoi l'USDC ?
+  WHAT_IS_USDC: (route = 'eurbrl') => {
+    const baseText = `🪙 C'est quoi l'USDC ?
 
 USDC = USD Coin, un "stablecoin" (crypto stable).
 
@@ -456,8 +492,17 @@ Pourquoi on choisit l'USDC ?
 • Contrairement au Bitcoin qui fluctue, l'USDC reste stable
 
 C'est parfait pour transférer de l'argent sans risque de variation.
+`;
 
-Tu l'utilises comme "monnaie pivot" : EUR → USDC → BRL.`,
+    if (route === 'brleur') {
+      return `${baseText}
+Tu l'utilises comme "monnaie pivot" : BRL → USDC → EUR.`;
+    }
+
+    // Default: eurbrl
+    return `${baseText}
+Tu l'utilises comme "monnaie pivot" : EUR → USDC → BRL.`;
+  },
 
   MARKET_VS_LIMIT: `📈 Market vs Limit
 

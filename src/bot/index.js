@@ -838,9 +838,9 @@ bot.action(/^action:continue_onchain:(.+):(\d+)$/, async (ctx) => {
   const amount = parseFloat(ctx.match[2]);
   const msg = getMsg(ctx);
   const locale = getLocale(ctx.state.lang);
-  
+
   const kb = buildKeyboards(msg, 'onchain_intro', { route, amount, locale });
-  await ctx.editMessageText(msg.ONCHAIN_INTRO, { parse_mode: 'HTML', ...kb });
+  await ctx.editMessageText(msg.ONCHAIN_INTRO(route), { parse_mode: 'HTML', ...kb });
   await ctx.answerCbQuery();
 });
 
@@ -849,9 +849,9 @@ bot.action(/^action:onchain_intro:(.+):(\d+)$/, async (ctx) => {
   const amount = parseFloat(ctx.match[2]);
   const msg = getMsg(ctx);
   const locale = getLocale(ctx.state.lang);
-  
+
   const kb = buildKeyboards(msg, 'onchain_intro', { route, amount, locale });
-  await ctx.editMessageText(msg.ONCHAIN_INTRO, { parse_mode: 'HTML', ...kb });
+  await ctx.editMessageText(msg.ONCHAIN_INTRO(route), { parse_mode: 'HTML', ...kb });
   await ctx.answerCbQuery();
 });
 
@@ -939,15 +939,17 @@ bot.action('action:exchanges_br', async (ctx) => {
 
 bot.action('action:what_usdc', async (ctx) => {
   const msg = getMsg(ctx);
+  const route = ctx.session?.lastRoute || 'eurbrl';
   const kb = buildKeyboards(msg, 'what_usdc');
-  await ctx.editMessageText(msg.WHAT_IS_USDC, { parse_mode: 'HTML', ...kb });
+  await ctx.editMessageText(msg.WHAT_IS_USDC(route), { parse_mode: 'HTML', ...kb });
   await ctx.answerCbQuery();
 });
 
 bot.action('action:what_exchange', async (ctx) => {
   const msg = getMsg(ctx);
+  const route = ctx.session?.lastRoute || 'eurbrl';
   const kb = buildKeyboards(msg, 'what_exchange');
-  await ctx.editMessageText(msg.WHAT_IS_EXCHANGE, { parse_mode: 'HTML', ...kb });
+  await ctx.editMessageText(msg.WHAT_IS_EXCHANGE(route), { parse_mode: 'HTML', ...kb });
   await ctx.answerCbQuery();
 });
 
