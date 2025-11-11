@@ -1006,6 +1006,8 @@ Pague uma vez, use pelo período escolhido, sem renovação automática.
 
     💰 Em ${formatAmount(amountExample, 0, locale)}${pair === 'eurbrl' ? '€' : ' R$'}, você ganha ~${formatAmount(savings, 0, locale)}${pair === 'eurbrl' ? ' R$' : '€'} vs a média
 
+    💡 <i>Pode ser um bom momento para considerar sua transferência</i>
+
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     💎 Com Premium (5 R$/mês):

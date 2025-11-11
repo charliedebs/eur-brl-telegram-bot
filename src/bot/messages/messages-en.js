@@ -1007,6 +1007,8 @@ Pay once, use for the chosen period, no automatic renewal.
 
     💰 On ${formatAmount(amountExample, 0, locale)}${pair === 'eurbrl' ? '€' : ' R$'}, you gain ~${formatAmount(savings, 0, locale)}${pair === 'eurbrl' ? ' R$' : '€'} vs average
 
+    💡 <i>This might be a good moment to consider for your transfer</i>
+
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     💎 With Premium (5 R$/month):

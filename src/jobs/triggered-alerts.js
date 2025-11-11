@@ -59,7 +59,7 @@ async function getCompleteStats(pair) {
 // BROADCAST SELON AUDIENCE
 // ==========================================
 
-async function broadcastTriggered(pair, currentRate, stats, audience = 'all') {
+async function broadcastTriggered(pair, currentRate, stats, audience = 'all', customText = null) {
   console.log(`[TRIGGERED] 📢 Broadcasting ${pair} to ${audience}...`);
   
   try {
@@ -90,7 +90,7 @@ async function broadcastTriggered(pair, currentRate, stats, audience = 'all') {
         const locale = getLocale(user.language);
         const msg = messages[user.language];
         
-        const text = buildTriggeredMessage(pair, currentRate, stats, amountExample, locale, msg);
+        const text = buildTriggeredMessage(pair, currentRate, stats, amountExample, locale, msg, customText);
         const kb = buildKeyboards(msg, 'triggered_alert', { pair, amount: amountExample });
         
         await bot.telegram.sendMessage(user.telegram_id, text, {
@@ -120,11 +120,18 @@ async function broadcastTriggered(pair, currentRate, stats, audience = 'all') {
 // CONSTRUIRE MESSAGE
 // ==========================================
 
-function buildTriggeredMessage(pair, currentRate, stats, amountExample, locale, msg) {
+function buildTriggeredMessage(pair, currentRate, stats, amountExample, locale, msg, customText = null) {
   // Use the TRIGGERED_ALERT message function (supports all languages + context-aware)
-  return msg.TRIGGERED_ALERT
+  const baseMessage = msg.TRIGGERED_ALERT
     ? msg.TRIGGERED_ALERT(pair, currentRate, stats, amountExample, locale)
     : `📢 ALERTA DO ADMIN\n\n${pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'} : ${formatRate(currentRate, locale)}\n\n📊 Taxa atual vs médias históricas`;
+
+  // Add custom text if provided
+  if (customText) {
+    return `${baseMessage}\n\n💬 <b>Mensagem do Admin:</b>\n<i>${customText}</i>`;
+  }
+
+  return baseMessage;
 }
 
 // ==========================================
@@ -134,12 +141,14 @@ function buildTriggeredMessage(pair, currentRate, stats, amountExample, locale, 
 export async function triggerManualAlert(options = {}) {
   const {
     pairs = ['eurbrl', 'brleur'],
-    audience = 'all'
+    audience = 'all',
+    text = null
   } = options;
-  
+
   console.log('\n📢 [TRIGGERED] Manual alert triggered');
   console.log(`   Pairs: ${pairs.join(', ')}`);
   console.log(`   Audience: ${audience}`);
+  if (text) console.log(`   Custom text: "${text}"`);
   
   try {
     console.log('[TRIGGERED] Fetching rates...');
@@ -168,7 +177,7 @@ export async function triggerManualAlert(options = {}) {
       console.log(`  30d avg: ${stats.stats30d?.avg.toFixed(4)}`);
       console.log(`  90d avg: ${stats.stats90d?.avg.toFixed(4)}`);
       
-      const sent = await broadcastTriggered(pair, currentRate, stats, audience);
+      const sent = await broadcastTriggered(pair, currentRate, stats, audience, text);
       results.push({ pair, sent });
     }
     
@@ -194,21 +203,36 @@ const isDirectExecution = currentFile === argFile;
 
 if (isDirectExecution) {
   console.log('🚀 Triggered Alerts CLI\n');
-  
+
   const args = process.argv.slice(2);
   const options = {};
-  
+
+  // Show help if requested
+  if (args.includes('--help') || args.includes('-h')) {
+    console.log('Usage: node triggered-alerts.js [options]\n');
+    console.log('Options:');
+    console.log('  --pairs=eurbrl,brleur  Pairs to send (default: both)');
+    console.log('  --audience=all|free|premium  Target audience (default: all)');
+    console.log('  --text="Your message"  Optional custom message to add');
+    console.log('\nExample:');
+    console.log('  node triggered-alerts.js --pairs=eurbrl --audience=premium --text="Excellent rate today!"');
+    process.exit(0);
+  }
+
   args.forEach(arg => {
     if (arg.startsWith('--')) {
       const [key, value] = arg.slice(2).split('=');
       if (key === 'pairs') {
         options.pairs = value.split(',');
+      } else if (key === 'text') {
+        // Handle quoted text
+        options[key] = value.replace(/^["']|["']$/g, '');
       } else {
         options[key] = value;
       }
     }
   });
-  
+
   console.log('Options:', options, '\n');
   
   triggerManualAlert(options)

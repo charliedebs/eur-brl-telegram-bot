@@ -1011,6 +1011,8 @@ Payez une fois, utilisez pour la période choisie, sans renouvellement automatiq
 
   💰 Sur ${formatAmount(amountExample, 0, locale)}${pair === 'eurbrl' ? '€' : ' R$'}, tu gagnes ~${formatAmount(savings, 0, locale)}${pair === 'eurbrl' ? ' R$' : '€'} vs la moyenne
 
+  💡 <i>Cela pourrait être un bon moment à considérer pour ton transfert</i>
+
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   💎 Avec Premium (5 R$/mois) :
