@@ -1050,58 +1050,58 @@ ${isGoodTime ? '✅ A taxa está favorável comparada ao último mês' : '⏳ Co
         const mediumTerm = variation30d;
         const longTerm = variation90d;
 
-        // Determine overall recommendation based on data
-        let recommendation, emoji, analysis;
+        // Determine overall observation based on data (factual only)
+        let observation, emoji, analysis;
 
         // Scenario 1: Rate significantly above average (> 2%)
         if (mediumTerm > 2) {
           if (shortTerm > mediumTerm) {
-            recommendation = '🚀 Excelente momento! Taxa está acelerando para cima';
+            observation = '📈 Taxa bem acima das médias e em aceleração';
             emoji = '✅';
-            analysis = 'Tendência de alta consistente em todos os períodos.';
+            analysis = 'Tendência de alta consistente em todos os períodos. Pode ser um momento favorável.';
           } else if (shortTerm > 0) {
-            recommendation = '💡 Bom momento para transferir';
+            observation = '📊 Taxa bem acima das médias históricas';
             emoji = '✅';
-            analysis = 'Taxa está acima das médias históricas.';
+            analysis = 'Taxa acima das médias de 7, 30 e 90 dias.';
           } else {
-            recommendation = '⚡ Aproveite agora - possível correção em breve';
-            emoji = '⚠️';
-            analysis = 'Taxa boa, mas perdendo força no curto prazo.';
+            observation = '⚠️ Taxa acima das médias, mas perdendo força';
+            emoji = '➡️';
+            analysis = 'Taxa está acima das médias de longo prazo, mas caindo no curto prazo.';
           }
         }
         // Scenario 2: Rate slightly above average (0 < rate ≤ 2%)
         else if (mediumTerm > 0) {
           if (shortTerm > mediumTerm + 1) {
-            recommendation = '📈 Taxa em alta - momento favorável';
-            emoji = '✅';
-            analysis = 'Taxa está melhorando rapidamente no curto prazo.';
-          } else {
-            recommendation = '⚖️ Momento neutro a favorável';
+            observation = '📈 Taxa em alta no curto prazo';
             emoji = '➡️';
-            analysis = 'Taxa ligeiramente acima da média.';
+            analysis = 'Taxa ligeiramente acima da média e melhorando rapidamente.';
+          } else {
+            observation = '📊 Taxa ligeiramente acima da média';
+            emoji = '➡️';
+            analysis = 'Taxa próxima das médias históricas.';
           }
         }
         // Scenario 3: Rate below average
         else {
           if (shortTerm > 0) {
             // Recovery: short term turned positive while medium term negative
-            recommendation = '📈 Taxa em recuperação - sinais positivos';
-            emoji = '⚠️';
-            analysis = 'Taxa melhorando, mas ainda abaixo da média 30d. Aguarde confirmação.';
+            observation = '📈 Taxa em recuperação';
+            emoji = '➡️';
+            analysis = 'Taxa abaixo da média 30d, mas mostrando sinais de recuperação no curto prazo.';
           } else if (shortTerm < mediumTerm - 0.5) {
             // Getting worse: short term more negative than medium term
-            recommendation = '📉 Taxa em queda - melhor aguardar';
+            observation = '📉 Taxa em tendência de baixa';
             emoji = '⏳';
-            analysis = 'Tendência de baixa acelerando. Espere estabilização.';
+            analysis = 'Taxa abaixo das médias e continuando em queda no curto prazo.';
           } else if (shortTerm > mediumTerm) {
             // Improving: short term less negative than medium term
-            recommendation = '📊 Taxa melhorando, mas ainda baixa';
+            observation = '📊 Taxa abaixo da média, mas melhorando';
             emoji = '⏳';
-            analysis = 'Taxa está se recuperando, mas ainda abaixo das médias.';
+            analysis = 'Taxa ainda abaixo das médias históricas, mas com leve recuperação.';
           } else {
-            recommendation = '⏳ Taxa abaixo da média - considere esperar';
+            observation = '📊 Taxa abaixo das médias históricas';
             emoji = '⏳';
-            analysis = 'Aguarde melhores condições.';
+            analysis = 'Taxa está abaixo das médias de 7, 30 e 90 dias.';
           }
         }
 
@@ -1111,7 +1111,7 @@ ${isGoodTime ? '✅ A taxa está favorável comparada ao último mês' : '⏳ Co
 
 ${direction} : ${formatRate(currentRate, locale)}
 
-${emoji} ${recommendation}
+${emoji} ${observation}
 
 📊 <b>Análise Multi-período:</b>
 

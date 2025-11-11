@@ -2074,6 +2074,8 @@ bot.action(/^alert:cd2:(\d+):(.+)$/, async (ctx) => {
     pair: parts[3],
     cooldown_minutes: cooldown
   };
+
+  console.log(`[ALERT-DECODE] Shortcode: "${shortcode}" → parts[1]: "${parts[1]}" → parsed: ${alertData.threshold_value}`);
   
   // 🔥 TÂCHE 5.1 : Si reference_type = 'current' ET relatif, convertir en absolu
   if (alertData.threshold_type === 'relative' && alertData.reference_type === 'current') {
@@ -2504,6 +2506,8 @@ bot.on('text', async (ctx) => {
       const threshold = parseFloat(match[1].replace(',', '.'));
       const validThreshold = validateThreshold(threshold, 'absolute', pair);
 
+      console.log(`[ALERT-INPUT] User entered: "${match[1]}" → Parsed: ${threshold} → Validated: ${validThreshold}`);
+
       if (!validThreshold) {
         const range = pair === 'eurbrl'
           ? 'entre 3.0 et 10.0'
@@ -2519,6 +2523,8 @@ bot.on('text', async (ctx) => {
         threshold_value: validThreshold,
         reference_type: null
       };
+
+      console.log(`[ALERT-DATA] alertData.threshold_value = ${alertData.threshold_value} (type: ${typeof alertData.threshold_value})`);
 
       const kb = buildKeyboards(msg, 'alert_choose_cooldown_v2', { alertData });
       return ctx.reply(msg.ALERT_CHOOSE_COOLDOWN, { parse_mode: 'HTML', ...kb });

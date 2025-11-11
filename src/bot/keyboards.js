@@ -438,10 +438,8 @@ case 'what_exchange':
       }
       
       case 'alert_choose_reference': {
-        const { pair, currentRate, avg7d, avg30d, avg90d, locale, msg } = options;
-        // NOTE: si 'msg' n'est pas passé dans options, récupère-le comme d'habitude:
-        // const msg = getMsg(locale) ou messages[locale]
-      
+        const { pair, currentRate, avg7d, avg30d, avg90d, locale } = options;
+
         return Markup.inlineKeyboard([
           [Markup.button.callback(
             msg.btn.refCurrent(currentRate, locale),
@@ -481,10 +479,15 @@ case 'what_exchange':
       case 'alert_choose_cooldown_v2': {
         const { alertData } = options;
         // Créer un shortcode : type-value-ref-pair
-        // Ex: "rel-3-avg30d-eurbrl" ou "abs-6.3-null-eurbrl"
+        // Ex: "rel-3-avg30d-eurbrl" ou "abs-6.3456-null-eurbrl"
+        // Preserve full precision by explicitly formatting the number
+        const thresholdStr = typeof alertData.threshold_value === 'number'
+          ? alertData.threshold_value.toString()
+          : alertData.threshold_value;
+
         const shortcode = [
           alertData.threshold_type.slice(0, 3), // 'rel' ou 'abs'
-          alertData.threshold_value,
+          thresholdStr,
           alertData.reference_type || 'null',
           alertData.pair
         ].join('-');

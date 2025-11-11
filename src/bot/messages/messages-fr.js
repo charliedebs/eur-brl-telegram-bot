@@ -1055,58 +1055,58 @@ ${isGoodTime ? '✅ Le taux est favorable par rapport au dernier mois' : '⏳ Co
     const mediumTerm = variation30d;
     const longTerm = variation90d;
 
-    // Determine overall recommendation based on data
-    let recommendation, emoji, analysis;
+    // Determine overall observation based on data (factual only)
+    let observation, emoji, analysis;
 
     // Scenario 1: Rate significantly above average (> 2%)
     if (mediumTerm > 2) {
       if (shortTerm > mediumTerm) {
-        recommendation = '🚀 Excellent moment ! Le taux accélère à la hausse';
+        observation = '📈 Taux bien au-dessus des moyennes et en accélération';
         emoji = '✅';
-        analysis = 'Tendance haussière cohérente sur toutes les périodes.';
+        analysis = 'Tendance haussière cohérente sur toutes les périodes. Ça pourrait être un moment favorable.';
       } else if (shortTerm > 0) {
-        recommendation = '💡 Bon moment pour transférer';
+        observation = '📊 Taux bien au-dessus des moyennes historiques';
         emoji = '✅';
-        analysis = 'Le taux est au-dessus des moyennes historiques.';
+        analysis = 'Taux au-dessus des moyennes de 7, 30 et 90 jours.';
       } else {
-        recommendation = '⚡ Profite maintenant - correction possible bientôt';
-        emoji = '⚠️';
-        analysis = 'Bon taux, mais perd de la force à court terme.';
+        observation = '⚠️ Taux au-dessus des moyennes, mais perd de la force';
+        emoji = '➡️';
+        analysis = 'Taux est au-dessus des moyennes long terme, mais baisse à court terme.';
       }
     }
     // Scenario 2: Rate slightly above average (0 < rate ≤ 2%)
     else if (mediumTerm > 0) {
       if (shortTerm > mediumTerm + 1) {
-        recommendation = '📈 Taux en hausse - moment favorable';
-        emoji = '✅';
-        analysis = 'Le taux s\'améliore rapidement à court terme.';
-      } else {
-        recommendation = '⚖️ Moment neutre à favorable';
+        observation = '📈 Taux en hausse à court terme';
         emoji = '➡️';
-        analysis = 'Taux légèrement au-dessus de la moyenne.';
+        analysis = 'Taux légèrement au-dessus de la moyenne et s\'améliore rapidement.';
+      } else {
+        observation = '📊 Taux légèrement au-dessus de la moyenne';
+        emoji = '➡️';
+        analysis = 'Taux proche des moyennes historiques.';
       }
     }
     // Scenario 3: Rate below average
     else {
       if (shortTerm > 0) {
         // Recovery: short term turned positive while medium term negative
-        recommendation = '📈 Taux en récupération - signes positifs';
-        emoji = '⚠️';
-        analysis = 'Taux s\'améliore, mais encore sous la moyenne 30j. Attends confirmation.';
+        observation = '📈 Taux en récupération';
+        emoji = '➡️';
+        analysis = 'Taux sous la moyenne 30j, mais montre des signes de récupération à court terme.';
       } else if (shortTerm < mediumTerm - 0.5) {
         // Getting worse: short term more negative than medium term
-        recommendation = '📉 Taux en baisse - mieux vaut attendre';
+        observation = '📉 Taux en tendance baissière';
         emoji = '⏳';
-        analysis = 'Tendance baissière s\'accélère. Attends la stabilisation.';
+        analysis = 'Taux sous les moyennes et continue de baisser à court terme.';
       } else if (shortTerm > mediumTerm) {
         // Improving: short term less negative than medium term
-        recommendation = '📊 Taux s\'améliore, mais encore bas';
+        observation = '📊 Taux sous la moyenne, mais s\'améliore';
         emoji = '⏳';
-        analysis = 'Taux se récupère, mais encore sous les moyennes.';
+        analysis = 'Taux encore sous les moyennes historiques, mais avec légère récupération.';
       } else {
-        recommendation = '⏳ Taux sous la moyenne - considère attendre';
+        observation = '📊 Taux sous les moyennes historiques';
         emoji = '⏳';
-        analysis = 'Attends de meilleures conditions.';
+        analysis = 'Taux est sous les moyennes de 7, 30 et 90 jours.';
       }
     }
 
@@ -1116,7 +1116,7 @@ ${isGoodTime ? '✅ Le taux est favorable par rapport au dernier mois' : '⏳ Co
 
 ${direction} : ${formatRate(currentRate, locale)}
 
-${emoji} ${recommendation}
+${emoji} ${observation}
 
 📊 <b>Analyse multi-période :</b>
 

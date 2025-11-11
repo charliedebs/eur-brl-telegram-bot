@@ -1051,58 +1051,58 @@ ${isGoodTime ? '✅ The rate is favorable compared to the last month' : '⏳ Con
         const mediumTerm = variation30d;
         const longTerm = variation90d;
 
-        // Determine overall recommendation based on data
-        let recommendation, emoji, analysis;
+        // Determine overall observation based on data (factual only)
+        let observation, emoji, analysis;
 
         // Scenario 1: Rate significantly above average (> 2%)
         if (mediumTerm > 2) {
           if (shortTerm > mediumTerm) {
-            recommendation = '🚀 Excellent moment! Rate is accelerating upward';
+            observation = '📈 Rate well above averages and accelerating';
             emoji = '✅';
-            analysis = 'Consistent upward trend across all periods.';
+            analysis = 'Consistent upward trend across all periods. This might be a favorable moment.';
           } else if (shortTerm > 0) {
-            recommendation = '💡 Good time to transfer';
+            observation = '📊 Rate well above historical averages';
             emoji = '✅';
-            analysis = 'Rate is above historical averages.';
+            analysis = 'Rate is above 7, 30, and 90-day averages.';
           } else {
-            recommendation = '⚡ Act now - possible correction soon';
-            emoji = '⚠️';
-            analysis = 'Good rate, but losing strength short-term.';
+            observation = '⚠️ Rate above averages but losing strength';
+            emoji = '➡️';
+            analysis = 'Rate is above long-term averages but declining in the short term.';
           }
         }
         // Scenario 2: Rate slightly above average (0 < rate ≤ 2%)
         else if (mediumTerm > 0) {
           if (shortTerm > mediumTerm + 1) {
-            recommendation = '📈 Rate rising - favorable moment';
-            emoji = '✅';
-            analysis = 'Rate is improving rapidly in the short term.';
-          } else {
-            recommendation = '⚖️ Neutral to favorable moment';
+            observation = '📈 Rate rising in the short term';
             emoji = '➡️';
-            analysis = 'Rate slightly above average.';
+            analysis = 'Rate slightly above average and improving rapidly.';
+          } else {
+            observation = '📊 Rate slightly above average';
+            emoji = '➡️';
+            analysis = 'Rate close to historical averages.';
           }
         }
         // Scenario 3: Rate below average
         else {
           if (shortTerm > 0) {
             // Recovery: short term turned positive while medium term negative
-            recommendation = '📈 Rate recovering - positive signs';
-            emoji = '⚠️';
-            analysis = 'Rate improving, but still below 30d average. Wait for confirmation.';
+            observation = '📈 Rate recovering';
+            emoji = '➡️';
+            analysis = 'Rate below 30d average but showing signs of recovery in the short term.';
           } else if (shortTerm < mediumTerm - 0.5) {
             // Getting worse: short term more negative than medium term
-            recommendation = '📉 Rate declining - better to wait';
+            observation = '📉 Rate in downward trend';
             emoji = '⏳';
-            analysis = 'Downward trend accelerating. Wait for stabilization.';
+            analysis = 'Rate below averages and continuing to decline in the short term.';
           } else if (shortTerm > mediumTerm) {
             // Improving: short term less negative than medium term
-            recommendation = '📊 Rate improving, but still low';
+            observation = '📊 Rate below average but improving';
             emoji = '⏳';
-            analysis = 'Rate recovering, but still below averages.';
+            analysis = 'Rate still below historical averages but with slight recovery.';
           } else {
-            recommendation = '⏳ Rate below average - consider waiting';
+            observation = '📊 Rate below historical averages';
             emoji = '⏳';
-            analysis = 'Wait for better conditions.';
+            analysis = 'Rate is below 7, 30, and 90-day averages.';
           }
         }
 
@@ -1112,7 +1112,7 @@ ${isGoodTime ? '✅ The rate is favorable compared to the last month' : '⏳ Con
 
 ${direction} : ${formatRate(currentRate, locale)}
 
-${emoji} ${recommendation}
+${emoji} ${observation}
 
 📊 <b>Multi-period Analysis:</b>
 
