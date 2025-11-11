@@ -139,26 +139,43 @@ async function broadcastFreeAlert(pair, currentRate, stats) {
 
 async function shouldSendPremiumAlert(pair, currentRate, userId, params) {
   try {
-    // 1. Variation >X% vs avg30d
-    const history30d = await db.getRateHistory(pair, 30);
+    // 1. Fetch multiple timeframes for comprehensive analysis
+    const [history7d, history30d, history90d] = await Promise.all([
+      db.getRateHistory(pair, 7),
+      db.getRateHistory(pair, 30),
+      db.getRateHistory(pair, 90)
+    ]);
+
     if (history30d.length < 20) return { send: false };
 
-    const rates = history30d.map(h => parseFloat(h.rate));
-    const avg30d = rates.reduce((a, b) => a + b, 0) / rates.length;
-    const variation = ((currentRate - avg30d) / avg30d) * 100;
+    // Calculate averages for each timeframe
+    const calc7d = history7d.map(h => parseFloat(h.rate));
+    const calc30d = history30d.map(h => parseFloat(h.rate));
+    const calc90d = history90d.map(h => parseFloat(h.rate));
 
-    if (variation < params.premiumThreshold) {
+    const avg7d = calc7d.length > 0 ? calc7d.reduce((a, b) => a + b, 0) / calc7d.length : null;
+    const avg30d = calc30d.reduce((a, b) => a + b, 0) / calc30d.length;
+    const avg90d = calc90d.length > 0 ? calc90d.reduce((a, b) => a + b, 0) / calc90d.length : null;
+
+    // Calculate variations vs each timeframe
+    const variation7d = avg7d ? ((currentRate - avg7d) / avg7d) * 100 : null;
+    const variation30d = ((currentRate - avg30d) / avg30d) * 100;
+    const variation90d = avg90d ? ((currentRate - avg90d) / avg90d) * 100 : null;
+
+    // Check primary threshold (30d)
+    if (variation30d < params.premiumThreshold) {
       return { send: false };
     }
 
-    // 2. Cooldown (configurable hours - global dans le CRON)
-    // Option simple : pas de tracking précis par utilisateur, juste global dans le CRON
-
-    logger.info(`[PREMIUM-SPONTANEOUS] ✅ ${pair} for user ${userId}: +${variation.toFixed(1)}%`);
+    logger.info(`[PREMIUM-SPONTANEOUS] ✅ ${pair} for user ${userId}: 7d:${variation7d?.toFixed(1)}% 30d:${variation30d.toFixed(1)}% 90d:${variation90d?.toFixed(1)}%`);
     return {
       send: true,
+      avg7d,
       avg30d,
-      variation
+      avg90d,
+      variation7d,
+      variation30d,
+      variation90d
     };
 
   } catch (error) {
@@ -178,12 +195,13 @@ async function broadcastPremiumAlert(pair, currentRate, stats, premiumUsers) {
       const msg = messages[user.language];
 
       const amountExample = pair === 'eurbrl' ? 1000 : 5000;
-      const savings = (currentRate - stats.avg30d) * amountExample;
 
-      // Use the PREMIUM_ALERT message function (supports all languages + context-aware)
-      const text = msg.PREMIUM_ALERT
-        ? msg.PREMIUM_ALERT(pair, currentRate, stats.avg30d, stats.variation, amountExample, savings, locale)
-        : `🔔 ALERTA ESPONTÂNEO PREMIUM\n\n${pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'} : ${formatRate(currentRate, locale)}\n\n📊 Variação: ${stats.variation > 0 ? '+' : ''}${formatAmount(stats.variation, 1, locale)}%`;
+      // Use the enhanced PREMIUM_ALERT message function with multi-timeframe analysis
+      const text = msg.PREMIUM_ALERT_ENHANCED
+        ? msg.PREMIUM_ALERT_ENHANCED(pair, currentRate, stats, amountExample, locale)
+        : msg.PREMIUM_ALERT
+        ? msg.PREMIUM_ALERT(pair, currentRate, stats.avg30d, stats.variation30d, amountExample, (currentRate - stats.avg30d) * amountExample, locale)
+        : `🔔 ALERTA ESPONTÂNEO PREMIUM\n\n${pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'} : ${formatRate(currentRate, locale)}\n\n📊 Variação: ${stats.variation30d > 0 ? '+' : ''}${formatAmount(stats.variation30d, 1, locale)}%`;
 
       const kb = buildKeyboards(msg, 'premium_alert', {
         pair,

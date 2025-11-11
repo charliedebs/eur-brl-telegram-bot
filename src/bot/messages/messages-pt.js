@@ -1036,6 +1036,78 @@ ${isGoodTime ? '✅ A taxa está favorável comparada ao último mês' : '⏳ Co
 ⏰ Próxima alerta espontânea possível em 6h`;
       },
 
+      PREMIUM_ALERT_ENHANCED: (pair, currentRate, stats, amountExample, locale) => {
+        const direction = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+        const {avg7d, avg30d, avg90d, variation7d, variation30d, variation90d} = stats;
+
+        // Analyze trend across timeframes
+        const shortTerm = variation7d || 0;
+        const mediumTerm = variation30d || 0;
+        const longTerm = variation90d || 0;
+
+        // Determine overall recommendation
+        let recommendation, emoji, analysis;
+        if (mediumTerm > 2) {
+          if (shortTerm > mediumTerm) {
+            recommendation = '🚀 Excelente momento! Taxa está acelerando para cima';
+            emoji = '✅';
+            analysis = 'Tendência de alta consistente em todos os períodos.';
+          } else if (shortTerm > 0) {
+            recommendation = '💡 Bom momento para transferir';
+            emoji = '✅';
+            analysis = 'Taxa está acima das médias históricas.';
+          } else {
+            recommendation = '⚡ Aproveite agora - possível correção em breve';
+            emoji = '⚠️';
+            analysis = 'Taxa boa, mas perdendo força no curto prazo.';
+          }
+        } else if (mediumTerm > 0) {
+          recommendation = '⚖️ Momento neutro a favorável';
+          emoji = '➡️';
+          analysis = 'Taxa ligeiramente acima da média.';
+        } else {
+          if (shortTerm < mediumTerm) {
+            recommendation = '📉 Taxa em queda - melhor aguardar';
+            emoji = '⏳';
+            analysis = 'Tendência de baixa. Espere estabilização.';
+          } else {
+            recommendation = '⏳ Taxa abaixo da média - considere esperar';
+            emoji = '⏳';
+            analysis = 'Aguarde melhores condições.';
+          }
+        }
+
+        const savings30d = avg30d ? (currentRate - avg30d) * amountExample : 0;
+
+        return `🔔 ALERTA PREMIUM - ANÁLISE COMPLETA
+
+${direction} : ${formatRate(currentRate, locale)}
+
+${emoji} ${recommendation}
+
+📊 <b>Análise Multi-período:</b>
+
+<b>Curto prazo (7 dias)</b>
+• Média: ${avg7d ? formatRate(avg7d, locale) : 'N/D'}
+• Variação: ${variation7d !== null ? (variation7d > 0 ? '+' : '') + formatAmount(variation7d, 1, locale) + '%' : 'N/D'} ${variation7d > 1 ? '📈' : variation7d < -1 ? '📉' : '➡️'}
+
+<b>Médio prazo (30 dias)</b>
+• Média: ${formatRate(avg30d, locale)}
+• Variação: ${variation30d > 0 ? '+' : ''}${formatAmount(variation30d, 1, locale)}% ${variation30d > 1 ? '📈' : variation30d < -1 ? '📉' : '➡️'}
+
+<b>Longo prazo (90 dias)</b>
+• Média: ${avg90d ? formatRate(avg90d, locale) : 'N/D'}
+• Variação: ${variation90d !== null ? (variation90d > 0 ? '+' : '') + formatAmount(variation90d, 1, locale) + '%' : 'N/D'} ${variation90d > 1 ? '📈' : variation90d < -1 ? '📉' : '➡️'}
+
+💡 <b>O que isso significa:</b>
+${analysis}
+
+💰 <b>Impacto financeiro:</b>
+Em ${formatAmount(amountExample, 0, locale)}${pair === 'eurbrl' ? '€' : ' R$'}, você ${savings30d > 0 ? 'ganha' : 'perde'} ~${formatAmount(Math.abs(savings30d), 0, locale)}${pair === 'eurbrl' ? ' R$' : '€'} vs média 30d
+
+⏰ Próxima alerta espontânea em 6h`;
+      },
+
       PROGRAMMED_ALERT: (pair, currentRate, threshold, refValue, alert, locale) => {
         const typeLabels = {
           absolute: '🎯 Absoluto',
