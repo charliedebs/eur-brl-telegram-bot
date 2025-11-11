@@ -104,65 +104,22 @@ async function sendProgrammedAlert(alert, currentRate, threshold, refValue) {
   try {
     const user = await db.getUser(alert.users.telegram_id);
     if (!user) return;
-    
+
     const locale = getLocale(user.language);
     const msg = messages[user.language];
-    
-    // Labels pour affichage
-    const typeLabels = {
-      absolute: { fr: '🎯 Absolu', pt: '🎯 Absoluto', en: '🎯 Absolute' },
-      relative: { fr: '📊 Relatif', pt: '📊 Relativo', en: '📊 Relative' }
-    };
-    
-    const refLabels = {
-      current: { fr: 'Taux actuel', pt: 'Taxa atual', en: 'Current rate' },
-      avg7d: { fr: 'Moyenne 7j', pt: 'Média 7 dias', en: '7-day avg' },
-      avg30d: { fr: 'Moyenne 30j', pt: 'Média 30 dias', en: '30-day avg' },
-      avg90d: { fr: 'Moyenne 90j', pt: 'Média 90 dias', en: '90-day avg' }
-    };
-    
-    const pairText = alert.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
-    const typeLabel = typeLabels[alert.threshold_type][user.language];
-    
-    let text = `🔔 ALERTE DÉCLENCHÉE
 
-${pairText}
-${typeLabel}`;
+    // Use PROGRAMMED_ALERT message function (supports all languages)
+    const text = msg.PROGRAMMED_ALERT
+      ? msg.PROGRAMMED_ALERT(alert.pair, currentRate, threshold, refValue, alert, locale)
+      : `🔔 ALERTA DISPARADO\n\n${alert.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'}\n\n💡 Seu limite foi atingido!\n\n• Taxa atual: ${formatRate(currentRate, locale)}\n• Limite: ${formatRate(threshold, locale)}`;
 
-    if (alert.threshold_type === 'relative') {
-      const refLabel = refLabels[alert.reference_type][user.language];
-      text += ` : +${formatAmount(alert.threshold_value, 1, locale)}% vs ${refLabel}`;
-    } else {
-      text += ` : ≥ ${formatRate(alert.threshold_value, locale)}`;
-    }
-    
-    text += `
-
-💡 Ton seuil est atteint !
-
-<b>Analyse :</b>
-• Taux actuel : ${formatRate(currentRate, locale)}`;
-
-    if (alert.threshold_type === 'relative' && refValue) {
-      const refLabel = refLabels[alert.reference_type][user.language];
-      const delta = ((currentRate - refValue) / refValue) * 100;
-      text += `
-• ${refLabel} : ${formatRate(refValue, locale)}
-• Écart : +${formatAmount(delta, 1, locale)}%`;
-    }
-    
-    text += `
-• Seuil alerte : ${formatRate(threshold, locale)}
-
-⏰ Prochaine alerte possible dans ${formatCooldown(alert.cooldown_minutes)}`;
-    
     const amountExample = alert.pair === 'eurbrl' ? 1000 : 5000;
     const kb = buildKeyboards(msg, 'premium_alert', {
       pair: alert.pair,
       amount: amountExample,
       alertId: alert.id
     });
-    
+
     await bot.telegram.sendMessage(user.telegram_id, text, {
       parse_mode: 'HTML',
       ...kb
@@ -173,12 +130,4 @@ ${typeLabel}`;
   } catch (error) {
     logger.error(`[CRON-PROGRAMMED] Failed to send alert:`, { error: error.message });
   }
-}
-
-// Helper formatCooldown (si pas déjà dans rates.js)
-function formatCooldown(minutes) {
-  if (minutes < 60) return `${minutes} min`;
-  if (minutes < 1440) return `${Math.floor(minutes / 60)}h`;
-  if (minutes < 10080) return `${Math.floor(minutes / 1440)}j`;
-  return `${Math.floor(minutes / 10080)} semaine(s)`;
 }

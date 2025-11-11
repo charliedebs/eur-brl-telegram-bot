@@ -1036,6 +1036,66 @@ ${isGoodTime ? '✅ A taxa está favorável comparada ao último mês' : '⏳ Co
 ⏰ Próxima alerta espontânea possível em 6h`;
       },
 
+      PROGRAMMED_ALERT: (pair, currentRate, threshold, refValue, alert, locale) => {
+        const typeLabels = {
+          absolute: '🎯 Absoluto',
+          relative: '📊 Relativo'
+        };
+
+        const refLabels = {
+          avg7d: 'Média 7 dias',
+          avg30d: 'Média 30 dias',
+          avg90d: 'Média 90 dias'
+        };
+
+        const pairText = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+        const typeLabel = typeLabels[alert.threshold_type] || '🔔';
+
+        let text = `🔔 ALERTA DISPARADO
+
+${pairText}
+${typeLabel}`;
+
+        if (alert.threshold_type === 'relative') {
+          const refLabel = refLabels[alert.reference_type];
+          text += ` : +${formatAmount(alert.threshold_value, 1, locale)}% vs ${refLabel}`;
+        } else {
+          text += ` : ≥ ${formatRate(alert.threshold_value, locale)}`;
+        }
+
+        text += `
+
+💡 Seu limite foi atingido!
+
+<b>Análise:</b>
+• Taxa atual: ${formatRate(currentRate, locale)}`;
+
+        if (alert.threshold_type === 'relative' && refValue) {
+          const refLabel = refLabels[alert.reference_type];
+          const delta = ((currentRate - refValue) / refValue) * 100;
+          text += `
+• ${refLabel}: ${formatRate(refValue, locale)}
+• Diferença: +${formatAmount(delta, 1, locale)}%`;
+        }
+
+        text += `
+• Limite alerta: ${formatRate(threshold, locale)}`;
+
+        // Format cooldown
+        const minutes = alert.cooldown_minutes || 60;
+        let cooldownText;
+        if (minutes < 60) cooldownText = `${minutes} min`;
+        else if (minutes < 1440) cooldownText = `${Math.floor(minutes / 60)}h`;
+        else if (minutes < 10080) cooldownText = `${Math.floor(minutes / 1440)} dia(s)`;
+        else cooldownText = `${Math.floor(minutes / 10080)} semana(s)`;
+
+        text += `
+
+⏰ Próximo alerta possível em ${cooldownText}`;
+
+        return text;
+      },
+
     ALERTS_LIST: (alerts, locale) => {
       if (alerts.length === 0) {
         return `🔔 <b>Meus alertas</b>

@@ -1037,6 +1037,66 @@ ${isGoodTime ? '✅ The rate is favorable compared to the last month' : '⏳ Con
 ⏰ Next spontaneous alert possible in 6h`;
       },
 
+      PROGRAMMED_ALERT: (pair, currentRate, threshold, refValue, alert, locale) => {
+        const typeLabels = {
+          absolute: '🎯 Absolute',
+          relative: '📊 Relative'
+        };
+
+        const refLabels = {
+          avg7d: '7-day avg',
+          avg30d: '30-day avg',
+          avg90d: '90-day avg'
+        };
+
+        const pairText = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+        const typeLabel = typeLabels[alert.threshold_type] || '🔔';
+
+        let text = `🔔 ALERT TRIGGERED
+
+${pairText}
+${typeLabel}`;
+
+        if (alert.threshold_type === 'relative') {
+          const refLabel = refLabels[alert.reference_type];
+          text += ` : +${formatAmount(alert.threshold_value, 1, locale)}% vs ${refLabel}`;
+        } else {
+          text += ` : ≥ ${formatRate(alert.threshold_value, locale)}`;
+        }
+
+        text += `
+
+💡 Your threshold has been reached!
+
+<b>Analysis:</b>
+• Current rate: ${formatRate(currentRate, locale)}`;
+
+        if (alert.threshold_type === 'relative' && refValue) {
+          const refLabel = refLabels[alert.reference_type];
+          const delta = ((currentRate - refValue) / refValue) * 100;
+          text += `
+• ${refLabel}: ${formatRate(refValue, locale)}
+• Difference: +${formatAmount(delta, 1, locale)}%`;
+        }
+
+        text += `
+• Alert threshold: ${formatRate(threshold, locale)}`;
+
+        // Format cooldown
+        const minutes = alert.cooldown_minutes || 60;
+        let cooldownText;
+        if (minutes < 60) cooldownText = `${minutes} min`;
+        else if (minutes < 1440) cooldownText = `${Math.floor(minutes / 60)}h`;
+        else if (minutes < 10080) cooldownText = `${Math.floor(minutes / 1440)} day(s)`;
+        else cooldownText = `${Math.floor(minutes / 10080)} week(s)`;
+
+        text += `
+
+⏰ Next alert possible in ${cooldownText}`;
+
+        return text;
+      },
+
     ALERTS_LIST: (alerts, locale) => {
       if (alerts.length === 0) {
         return `🔔 <b>My alerts</b>
