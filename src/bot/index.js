@@ -1920,34 +1920,34 @@ bot.action(/^alert:type:relative:(eurbrl|brleur)$/, async (ctx) => {
     return;
   }
   
-  // Récupérer taux et moyennes
+  // Récupérer taux et moyennes (30d, 90d, 365d)
   const rates = await getRates();
   const currentRate = pair === 'eurbrl' ? rates.cross : 1 / rates.cross;
-  
-  const [avg7d, avg30d, avg90d] = await Promise.all([
-    db.getAverage(pair, 7),
+
+  const [avg30d, avg90d, avg365d] = await Promise.all([
     db.getAverage30Days(pair),
-    db.getAverage(pair, 90)
+    db.getAverage(pair, 90),
+    db.getAverage(pair, 365)
   ]);
-  
+
   const kb = buildKeyboards(msg, 'alert_choose_reference', {
     pair,
     currentRate,
-    avg7d: avg7d || currentRate,
     avg30d: avg30d || currentRate,
     avg90d: avg90d || currentRate,
+    avg365d: avg365d || currentRate,
     locale
   });
-  
+
   await ctx.editMessageText(
-    msg.ALERT_CHOOSE_REFERENCE(pair, currentRate, avg7d, avg30d, avg90d, locale),
+    msg.ALERT_CHOOSE_REFERENCE(pair, currentRate, avg30d, avg90d, avg365d, locale),
     { parse_mode: 'HTML', ...kb }
   );
   await ctx.answerCbQuery();
 });
 
 // Handler: Référence choisie → Choix pourcentage
-bot.action(/^alert:ref:(current|avg7d|avg30d|avg90d):(eurbrl|brleur)$/, async (ctx) => {
+bot.action(/^alert:ref:(current|avg30d|avg90d|avg365d):(eurbrl|brleur)$/, async (ctx) => {
   const refType = ctx.match[1];
   const pair = ctx.match[2];
   const msg = getMsg(ctx);
@@ -1978,19 +1978,19 @@ bot.action(/^alert:ref:(current|avg7d|avg30d|avg90d):(eurbrl|brleur)$/, async (c
     return;
   }
   
-  // Autres références : comportement normal
-  if (refType === 'avg7d') {
-    refValue = await db.getAverage(pair, 7) || currentRate;
-  } else if (refType === 'avg30d') {
+  // Autres références : comportement normal (30d, 90d, 365d)
+  if (refType === 'avg30d') {
     refValue = await db.getAverage30Days(pair) || currentRate;
   } else if (refType === 'avg90d') {
     refValue = await db.getAverage(pair, 90) || currentRate;
+  } else if (refType === 'avg365d') {
+    refValue = await db.getAverage(pair, 365) || currentRate;
   }
-  
+
   ctx.session.alertDraft = { pair, refType, refValue };
-  
+
   const kb = buildKeyboards(msg, 'alert_choose_percent', { pair, refType });
-  
+
   await ctx.editMessageText(
     msg.ALERT_CHOOSE_PERCENT(pair, refType, refValue, locale),
     { parse_mode: 'HTML', ...kb }
@@ -1999,7 +1999,7 @@ bot.action(/^alert:ref:(current|avg7d|avg30d|avg90d):(eurbrl|brleur)$/, async (c
 });
 
 // Handler: Pourcentage choisi (preset ou custom)
-bot.action(/^alert:percent:(2|3|5|custom):(current|avg7d|avg30d|avg90d):(eurbrl|brleur)$/, async (ctx) => {
+bot.action(/^alert:percent:(2|3|5|custom):(current|avg30d|avg90d|avg365d):(eurbrl|brleur)$/, async (ctx) => {
   const percent = ctx.match[1];
   const refType = ctx.match[2];
   const pair = ctx.match[3];
@@ -2115,14 +2115,14 @@ bot.action(/^alert:cd2:(\d+):(.+)$/, async (ctx) => {
     calculatedThreshold = alertData.threshold_value;
     refValue = null;
   } else {
-    if (alertData.reference_type === 'avg7d') {
-      refValue = await db.getAverage(alertData.pair, 7);
-    } else if (alertData.reference_type === 'avg30d') {
+    if (alertData.reference_type === 'avg30d') {
       refValue = await db.getAverage30Days(alertData.pair);
     } else if (alertData.reference_type === 'avg90d') {
       refValue = await db.getAverage(alertData.pair, 90);
+    } else if (alertData.reference_type === 'avg365d') {
+      refValue = await db.getAverage(alertData.pair, 365);
     }
-    
+
     calculatedThreshold = refValue * (1 + alertData.threshold_value / 100);
   }
   
@@ -2170,12 +2170,12 @@ bot.action(/^alert:view:(.+)$/, async (ctx) => {
     } else {
       if (alert.reference_type === 'current') {
         refValue = currentRate;
-      } else if (alert.reference_type === 'avg7d') {
-        refValue = await db.getAverage(alert.pair, 7);
       } else if (alert.reference_type === 'avg30d') {
         refValue = await db.getAverage30Days(alert.pair);
       } else if (alert.reference_type === 'avg90d') {
         refValue = await db.getAverage(alert.pair, 90);
+      } else if (alert.reference_type === 'avg365d') {
+        refValue = await db.getAverage(alert.pair, 365);
       }
       calculatedThreshold = refValue * (1 + alert.threshold_value / 100);
     }
