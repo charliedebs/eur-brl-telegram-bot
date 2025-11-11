@@ -503,19 +503,19 @@ case 'what_exchange':
       }
     // Liste des alertes (mise à jour)
     case 'alerts_list': {
-      const { alerts } = options;
-      
+      const { alerts, isPaused } = options;
+
       const buttons = [];
-      
+
       alerts.forEach((alert) => {
         let label;
-        
+
         if (alert.name) {
           const pairText = alert.pair === 'eurbrl' ? 'EUR→BRL' : 'BRL→EUR';
           label = `${alert.name} - ${pairText}`;
         } else {
           const pairText = alert.pair === 'eurbrl' ? 'EUR→BRL' : 'BRL→EUR';
-          
+
           let criteria;
           if (alert.threshold_type === 'absolute') {
             criteria = `≥${alert.threshold_value}`;
@@ -528,20 +528,25 @@ case 'what_exchange':
             };
             criteria = `+${alert.threshold_value}% vs ${refShort[alert.reference_type] || alert.reference_type}`;
           }
-          
+
           label = `${pairText}: ${criteria}`;
         }
-        
+
         if (label.length > 60) {
           label = label.substring(0, 57) + '...';
         }
-        
+
         buttons.push([Markup.button.callback(label, `alert:view:${alert.id}`)]);
       });
-      
+
+      // Add resume button if spontaneous alerts are paused
+      if (isPaused) {
+        buttons.push([Markup.button.callback(msg.btn.resumeSpontaneousAlerts, 'spontaneous:resume')]);
+      }
+
       buttons.push([Markup.button.callback(msg.btn.createAlert, 'alert:choose_pair')]);
       buttons.push([Markup.button.callback(msg.btn.back, 'action:back_main')]);
-      
+
       return Markup.inlineKeyboard(buttons);
     }
     

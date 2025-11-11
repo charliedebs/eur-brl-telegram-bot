@@ -2235,17 +2235,18 @@ bot.action(/^alert:delete:(.+)$/, async (ctx) => {
 bot.action('alert:list', async (ctx) => {
   const msg = getMsg(ctx);
   const locale = getLocale(ctx.state.lang);
-  
+
   const isPremium = await db.isPremium(ctx.from.id);
   if (!isPremium) {
     await ctx.answerCbQuery('🔒 Fonctionnalité Premium');
     const kb = buildKeyboards(msg, 'not_premium');
     return ctx.reply(msg.NOT_PREMIUM, { parse_mode: 'HTML', ...kb });
   }
-  
+
   const userAlerts = await db.getUserAlerts(ctx.from.id);
-  const kb = buildKeyboards(msg, 'alerts_list', { alerts: userAlerts });
-  
+  const isPaused = await db.isSpontaneousAlertsPaused(ctx.from.id);
+  const kb = buildKeyboards(msg, 'alerts_list', { alerts: userAlerts, isPaused });
+
   await ctx.editMessageText(msg.ALERTS_LIST(userAlerts, locale), { parse_mode: 'HTML', ...kb });
   await ctx.answerCbQuery();
 });
