@@ -2250,6 +2250,69 @@ bot.action('alert:list', async (ctx) => {
   await ctx.answerCbQuery();
 });
 
+// ==================== SPONTANEOUS ALERTS PAUSE/RESUME ====================
+
+bot.action('spontaneous:pause', async (ctx) => {
+  const msg = getMsg(ctx);
+  const locale = getLocale(ctx.state.lang);
+
+  const isPremium = await db.isPremium(ctx.from.id);
+  if (!isPremium) {
+    await ctx.answerCbQuery('🔒 Fonctionnalité Premium');
+    return;
+  }
+
+  // Pause for 7 days
+  const result = await db.pauseSpontaneousAlerts(ctx.from.id, 7);
+
+  if (result) {
+    const kb = Markup.inlineKeyboard([
+      [Markup.button.callback(msg.btn.resumeSpontaneousAlerts, 'spontaneous:resume')]
+    ]);
+
+    await ctx.editMessageReplyMarkup(kb.reply_markup);
+    await ctx.answerCbQuery('⏸️ Alertas pausados por 1 semana');
+
+    // Send confirmation message
+    await ctx.reply(msg.SPONTANEOUS_ALERTS_PAUSED(result.spontaneous_alerts_paused_until, locale), {
+      parse_mode: 'HTML',
+      ...kb
+    });
+  } else {
+    await ctx.answerCbQuery('❌ Erro ao pausar alertas');
+  }
+});
+
+bot.action('spontaneous:resume', async (ctx) => {
+  const msg = getMsg(ctx);
+
+  const isPremium = await db.isPremium(ctx.from.id);
+  if (!isPremium) {
+    await ctx.answerCbQuery('🔒 Fonctionnalité Premium');
+    return;
+  }
+
+  const result = await db.resumeSpontaneousAlerts(ctx.from.id);
+
+  if (result) {
+    await ctx.answerCbQuery('▶️ Alertas reativados');
+
+    // Edit the message to remove the resume button
+    try {
+      await ctx.editMessageReplyMarkup({ inline_keyboard: [] });
+    } catch (e) {
+      // Message might be too old to edit
+    }
+
+    // Send confirmation message
+    await ctx.reply(msg.SPONTANEOUS_ALERTS_RESUMED, {
+      parse_mode: 'HTML'
+    });
+  } else {
+    await ctx.answerCbQuery('❌ Erro ao reativar alertas');
+  }
+});
+
 
 // ==================== INLINE MODE ====================
 // Ajouter avant bot.on('text', ...)

@@ -554,7 +554,7 @@ case 'what_exchange':
         [Markup.button.callback(msg.btn.seePremium, 'premium:pricing')]
       ]);
     
-    // Alerte premium déclenchée (depuis broadcast)
+    // Alerte premium programmée déclenchée (avec alertId)
     case 'premium_alert':
       const alertPair = options.pair || 'eurbrl';
       const alertAmount = options.amount || 1000;
@@ -564,6 +564,15 @@ case 'what_exchange':
         [Markup.button.callback(msg.btn.editMyAlert, `alert:view:${alertId}`)],
         [Markup.button.callback(msg.btn.deleteMyAlert, `alert:delete:${alertId}`)],
         [Markup.button.callback(msg.btn.myAlerts, 'alert:list')]
+      ]);
+
+    // Alerte spontanée premium (sans alertId - automatique)
+    case 'spontaneous_premium_alert':
+      const spontPair = options.pair || 'eurbrl';
+      const spontAmount = options.amount || 1000;
+      return Markup.inlineKeyboard([
+        [Markup.button.callback(msg.btn.compareNow, `route:${spontPair}:${spontAmount}`)],
+        [Markup.button.callback(msg.btn.pauseSpontaneousAlerts, 'spontaneous:pause')]
       ]);
 
     // Alerte déclenchée manuellement (admin)

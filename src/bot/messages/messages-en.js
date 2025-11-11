@@ -1605,8 +1605,21 @@ You ${gain30d > 0 ? 'gain' : 'lose'} ~${formatAmount(Math.abs(gain30d), 0, local
       CONVERT_ASK_AMOUNT: "💱 What amount do you want to convert?\n\nExample: 253 or 1500 brl",
       RATE_LABEL: "Rate", // ou "Taxa" (PT), "Rate" (EN)
       BETTER_BY: "better by", // ou "melhor em" (PT), "better by" (EN)
-    
-    
+
+      // Pause/Resume spontaneous alerts
+      SPONTANEOUS_ALERTS_PAUSED: (pausedUntil, locale) => `⏸️ <b>Spontaneous alerts paused</b>
+
+You will no longer receive spontaneous alerts until <b>${new Date(pausedUntil).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })}</b>.
+
+Your custom alerts (that you created) will continue to work normally.
+
+To reactivate spontaneous alerts before this date, click the button below.`,
+
+      SPONTANEOUS_ALERTS_RESUMED: `▶️ <b>Spontaneous alerts resumed</b>
+
+You will receive spontaneous alerts again when there are interesting rate opportunities.`,
+
+
       btn: {
         langFR: '🇫🇷 Français',
         langPT: '🇧🇷 Português',
@@ -1741,6 +1754,8 @@ You ${gain30d > 0 ? 'gain' : 'lose'} ~${formatAmount(Math.abs(gain30d), 0, local
         compareNow: '🚀 Compare now',
         editMyAlert: '⚙️ Edit my alert',
         deleteMyAlert: '🗑️ Delete this alert',
+        pauseSpontaneousAlerts: '⏸️ Pause alerts (1 week)',
+        resumeSpontaneousAlerts: '▶️ Resume alerts',
         help: '❓ Help',
         paymentHelp: '💬 Payment support',
         mainMenu: '🏠 Main menu',

@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
     telegram_id BIGINT UNIQUE NOT NULL,
     language VARCHAR(5) DEFAULT 'pt',
     premium_until TIMESTAMP WITH TIME ZONE,
+    spontaneous_alerts_paused_until TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -17,6 +18,7 @@ CREATE TABLE IF NOT EXISTS users (
 -- Indexes for users table
 CREATE INDEX IF NOT EXISTS idx_users_telegram_id ON users(telegram_id);
 CREATE INDEX IF NOT EXISTS idx_users_premium_until ON users(premium_until);
+CREATE INDEX IF NOT EXISTS idx_users_spontaneous_alerts_paused_until ON users(spontaneous_alerts_paused_until);
 
 -- ==========================================
 -- USER_ALERTS TABLE (Premium feature)

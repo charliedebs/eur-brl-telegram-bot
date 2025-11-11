@@ -1605,8 +1605,21 @@ Você ${gain30d > 0 ? 'ganha' : 'perde'} ~${formatAmount(Math.abs(gain30d), 0, l
     CONVERT_ASK_AMOUNT: "💱 Que valor você quer converter?\n\nExemplo: 253 ou 1500 brl",
     RATE_LABEL: "Taxa", // ou "Taxa" (PT), "Rate" (EN)
     BETTER_BY: "melhor em", // ou "melhor em" (PT), "better by" (EN)
-    
-    
+
+    // Pause/Resume spontaneous alerts
+    SPONTANEOUS_ALERTS_PAUSED: (pausedUntil, locale) => `⏸️ <b>Alertas espontâneos pausados</b>
+
+Você não receberá mais alertas espontâneos até <b>${new Date(pausedUntil).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })}</b>.
+
+Seus alertas personalizados (que você criou) continuarão funcionando normalmente.
+
+Para reativar os alertas espontâneos antes dessa data, clique no botão abaixo.`,
+
+    SPONTANEOUS_ALERTS_RESUMED: `▶️ <b>Alertas espontâneos reativados</b>
+
+Você voltará a receber alertas espontâneos quando houver oportunidades interessantes de taxa.`,
+
+
       btn: {
         langFR: '🇫🇷 Français',
         langPT: '🇧🇷 Português',
@@ -1741,6 +1754,8 @@ Você ${gain30d > 0 ? 'ganha' : 'perde'} ~${formatAmount(Math.abs(gain30d), 0, l
         compareNow: '🚀 Comparar agora',
         editMyAlert: '⚙️ Editar meu alerta',
         deleteMyAlert: '🗑️ Apagar este alerta',
+        pauseSpontaneousAlerts: '⏸️ Pausar alertas (1 semana)',
+        resumeSpontaneousAlerts: '▶️ Reativar alertas',
         help: '❓ Ajuda',
         paymentHelp: '💬 Ajuda com pagamento',
         mainMenu: '🏠 Menu principal',

@@ -185,11 +185,20 @@ async function shouldSendPremiumAlert(pair, currentRate, userId, params) {
 }
 
 async function broadcastPremiumAlert(pair, currentRate, stats, premiumUsers) {
-  logger.info(`[PREMIUM-SPONTANEOUS] Broadcasting ${pair} to ${premiumUsers.length} premium users...`);
+  // Filter out users who have paused spontaneous alerts
+  const activeUsers = [];
+  for (const user of premiumUsers) {
+    const isPaused = await db.isSpontaneousAlertsPaused(user.telegram_id);
+    if (!isPaused) {
+      activeUsers.push(user);
+    }
+  }
+
+  logger.info(`[PREMIUM-SPONTANEOUS] Broadcasting ${pair} to ${activeUsers.length}/${premiumUsers.length} premium users (${premiumUsers.length - activeUsers.length} paused)...`);
 
   let successCount = 0;
 
-  for (const user of premiumUsers) {
+  for (const user of activeUsers) {
     try {
       const locale = getLocale(user.language);
       const msg = messages[user.language];
@@ -203,7 +212,7 @@ async function broadcastPremiumAlert(pair, currentRate, stats, premiumUsers) {
         ? msg.PREMIUM_ALERT(pair, currentRate, stats.avg30d, stats.variation30d, amountExample, (currentRate - stats.avg30d) * amountExample, locale)
         : `🔔 ALERTA ESPONTÂNEO PREMIUM\n\n${pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'} : ${formatRate(currentRate, locale)}\n\n📊 Variação: ${stats.variation30d > 0 ? '+' : ''}${formatAmount(stats.variation30d, 1, locale)}%`;
 
-      const kb = buildKeyboards(msg, 'premium_alert', {
+      const kb = buildKeyboards(msg, 'spontaneous_premium_alert', {
         pair,
         amount: amountExample
       });
@@ -221,7 +230,7 @@ async function broadcastPremiumAlert(pair, currentRate, stats, premiumUsers) {
     }
   }
 
-  logger.info(`[PREMIUM-SPONTANEOUS] ✅ ${pair}: Sent to ${successCount}/${premiumUsers.length} users`);
+  logger.info(`[PREMIUM-SPONTANEOUS] ✅ ${pair}: Sent to ${successCount}/${activeUsers.length} users`);
 }
 
 // ==========================================

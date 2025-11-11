@@ -1620,6 +1620,19 @@ CONVERT_ASK_AMOUNT: "💱 Quel montant veux-tu convertir?\n\nExemple: 253 ou 150
 RATE_LABEL: "Taux", // ou "Taxa" (PT), "Rate" (EN)
 BETTER_BY: "meilleur de", // ou "melhor em" (PT), "better by" (EN)
 
+// Pause/Resume spontaneous alerts
+SPONTANEOUS_ALERTS_PAUSED: (pausedUntil, locale) => `⏸️ <b>Alertes spontanées en pause</b>
+
+Tu ne recevras plus d'alertes spontanées jusqu'au <b>${new Date(pausedUntil).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })}</b>.
+
+Tes alertes personnalisées (que tu as créées) continueront de fonctionner normalement.
+
+Pour réactiver les alertes spontanées avant cette date, clique sur le bouton ci-dessous.`,
+
+SPONTANEOUS_ALERTS_RESUMED: `▶️ <b>Alertes spontanées réactivées</b>
+
+Tu recevras à nouveau des alertes spontanées lorsqu'il y aura des opportunités intéressantes de taux.`,
+
 btn: {
   langFR: '🇫🇷 Français',
   langPT: '🇧🇷 Português',
@@ -1754,6 +1767,8 @@ btn: {
   compareNow: '🚀 Comparer maintenant',
   editMyAlert: '⚙️ Modifier mon alerte',
   deleteMyAlert: '🗑️ Supprimer cette alerte',
+  pauseSpontaneousAlerts: '⏸️ Mettre en pause (1 semaine)',
+  resumeSpontaneousAlerts: '▶️ Réactiver les alertes',
   help: '❓ Aide',
   paymentHelp: '💬 Aide pour le paiement',
   mainMenu: '🏠 Menu principal',
