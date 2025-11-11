@@ -1041,13 +1041,20 @@ ${isGoodTime ? '✅ The rate is favorable compared to the last month' : '⏳ Con
         const direction = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
         const {avg7d, avg30d, avg90d, variation7d, variation30d, variation90d} = stats;
 
-        // Analyze trend across timeframes
-        const shortTerm = variation7d || 0;
-        const mediumTerm = variation30d || 0;
-        const longTerm = variation90d || 0;
+        // If key data is missing, fall back to simple version
+        if (variation7d === null || variation30d === null) {
+          const savings = avg30d ? (currentRate - avg30d) * amountExample : 0;
+          return this.PREMIUM_ALERT ? this.PREMIUM_ALERT(pair, currentRate, avg30d, variation30d || 0, amountExample, savings, locale) : '';
+        }
 
-        // Determine overall recommendation
+        const shortTerm = variation7d;
+        const mediumTerm = variation30d;
+        const longTerm = variation90d;
+
+        // Determine overall recommendation based on data
         let recommendation, emoji, analysis;
+
+        // Scenario 1: Rate significantly above average (> 2%)
         if (mediumTerm > 2) {
           if (shortTerm > mediumTerm) {
             recommendation = '🚀 Excellent moment! Rate is accelerating upward';
@@ -1062,15 +1069,36 @@ ${isGoodTime ? '✅ The rate is favorable compared to the last month' : '⏳ Con
             emoji = '⚠️';
             analysis = 'Good rate, but losing strength short-term.';
           }
-        } else if (mediumTerm > 0) {
-          recommendation = '⚖️ Neutral to favorable moment';
-          emoji = '➡️';
-          analysis = 'Rate slightly above average.';
-        } else {
-          if (shortTerm < mediumTerm) {
+        }
+        // Scenario 2: Rate slightly above average (0 < rate ≤ 2%)
+        else if (mediumTerm > 0) {
+          if (shortTerm > mediumTerm + 1) {
+            recommendation = '📈 Rate rising - favorable moment';
+            emoji = '✅';
+            analysis = 'Rate is improving rapidly in the short term.';
+          } else {
+            recommendation = '⚖️ Neutral to favorable moment';
+            emoji = '➡️';
+            analysis = 'Rate slightly above average.';
+          }
+        }
+        // Scenario 3: Rate below average
+        else {
+          if (shortTerm > 0) {
+            // Recovery: short term turned positive while medium term negative
+            recommendation = '📈 Rate recovering - positive signs';
+            emoji = '⚠️';
+            analysis = 'Rate improving, but still below 30d average. Wait for confirmation.';
+          } else if (shortTerm < mediumTerm - 0.5) {
+            // Getting worse: short term more negative than medium term
             recommendation = '📉 Rate declining - better to wait';
             emoji = '⏳';
-            analysis = 'Downward trend. Wait for stabilization.';
+            analysis = 'Downward trend accelerating. Wait for stabilization.';
+          } else if (shortTerm > mediumTerm) {
+            // Improving: short term less negative than medium term
+            recommendation = '📊 Rate improving, but still low';
+            emoji = '⏳';
+            analysis = 'Rate recovering, but still below averages.';
           } else {
             recommendation = '⏳ Rate below average - consider waiting';
             emoji = '⏳';
@@ -1165,6 +1193,63 @@ ${typeLabel}`;
         text += `
 
 ⏰ Next alert possible in ${cooldownText}`;
+
+        return text;
+      },
+
+      TRIGGERED_ALERT: (pair, currentRate, stats, amountExample, locale) => {
+        const pairText = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+        const currency = pair === 'eurbrl' ? '€' : ' R$';
+
+        const var30d = stats.stats30d ? ((currentRate - stats.stats30d.avg) / stats.stats30d.avg * 100) : null;
+        const var90d = stats.stats90d ? ((currentRate - stats.stats90d.avg) / stats.stats90d.avg * 100) : null;
+        const var365d = stats.stats365d ? ((currentRate - stats.stats365d.avg) / stats.stats365d.avg * 100) : null;
+
+        const gain30d = stats.stats30d ? (currentRate - stats.stats30d.avg) * amountExample : null;
+
+        // Determine if it's a good time based on averages
+        const isGoodTime = var30d > 0;
+
+        let text = `📢 ADMIN ALERT
+
+${pairText} : ${formatRate(currentRate, locale)}
+
+📊 <b>Current position:</b>
+
+`;
+
+        if (stats.stats30d) {
+          text += `<b>Last 30 days:</b>
+• Average: ${formatRate(stats.stats30d.avg, locale)}
+• Min: ${formatRate(stats.stats30d.min, locale)}
+• Max: ${formatRate(stats.stats30d.max, locale)}
+• Change vs average: ${var30d > 0 ? '+' : ''}${formatAmount(var30d, 1, locale)}%\n\n`;
+        }
+
+        if (stats.stats90d) {
+          text += `<b>Last 90 days:</b>
+• Average: ${formatRate(stats.stats90d.avg, locale)}
+• Min: ${formatRate(stats.stats90d.min, locale)}
+• Max: ${formatRate(stats.stats90d.max, locale)}
+• Change vs average: ${var90d > 0 ? '+' : ''}${formatAmount(var90d, 1, locale)}%\n\n`;
+        }
+
+        if (stats.stats365d) {
+          text += `<b>Last 12 months:</b>
+• Average: ${formatRate(stats.stats365d.avg, locale)}
+• Min: ${formatRate(stats.stats365d.min, locale)}
+• Max: ${formatRate(stats.stats365d.max, locale)}
+• Change vs average: ${var365d > 0 ? '+' : ''}${formatAmount(var365d, 1, locale)}%\n\n`;
+        }
+
+        if (gain30d !== null) {
+          text += `💰 <b>Example on ${formatAmount(amountExample, 0, locale)}${currency}:</b>
+You ${gain30d > 0 ? 'gain' : 'lose'} ~${formatAmount(Math.abs(gain30d), 0, locale)}${pair === 'eurbrl' ? ' R$' : '€'} vs 30d average\n\n`;
+        }
+
+        text += isGoodTime
+          ? `💡 Rate above average - good time to transfer!`
+          : `⏳ Rate below average - consider waiting.`;
 
         return text;
       },

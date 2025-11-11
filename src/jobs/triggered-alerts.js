@@ -121,55 +121,10 @@ async function broadcastTriggered(pair, currentRate, stats, audience = 'all') {
 // ==========================================
 
 function buildTriggeredMessage(pair, currentRate, stats, amountExample, locale, msg) {
-  const pairText = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
-  const currency = pair === 'eurbrl' ? '€' : ' R$';
-  
-  const var30d = stats.avg30d ? ((currentRate - stats.avg30d.avg) / stats.avg30d.avg * 100) : null;
-  const var90d = stats.stats90d ? ((currentRate - stats.stats90d.avg) / stats.stats90d.avg * 100) : null;
-  const var365d = stats.stats365d ? ((currentRate - stats.stats365d.avg) / stats.stats365d.avg * 100) : null;
-  
-  const gain30d = stats.avg30d ? (currentRate - stats.avg30d.avg) * amountExample : null;
-  
-  let text = `📢 ALERTE ADMIN
-
-${pairText} : ${formatRate(currentRate, locale)}
-
-📊 <b>Position actuelle :</b>
-
-`;
-  
-  if (stats.stats30d) {
-    text += `<b>30 derniers jours :</b>
-• Moyenne : ${formatRate(stats.stats30d.avg, locale)}
-• Min : ${formatRate(stats.stats30d.min, locale)}
-• Max : ${formatRate(stats.stats30d.max, locale)}
-• Écart vs moyenne : ${var30d > 0 ? '+' : ''}${formatAmount(var30d, 1, locale)}%\n\n`;
-  }
-  
-  if (stats.stats90d) {
-    text += `<b>90 derniers jours :</b>
-• Moyenne : ${formatRate(stats.stats90d.avg, locale)}
-• Min : ${formatRate(stats.stats90d.min, locale)}
-• Max : ${formatRate(stats.stats90d.max, locale)}
-• Écart vs moyenne : ${var90d > 0 ? '+' : ''}${formatAmount(var90d, 1, locale)}%\n\n`;
-  }
-  
-  if (stats.stats365d) {
-    text += `<b>12 derniers mois :</b>
-• Moyenne : ${formatRate(stats.stats365d.avg, locale)}
-• Min : ${formatRate(stats.stats365d.min, locale)}
-• Max : ${formatRate(stats.stats365d.max, locale)}
-• Écart vs moyenne : ${var365d > 0 ? '+' : ''}${formatAmount(var365d, 1, locale)}%\n\n`;
-  }
-  
-  if (gain30d) {
-    text += `💰 <b>Exemple sur ${formatAmount(amountExample, 0, locale)}${currency} :</b>
-${gain30d > 0 ? 'Tu gagnes' : 'Tu perds'} ~${formatAmount(Math.abs(gain30d), 0, locale)}${pair === 'eurbrl' ? ' R$' : '€'} vs moyenne 30j\n\n`;
-  }
-  
-  text += `💡 C'est le bon moment pour transférer !`;
-  
-  return text;
+  // Use the TRIGGERED_ALERT message function (supports all languages + context-aware)
+  return msg.TRIGGERED_ALERT
+    ? msg.TRIGGERED_ALERT(pair, currentRate, stats, amountExample, locale)
+    : `📢 ALERTA DO ADMIN\n\n${pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'} : ${formatRate(currentRate, locale)}\n\n📊 Taxa atual vs médias históricas`;
 }
 
 // ==========================================
