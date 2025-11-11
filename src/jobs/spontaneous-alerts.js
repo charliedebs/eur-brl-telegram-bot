@@ -169,45 +169,35 @@ async function shouldSendPremiumAlert(pair, currentRate, userId, params) {
 
 async function broadcastPremiumAlert(pair, currentRate, stats, premiumUsers) {
   logger.info(`[PREMIUM-SPONTANEOUS] Broadcasting ${pair} to ${premiumUsers.length} premium users...`);
-  
+
   let successCount = 0;
-  
+
   for (const user of premiumUsers) {
     try {
       const locale = getLocale(user.language);
       const msg = messages[user.language];
-      
+
       const amountExample = pair === 'eurbrl' ? 1000 : 5000;
       const savings = (currentRate - stats.avg30d) * amountExample;
-      
-      const text = `🔔 ALERTE SPONTANÉE PREMIUM
 
-${pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'} : ${formatRate(currentRate, locale)}
+      // Use the PREMIUM_ALERT message function (supports all languages + context-aware)
+      const text = msg.PREMIUM_ALERT
+        ? msg.PREMIUM_ALERT(pair, currentRate, stats.avg30d, stats.variation, amountExample, savings, locale)
+        : `🔔 ALERTA ESPONTÂNEO PREMIUM\n\n${pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'} : ${formatRate(currentRate, locale)}\n\n📊 Variação: ${stats.variation > 0 ? '+' : ''}${formatAmount(stats.variation, 1, locale)}%`;
 
-💡 Bon moment pour transférer !
-
-📊 Analyse :
-• Taux actuel : ${formatRate(currentRate, locale)}
-• Moyenne 30j : ${formatRate(stats.avg30d, locale)}
-• Écart : +${formatAmount(stats.variation, 1, locale)}% 🎯
-
-💰 Sur ${formatAmount(amountExample, 0, locale)}${pair === 'eurbrl' ? '€' : ' R$'}, tu gagnes ~${formatAmount(Math.abs(savings), 0, locale)}${pair === 'eurbrl' ? ' R$' : '€'} vs la moyenne
-
-⏰ Prochaine alerte possible dans 6h (spontanées)`;
-      
       const kb = buildKeyboards(msg, 'premium_alert', {
         pair,
         amount: amountExample
       });
-      
+
       await bot.telegram.sendMessage(user.telegram_id, text, {
         parse_mode: 'HTML',
         ...kb
       });
-      
+
       successCount++;
       await new Promise(resolve => setTimeout(resolve, 50));
-      
+
     } catch (error) {
       logger.error(`[PREMIUM-SPONTANEOUS] Failed for user ${user.telegram_id}:`, { error: error.message });
     }

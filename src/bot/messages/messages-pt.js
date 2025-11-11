@@ -519,8 +519,8 @@ Só recomendamos plataformas que realmente usamos e confiamos. A qualidade do se
       GUIDE_TRANSITION: (route = 'eurbrl') => {
         if (route === 'brleur') {
           return `✅ Você tem (ou vai ter):
-    • Uma conta 🇧🇷 para depositar seus BRL (Pix → USDC)
-    • Uma conta 🇪🇺 para sacar seus EUR (USDC → transferência bancária)
+    • Uma conta 🇧🇷 para: depositar BRL via Pix → comprar USDC
+    • Uma conta 🇪🇺 para: receber USDC → vender por EUR → sacar via transferência bancária
 
     🌐 Você está dando seu primeiro passo on-chain.
     É mais que uma simples transferência:
@@ -533,8 +533,8 @@ Só recomendamos plataformas que realmente usamos e confiamos. A qualidade do se
 
         // Default: eurbrl
         return `✅ Você tem (ou vai ter):
-    • Uma conta 🇪🇺 para depositar seus EUR (transferência bancária → USDC)
-    • Uma conta 🇧🇷 para sacar seus BRL (USDC → Pix)
+    • Uma conta 🇪🇺 para: depositar EUR via transferência bancária → comprar USDC
+    • Uma conta 🇧🇷 para: receber USDC → vender por BRL → sacar via Pix
 
     🌐 Você está dando seu primeiro passo on-chain.
     É mais que uma simples transferência:
@@ -999,21 +999,43 @@ Pague uma vez, use pelo período escolhido, sem renovação automática.
     💰 Em ${formatAmount(amountExample, 0, locale)}${pair === 'eurbrl' ? '€' : ' R$'}, você ganha ~${formatAmount(savings, 0, locale)}${pair === 'eurbrl' ? ' R$' : '€'} vs a média`,
     
       FREE_ALERT: (pair, currentRate, recordDays, amountExample, savings, locale) => `🔔 ALERTA ESPECIAL
-    
+
     ${pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'} : ${formatRate(currentRate, locale)}
-    
+
     📊 É a MELHOR taxa dos últimos ${recordDays} dias!
-    
+
     💰 Em ${formatAmount(amountExample, 0, locale)}${pair === 'eurbrl' ? '€' : ' R$'}, você ganha ~${formatAmount(savings, 0, locale)}${pair === 'eurbrl' ? ' R$' : '€'} vs a média
-    
+
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    
+
     💎 Com Premium (5 R$/mês):
     • Configure seus próprios alertas
     • Multi-pares (EUR→BRL + BRL→EUR)
     • Vários limites personalizados
     • Alertas regulares (não apenas recordes)`,
-    
+
+      PREMIUM_ALERT: (pair, currentRate, avg30d, variation, amountExample, savings, locale) => {
+        const isGoodTime = variation > 0;
+        const direction = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+
+        return `🔔 ALERTA ESPONTÂNEO PREMIUM
+
+${direction} : ${formatRate(currentRate, locale)}
+
+${isGoodTime ? '💡 Bom momento para transferir!' : '⚠️ Taxa abaixo da média - talvez esperar seja melhor'}
+
+📊 Análise:
+• Taxa atual: ${formatRate(currentRate, locale)}
+• Média 30d: ${formatRate(avg30d, locale)}
+• Diferença: ${variation > 0 ? '+' : ''}${formatAmount(variation, 1, locale)}% ${variation > 0 ? '🎯' : '📉'}
+
+💰 Em ${formatAmount(amountExample, 0, locale)}${pair === 'eurbrl' ? '€' : ' R$'}, você ${variation > 0 ? 'ganha' : 'perde'} ~${formatAmount(Math.abs(savings), 0, locale)}${pair === 'eurbrl' ? ' R$' : '€'} vs a média
+
+${isGoodTime ? '✅ A taxa está favorável comparada ao último mês' : '⏳ Considere aguardar uma taxa melhor'}
+
+⏰ Próxima alerta espontânea possível em 6h`;
+      },
+
     ALERTS_LIST: (alerts, locale) => {
       if (alerts.length === 0) {
         return `🔔 <b>Meus alertas</b>
