@@ -234,7 +234,7 @@ async createAlert(userId, alertData) {
       pair: alertData.pair,
       threshold_type: alertData.threshold_type,    // 'absolute' | 'relative'
       threshold_value: alertData.threshold_value,   // 6.30 | 3.0
-      reference_type: alertData.reference_type,     // 'current' | 'avg7d' | 'avg30d' | 'avg90d' | null
+      reference_type: alertData.reference_type,     // 'current' | 'avg30d' | 'avg90d' | 'avg365d' | null
       preset: alertData.preset || null,
       cooldown_minutes: alertData.cooldown_minutes || 60,
       active: true

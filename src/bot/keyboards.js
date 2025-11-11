@@ -522,9 +522,9 @@ case 'what_exchange':
           } else {
             const refShort = {
               current: 'actuel',
-              avg7d: '7j',
               avg30d: '30j',
-              avg90d: '90j'
+              avg90d: '90j',
+              avg365d: '1an'
             };
             criteria = `+${alert.threshold_value}% vs ${refShort[alert.reference_type] || alert.reference_type}`;
           }

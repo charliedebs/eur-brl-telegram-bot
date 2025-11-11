@@ -54,10 +54,23 @@ export async function checkProgrammedAlerts() {
       } else if (alert.threshold_type === 'relative') {
         // Seuil relatif : calculer selon référence
         if (alert.reference_type === 'current') {
-          // ❌ This should never happen - bot/index.js converts these to absolute
-          // If we find one, it's a data corruption issue - skip it
-          logger.error(`[CRON-PROGRAMMED] ❌ Invalid alert ${alert.id}: reference_type='current' should be absolute`);
-          logger.error(`[CRON-PROGRAMMED] Skipping alert. User: ${alert.users.telegram_id}, Pair: ${alert.pair}`);
+          // Note: bot/index.js normally converts reference_type='current' to absolute alerts
+          // If we encounter one here, it may be from an older version or direct DB insert
+          // Convert it to absolute by using current rate as threshold
+          logger.warn(`[CRON-PROGRAMMED] ⚠️ Converting relative alert with reference_type='current' to absolute`);
+          logger.warn(`[CRON-PROGRAMMED] Alert ${alert.id}, User: ${alert.users.telegram_id}, Pair: ${alert.pair}`);
+          // Convert to absolute: threshold = current_rate * (1 + percentage/100)
+          threshold = currentRate * (1 + alert.threshold_value / 100);
+          refValue = currentRate;
+          // Continue processing as absolute alert
+          if (currentRate >= threshold) {
+            logger.info(`[CRON-PROGRAMMED] 🎯 Alert triggered for user ${alert.users.telegram_id}`);
+            logger.info(`  Current: ${currentRate.toFixed(4)} >= Threshold: ${threshold.toFixed(4)}`);
+            await sendProgrammedAlert(alert, currentRate, threshold, refValue);
+            await db.updateAlert(alert.id, {
+              last_triggered_at: new Date().toISOString()
+            });
+          }
           continue;
         } else if (alert.reference_type === 'avg30d') {
           refValue = await db.getAverage30Days(alert.pair);

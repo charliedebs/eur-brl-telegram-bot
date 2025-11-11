@@ -1144,9 +1144,10 @@ On ${formatAmount(amountExample, 0, locale)}${pair === 'eurbrl' ? '€' : ' R$'}
         };
 
         const refLabels = {
-          avg365d: '1-year avg',
+          current: 'Current rate',
           avg30d: '30-day avg',
-          avg90d: '90-day avg'
+          avg90d: '90-day avg',
+          avg365d: '1-year avg'
         };
 
         const pairText = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
@@ -1290,9 +1291,9 @@ You ${gain30d > 0 ? 'gain' : 'lose'} ~${formatAmount(Math.abs(gain30d), 0, local
         } else {
           const refLabels = {
             current: 'current rate',
-            avg365d: '1y avg',
             avg30d: '30d avg',
-            avg90d: '90d avg'
+            avg90d: '90d avg',
+            avg365d: '1y avg'
           };
           const refLabel = refLabels[alert.reference_type] || alert.reference_type;
           threshold = `+${formatAmount(alert.threshold_value, 1, locale)}% vs ${refLabel}`;
@@ -1401,9 +1402,9 @@ You ${gain30d > 0 ? 'gain' : 'lose'} ~${formatAmount(Math.abs(gain30d), 0, local
       
       const refLabels = {
         current: 'Current rate',
-        avg365d: '1-year avg',
         avg30d: '30-day avg',
-        avg90d: '90-day avg'
+        avg90d: '90-day avg',
+        avg365d: '1-year avg'
       };
       
       let text = `✅ ALERT CREATED
@@ -1489,9 +1490,9 @@ You ${gain30d > 0 ? 'gain' : 'lose'} ~${formatAmount(Math.abs(gain30d), 0, local
         
         const refLabels = {
           current: 'Current rate',
-          avg365d: '1-year avg',
           avg30d: '30-day avg',
-          avg90d: '90-day avg'
+          avg90d: '90-day avg',
+          avg365d: '1-year avg'
         };
         
         const pairText = alert.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';

@@ -1148,9 +1148,10 @@ Sur ${formatAmount(amountExample, 0, locale)}${pair === 'eurbrl' ? '€' : ' R$'
     };
 
     const refLabels = {
-      avg365d: 'Moyenne 1 an',
+      current: 'Taux actuel',
       avg30d: 'Moyenne 30j',
-      avg90d: 'Moyenne 90j'
+      avg90d: 'Moyenne 90j',
+      avg365d: 'Moyenne 1 an'
     };
 
     const pairText = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
@@ -1296,9 +1297,9 @@ Crée ta première alerte pour être notifié automatiquement !`;
     } else {
       const refLabels = {
         current: 'taux actuel',
-        avg365d: 'moy. 1 an',
         avg30d: 'moy. 30j',
-        avg90d: 'moy. 90j'
+        avg90d: 'moy. 90j',
+        avg365d: 'moy. 1 an'
       };
       const refLabel = refLabels[alert.reference_type] || alert.reference_type;
       threshold = `+${formatAmount(alert.threshold_value, 1, locale)}% vs ${refLabel}`;
@@ -1393,9 +1394,9 @@ Crée ta première alerte pour être notifié automatiquement !`;
     
     const refLabels = {
       current: 'Taux actuel',
-      avg365d: 'Moyenne 1 an',
       avg30d: 'Moyenne 30 jours',
-      avg90d: 'Moyenne 90 jours'
+      avg90d: 'Moyenne 90 jours',
+      avg365d: 'Moyenne 1 an'
     };
     
     let text = `✅ ALERTE CRÉÉE
@@ -1481,9 +1482,9 @@ Crée ta première alerte pour être notifié automatiquement !`;
       
       const refLabels = {
         current: 'Taux actuel',
-        avg365d: 'Moyenne 1 an',
         avg30d: 'Moyenne 30 jours',
-        avg90d: 'Moyenne 90 jours'
+        avg90d: 'Moyenne 90 jours',
+        avg365d: 'Moyenne 1 an'
       };
       
       const pairText = alert.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';

@@ -1143,6 +1143,7 @@ Em ${formatAmount(amountExample, 0, locale)}${pair === 'eurbrl' ? '€' : ' R$'}
         };
 
         const refLabels = {
+          current: 'Taxa atual',
           avg30d: 'Média 30 dias',
           avg90d: 'Média 90 dias',
           avg365d: 'Média 1 ano'
