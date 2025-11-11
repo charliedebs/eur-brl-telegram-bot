@@ -1144,7 +1144,7 @@ On ${formatAmount(amountExample, 0, locale)}${pair === 'eurbrl' ? '€' : ' R$'}
         };
 
         const refLabels = {
-          avg7d: '7-day avg',
+          avg365d: '1-year avg',
           avg30d: '30-day avg',
           avg90d: '90-day avg'
         };
@@ -1290,7 +1290,7 @@ You ${gain30d > 0 ? 'gain' : 'lose'} ~${formatAmount(Math.abs(gain30d), 0, local
         } else {
           const refLabels = {
             current: 'current rate',
-            avg7d: '7d avg',
+            avg365d: '1y avg',
             avg30d: '30d avg',
             avg90d: '90d avg'
           };
@@ -1357,25 +1357,25 @@ You ${gain30d > 0 ? 'gain' : 'lose'} ~${formatAmount(Math.abs(gain30d), 0, local
     
     How do you want to define your threshold?`,
     
-    ALERT_CHOOSE_REFERENCE: (pair, currentRate, avg7d, avg30d, avg90d, locale) => `📊 RELATIVE THRESHOLD
-    
+    ALERT_CHOOSE_REFERENCE: (pair, currentRate, avg30d, avg90d, avg365d, locale) => `📊 RELATIVE THRESHOLD
+
     Current rate: ${formatRate(currentRate, locale)}
-    
+
     +X% compared to what?
-    
+
     💡 <i>The reference will be recalculated at each check (every 2h)</i>`,
-    
+
     ALERT_CHOOSE_PERCENT: (pair, refType, refValue, locale) => {
       const refLabels = {
         current: `Current rate (${formatRate(refValue, locale)})`,
-        avg7d: `7-day avg (${formatRate(refValue, locale)})`,
         avg30d: `30-day avg (${formatRate(refValue, locale)})`,
-        avg90d: `90-day avg (${formatRate(refValue, locale)})`
+        avg90d: `90-day avg (${formatRate(refValue, locale)})`,
+        avg365d: `1-year avg (${formatRate(refValue, locale)})`
       };
-      
+
       return `📊 RELATIVE THRESHOLD
     Reference: ${refLabels[refType]}
-    
+
     Enter the percentage increase:`;
     },
     
@@ -1401,7 +1401,7 @@ You ${gain30d > 0 ? 'gain' : 'lose'} ~${formatAmount(Math.abs(gain30d), 0, local
       
       const refLabels = {
         current: 'Current rate',
-        avg7d: '7-day avg',
+        avg365d: '1-year avg',
         avg30d: '30-day avg',
         avg90d: '90-day avg'
       };
@@ -1489,7 +1489,7 @@ You ${gain30d > 0 ? 'gain' : 'lose'} ~${formatAmount(Math.abs(gain30d), 0, local
         
         const refLabels = {
           current: 'Current rate',
-          avg7d: '7-day avg',
+          avg365d: '1-year avg',
           avg30d: '30-day avg',
           avg90d: '90-day avg'
         };
@@ -1719,9 +1719,9 @@ You ${gain30d > 0 ? 'gain' : 'lose'} ~${formatAmount(Math.abs(gain30d), 0, local
         absoluteAlert:'🎯 Absolute (fixed rate)',
     
         refCurrent: (rate, locale) => `💵 Current rate (${formatRate(rate, locale)})`,
-        refAvg7d:   (rate, locale) => `📈 7d average (${formatRate(rate, locale)})`,
         refAvg30d:  (rate, locale) => `📊 30d average (${formatRate(rate, locale)}) ⭐`,
-        refAvg90d:  (rate, locale) => `📉 90d average (${formatRate(rate, locale)})`,
+        refAvg90d:  (rate, locale) => `📈 90d average (${formatRate(rate, locale)})`,
+        refAvg365d: (rate, locale) => `📅 1-year average (${formatRate(rate, locale)})`,
     
         backToPricing: '⬅️ Back to pricing',
         chooseCooldown15: '⚡ 15 minutes',

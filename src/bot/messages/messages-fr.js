@@ -1148,7 +1148,7 @@ Sur ${formatAmount(amountExample, 0, locale)}${pair === 'eurbrl' ? '€' : ' R$'
     };
 
     const refLabels = {
-      avg7d: 'Moyenne 7j',
+      avg365d: 'Moyenne 1 an',
       avg30d: 'Moyenne 30j',
       avg90d: 'Moyenne 90j'
     };
@@ -1296,7 +1296,7 @@ Crée ta première alerte pour être notifié automatiquement !`;
     } else {
       const refLabels = {
         current: 'taux actuel',
-        avg7d: 'moy. 7j',
+        avg365d: 'moy. 1 an',
         avg30d: 'moy. 30j',
         avg90d: 'moy. 90j'
       };
@@ -1346,26 +1346,26 @@ Crée ta première alerte pour être notifié automatiquement !`;
   Comment veux-tu définir ton seuil ?`,
   
   // Étape 2a : Choix référence (si relatif)
-  ALERT_CHOOSE_REFERENCE: (pair, currentRate, avg7d, avg30d, avg90d, locale) => `📊 SEUIL RELATIF
-  
+  ALERT_CHOOSE_REFERENCE: (pair, currentRate, avg30d, avg90d, avg365d, locale) => `📊 SEUIL RELATIF
+
   Taux actuel : ${formatRate(currentRate, locale)}
-  
+
   +X% par rapport à quoi ?
-  
+
   💡 <i>La référence sera recalculée à chaque vérification (toutes les 2h)</i>`,
-  
+
   // Étape 2b : Pourcentage (si relatif)
   ALERT_CHOOSE_PERCENT: (pair, refType, refValue, locale) => {
     const refLabels = {
       current: `Taux actuel (${formatRate(refValue, locale)})`,
-      avg7d: `Moyenne 7j (${formatRate(refValue, locale)})`,
       avg30d: `Moyenne 30j (${formatRate(refValue, locale)})`,
-      avg90d: `Moyenne 90j (${formatRate(refValue, locale)})`
+      avg90d: `Moyenne 90j (${formatRate(refValue, locale)})`,
+      avg365d: `Moyenne 1 an (${formatRate(refValue, locale)})`
     };
-    
+
     return `📊 SEUIL RELATIF
   Référence : ${refLabels[refType]}
-  
+
   Entre le pourcentage d'augmentation :`;
   },
   
@@ -1393,7 +1393,7 @@ Crée ta première alerte pour être notifié automatiquement !`;
     
     const refLabels = {
       current: 'Taux actuel',
-      avg7d: 'Moyenne 7 jours',
+      avg365d: 'Moyenne 1 an',
       avg30d: 'Moyenne 30 jours',
       avg90d: 'Moyenne 90 jours'
     };
@@ -1481,7 +1481,7 @@ Crée ta première alerte pour être notifié automatiquement !`;
       
       const refLabels = {
         current: 'Taux actuel',
-        avg7d: 'Moyenne 7 jours',
+        avg365d: 'Moyenne 1 an',
         avg30d: 'Moyenne 30 jours',
         avg90d: 'Moyenne 90 jours'
       };
@@ -1732,9 +1732,9 @@ btn: {
   absoluteAlert:'🎯 Absolu (valeur fixe)',
 
   refCurrent: (rate, locale) => `💵 Taux actuel (${formatRate(rate, locale)})`,
-refAvg7d:   (rate, locale) => `📈 Moyenne 7j (${formatRate(rate, locale)})`,
-refAvg30d:  (rate, locale) => `📊 Moyenne 30j (${formatRate(rate, locale)}) ⭐`,
-refAvg90d:  (rate, locale) => `📉 Moyenne 90j (${formatRate(rate, locale)})`,
+  refAvg30d:  (rate, locale) => `📊 Moyenne 30j (${formatRate(rate, locale)}) ⭐`,
+  refAvg90d:  (rate, locale) => `📈 Moyenne 90j (${formatRate(rate, locale)})`,
+  refAvg365d: (rate, locale) => `📅 Moyenne 1 an (${formatRate(rate, locale)})`,
 
   backToPricing: '⬅️ Retour aux tarifs',
   chooseCooldown15: '⚡ 15 minutes',

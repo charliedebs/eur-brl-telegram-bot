@@ -1038,17 +1038,17 @@ ${isGoodTime ? '✅ A taxa está favorável comparada ao último mês' : '⏳ Co
 
       PREMIUM_ALERT_ENHANCED: (pair, currentRate, stats, amountExample, locale) => {
         const direction = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
-        const {avg7d, avg30d, avg90d, variation7d, variation30d, variation90d} = stats;
+        const {avg30d, avg90d, avg365d, variation30d, variation90d, variation365d} = stats;
 
         // If key data is missing, fall back to simple version
-        if (variation7d === null || variation30d === null) {
+        if (variation30d === null || variation90d === null) {
           const savings = avg30d ? (currentRate - avg30d) * amountExample : 0;
           return this.PREMIUM_ALERT ? this.PREMIUM_ALERT(pair, currentRate, avg30d, variation30d || 0, amountExample, savings, locale) : '';
         }
 
-        const shortTerm = variation7d;
-        const mediumTerm = variation30d;
-        const longTerm = variation90d;
+        const shortTerm = variation30d;
+        const mediumTerm = variation90d;
+        const longTerm = variation365d;
 
         // Determine overall observation based on data (factual only)
         let observation, emoji, analysis;
@@ -1062,7 +1062,7 @@ ${isGoodTime ? '✅ A taxa está favorável comparada ao último mês' : '⏳ Co
           } else if (shortTerm > 0) {
             observation = '📊 Taxa bem acima das médias históricas';
             emoji = '✅';
-            analysis = 'Taxa acima das médias de 7, 30 e 90 dias.';
+            analysis = 'Taxa acima das médias de 30, 90 e 365 dias.';
           } else {
             observation = '⚠️ Taxa acima das médias, mas perdendo força';
             emoji = '➡️';
@@ -1101,7 +1101,7 @@ ${isGoodTime ? '✅ A taxa está favorável comparada ao último mês' : '⏳ Co
           } else {
             observation = '📊 Taxa abaixo das médias históricas';
             emoji = '⏳';
-            analysis = 'Taxa está abaixo das médias de 7, 30 e 90 dias.';
+            analysis = 'Taxa está abaixo das médias de 30, 90 e 365 dias.';
           }
         }
 
@@ -1115,17 +1115,17 @@ ${emoji} ${observation}
 
 📊 <b>Análise Multi-período:</b>
 
-<b>Curto prazo (7 dias)</b>
-• Média: ${avg7d ? formatRate(avg7d, locale) : 'N/D'}
-• Variação: ${variation7d !== null ? (variation7d > 0 ? '+' : '') + formatAmount(variation7d, 1, locale) + '%' : 'N/D'} ${variation7d > 1 ? '📈' : variation7d < -1 ? '📉' : '➡️'}
+<b>Curto prazo (30 dias)</b>
+• Média: ${avg30d ? formatRate(avg30d, locale) : 'N/D'}
+• Variação: ${variation30d !== null ? (variation30d > 0 ? '+' : '') + formatAmount(variation30d, 1, locale) + '%' : 'N/D'} ${variation30d > 1 ? '📈' : variation30d < -1 ? '📉' : '➡️'}
 
-<b>Médio prazo (30 dias)</b>
-• Média: ${formatRate(avg30d, locale)}
-• Variação: ${variation30d > 0 ? '+' : ''}${formatAmount(variation30d, 1, locale)}% ${variation30d > 1 ? '📈' : variation30d < -1 ? '📉' : '➡️'}
+<b>Médio prazo (90 dias)</b>
+• Média: ${formatRate(avg90d, locale)}
+• Variação: ${variation90d > 0 ? '+' : ''}${formatAmount(variation90d, 1, locale)}% ${variation90d > 1 ? '📈' : variation90d < -1 ? '📉' : '➡️'}
 
-<b>Longo prazo (90 dias)</b>
-• Média: ${avg90d ? formatRate(avg90d, locale) : 'N/D'}
-• Variação: ${variation90d !== null ? (variation90d > 0 ? '+' : '') + formatAmount(variation90d, 1, locale) + '%' : 'N/D'} ${variation90d > 1 ? '📈' : variation90d < -1 ? '📉' : '➡️'}
+<b>Longo prazo (1 ano)</b>
+• Média: ${avg365d ? formatRate(avg365d, locale) : 'N/D'}
+• Variação: ${variation365d !== null ? (variation365d > 0 ? '+' : '') + formatAmount(variation365d, 1, locale) + '%' : 'N/D'} ${variation365d > 1 ? '📈' : variation365d < -1 ? '📉' : '➡️'}
 
 💡 <b>O que isso significa:</b>
 ${analysis}
@@ -1143,9 +1143,9 @@ Em ${formatAmount(amountExample, 0, locale)}${pair === 'eurbrl' ? '€' : ' R$'}
         };
 
         const refLabels = {
-          avg7d: 'Média 7 dias',
           avg30d: 'Média 30 dias',
-          avg90d: 'Média 90 dias'
+          avg90d: 'Média 90 dias',
+          avg365d: 'Média 1 ano'
         };
 
         const pairText = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
@@ -1289,9 +1289,9 @@ Você ${gain30d > 0 ? 'ganha' : 'perde'} ~${formatAmount(Math.abs(gain30d), 0, l
         } else {
           const refLabels = {
             current: 'taxa atual',
-            avg7d: 'média 7d',
             avg30d: 'média 30d',
-            avg90d: 'média 90d'
+            avg90d: 'média 90d',
+            avg365d: 'média 1 ano'
           };
           const refLabel = refLabels[alert.reference_type] || alert.reference_type;
           threshold = `+${formatAmount(alert.threshold_value, 1, locale)}% vs ${refLabel}`;
@@ -1356,25 +1356,25 @@ Você ${gain30d > 0 ? 'ganha' : 'perde'} ~${formatAmount(Math.abs(gain30d), 0, l
     
     Como você quer definir seu limite?`,
     
-    ALERT_CHOOSE_REFERENCE: (pair, currentRate, avg7d, avg30d, avg90d, locale) => `📊 LIMITE RELATIVO
-    
+    ALERT_CHOOSE_REFERENCE: (pair, currentRate, avg30d, avg90d, avg365d, locale) => `📊 LIMITE RELATIVO
+
     Taxa atual: ${formatRate(currentRate, locale)}
-    
+
     +X% em relação a quê?
-    
+
     💡 <i>A referência será recalculada a cada verificação (a cada 2h)</i>`,
-    
+
     ALERT_CHOOSE_PERCENT: (pair, refType, refValue, locale) => {
       const refLabels = {
         current: `Taxa atual (${formatRate(refValue, locale)})`,
-        avg7d: `Média 7 dias (${formatRate(refValue, locale)})`,
         avg30d: `Média 30 dias (${formatRate(refValue, locale)})`,
-        avg90d: `Média 90 dias (${formatRate(refValue, locale)})`
+        avg90d: `Média 90 dias (${formatRate(refValue, locale)})`,
+        avg365d: `Média 1 ano (${formatRate(refValue, locale)})`
       };
-      
+
       return `📊 LIMITE RELATIVO
     Referência: ${refLabels[refType]}
-    
+
     Digite a porcentagem de aumento:`;
     },
     
@@ -1400,9 +1400,9 @@ Você ${gain30d > 0 ? 'ganha' : 'perde'} ~${formatAmount(Math.abs(gain30d), 0, l
       
       const refLabels = {
         current: 'Taxa atual',
-        avg7d: 'Média 7 dias',
         avg30d: 'Média 30 dias',
-        avg90d: 'Média 90 dias'
+        avg90d: 'Média 90 dias',
+        avg365d: 'Média 1 ano'
       };
       
       let text = `✅ ALERTA CRIADO
@@ -1489,9 +1489,9 @@ Você ${gain30d > 0 ? 'ganha' : 'perde'} ~${formatAmount(Math.abs(gain30d), 0, l
         
         const refLabels = {
           current: 'Taxa atual',
-          avg7d: 'Média 7 dias',
           avg30d: 'Média 30 dias',
-          avg90d: 'Média 90 dias'
+          avg90d: 'Média 90 dias',
+          avg365d: 'Média 1 ano'
         };
         
         const pairText = alert.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
@@ -1719,9 +1719,9 @@ Você ${gain30d > 0 ? 'ganha' : 'perde'} ~${formatAmount(Math.abs(gain30d), 0, l
         absoluteAlert:'🎯 Absoluta (taxa fixa)',
     
         refCurrent: (rate, locale) => `💵 Taxa atual (${formatRate(rate, locale)})`,
-    refAvg7d:   (rate, locale) => `📈 Média 7d (${formatRate(rate, locale)})`,
-    refAvg30d:  (rate, locale) => `📊 Média 30d (${formatRate(rate, locale)}) ⭐`,
-    refAvg90d:  (rate, locale) => `📉 Média 90d (${formatRate(rate, locale)})`,
+        refAvg30d:  (rate, locale) => `📊 Média 30d (${formatRate(rate, locale)}) ⭐`,
+        refAvg90d:  (rate, locale) => `📈 Média 90d (${formatRate(rate, locale)})`,
+        refAvg365d: (rate, locale) => `📅 Média 1 ano (${formatRate(rate, locale)})`,
     
         backToPricing: '⬅️ Voltar aos preços',
         chooseCooldown15: '⚡ 15 minutos',

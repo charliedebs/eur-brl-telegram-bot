@@ -139,43 +139,43 @@ async function broadcastFreeAlert(pair, currentRate, stats) {
 
 async function shouldSendPremiumAlert(pair, currentRate, userId, params) {
   try {
-    // 1. Fetch multiple timeframes for comprehensive analysis
-    const [history7d, history30d, history90d] = await Promise.all([
-      db.getRateHistory(pair, 7),
+    // 1. Fetch multiple timeframes for comprehensive analysis (30d, 90d, 365d)
+    const [history30d, history90d, history365d] = await Promise.all([
       db.getRateHistory(pair, 30),
-      db.getRateHistory(pair, 90)
+      db.getRateHistory(pair, 90),
+      db.getRateHistory(pair, 365)
     ]);
 
     if (history30d.length < 20) return { send: false };
 
     // Calculate averages for each timeframe
-    const calc7d = history7d.map(h => parseFloat(h.rate));
     const calc30d = history30d.map(h => parseFloat(h.rate));
     const calc90d = history90d.map(h => parseFloat(h.rate));
+    const calc365d = history365d.map(h => parseFloat(h.rate));
 
-    const avg7d = calc7d.length > 0 ? calc7d.reduce((a, b) => a + b, 0) / calc7d.length : null;
     const avg30d = calc30d.reduce((a, b) => a + b, 0) / calc30d.length;
     const avg90d = calc90d.length > 0 ? calc90d.reduce((a, b) => a + b, 0) / calc90d.length : null;
+    const avg365d = calc365d.length > 0 ? calc365d.reduce((a, b) => a + b, 0) / calc365d.length : null;
 
     // Calculate variations vs each timeframe
-    const variation7d = avg7d ? ((currentRate - avg7d) / avg7d) * 100 : null;
     const variation30d = ((currentRate - avg30d) / avg30d) * 100;
     const variation90d = avg90d ? ((currentRate - avg90d) / avg90d) * 100 : null;
+    const variation365d = avg365d ? ((currentRate - avg365d) / avg365d) * 100 : null;
 
     // Check primary threshold (30d)
     if (variation30d < params.premiumThreshold) {
       return { send: false };
     }
 
-    logger.info(`[PREMIUM-SPONTANEOUS] ✅ ${pair} for user ${userId}: 7d:${variation7d?.toFixed(1)}% 30d:${variation30d.toFixed(1)}% 90d:${variation90d?.toFixed(1)}%`);
+    logger.info(`[PREMIUM-SPONTANEOUS] ✅ ${pair} for user ${userId}: 30d:${variation30d.toFixed(1)}% 90d:${variation90d?.toFixed(1)}% 365d:${variation365d?.toFixed(1)}%`);
     return {
       send: true,
-      avg7d,
       avg30d,
       avg90d,
-      variation7d,
+      avg365d,
       variation30d,
-      variation90d
+      variation90d,
+      variation365d
     };
 
   } catch (error) {

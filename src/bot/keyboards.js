@@ -438,16 +438,12 @@ case 'what_exchange':
       }
       
       case 'alert_choose_reference': {
-        const { pair, currentRate, avg7d, avg30d, avg90d, locale } = options;
+        const { pair, currentRate, avg30d, avg90d, avg365d, locale } = options;
 
         return Markup.inlineKeyboard([
           [Markup.button.callback(
             msg.btn.refCurrent(currentRate, locale),
             `alert:ref:current:${pair}`
-          )],
-          [Markup.button.callback(
-            msg.btn.refAvg7d(avg7d, locale),
-            `alert:ref:avg7d:${pair}`
           )],
           [Markup.button.callback(
             msg.btn.refAvg30d(avg30d, locale),
@@ -456,6 +452,10 @@ case 'what_exchange':
           [Markup.button.callback(
             msg.btn.refAvg90d(avg90d, locale),
             `alert:ref:avg90d:${pair}`
+          )],
+          [Markup.button.callback(
+            msg.btn.refAvg365d(avg365d, locale),
+            `alert:ref:avg365d:${pair}`
           )],
           [Markup.button.callback(
             msg.btn.back,

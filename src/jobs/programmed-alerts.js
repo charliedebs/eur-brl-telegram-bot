@@ -59,12 +59,12 @@ export async function checkProgrammedAlerts() {
           logger.error(`[CRON-PROGRAMMED] ❌ Invalid alert ${alert.id}: reference_type='current' should be absolute`);
           logger.error(`[CRON-PROGRAMMED] Skipping alert. User: ${alert.users.telegram_id}, Pair: ${alert.pair}`);
           continue;
-        } else if (alert.reference_type === 'avg7d') {
-          refValue = await db.getAverage(alert.pair, 7);
         } else if (alert.reference_type === 'avg30d') {
           refValue = await db.getAverage30Days(alert.pair);
         } else if (alert.reference_type === 'avg90d') {
           refValue = await db.getAverage(alert.pair, 90);
+        } else if (alert.reference_type === 'avg365d') {
+          refValue = await db.getAverage(alert.pair, 365);
         }
 
         if (!refValue) {
