@@ -1039,17 +1039,17 @@ ${isGoodTime ? '✅ The rate is favorable compared to the last month' : '⏳ Con
 
       PREMIUM_ALERT_ENHANCED: (pair, currentRate, stats, amountExample, locale) => {
         const direction = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
-        const {avg7d, avg30d, avg90d, variation7d, variation30d, variation90d} = stats;
+        const {avg30d, avg90d, avg365d, variation30d, variation90d, variation365d} = stats;
 
         // If key data is missing, fall back to simple version
-        if (variation7d === null || variation30d === null) {
+        if (variation30d === null || variation90d === null) {
           const savings = avg30d ? (currentRate - avg30d) * amountExample : 0;
           return this.PREMIUM_ALERT ? this.PREMIUM_ALERT(pair, currentRate, avg30d, variation30d || 0, amountExample, savings, locale) : '';
         }
 
-        const shortTerm = variation7d;
-        const mediumTerm = variation30d;
-        const longTerm = variation90d;
+        const shortTerm = variation30d;
+        const mediumTerm = variation90d;
+        const longTerm = variation365d;
 
         // Determine overall observation based on data (factual only)
         let observation, emoji, analysis;
@@ -1063,7 +1063,7 @@ ${isGoodTime ? '✅ The rate is favorable compared to the last month' : '⏳ Con
           } else if (shortTerm > 0) {
             observation = '📊 Rate well above historical averages';
             emoji = '✅';
-            analysis = 'Rate is above 7, 30, and 90-day averages.';
+            analysis = 'Rate is above 30, 90, and 365-day averages.';
           } else {
             observation = '⚠️ Rate above averages but losing strength';
             emoji = '➡️';
@@ -1102,7 +1102,7 @@ ${isGoodTime ? '✅ The rate is favorable compared to the last month' : '⏳ Con
           } else {
             observation = '📊 Rate below historical averages';
             emoji = '⏳';
-            analysis = 'Rate is below 7, 30, and 90-day averages.';
+            analysis = 'Rate is below 30, 90, and 365-day averages.';
           }
         }
 
@@ -1116,17 +1116,17 @@ ${emoji} ${observation}
 
 📊 <b>Multi-period Analysis:</b>
 
-<b>Short term (7 days)</b>
-• Average: ${avg7d ? formatRate(avg7d, locale) : 'N/A'}
-• Change: ${variation7d !== null ? (variation7d > 0 ? '+' : '') + formatAmount(variation7d, 1, locale) + '%' : 'N/A'} ${variation7d > 1 ? '📈' : variation7d < -1 ? '📉' : '➡️'}
+<b>Short term (30 days)</b>
+• Average: ${avg30d ? formatRate(avg30d, locale) : 'N/A'}
+• Change: ${variation30d !== null ? (variation30d > 0 ? '+' : '') + formatAmount(variation30d, 1, locale) + '%' : 'N/A'} ${variation30d > 1 ? '📈' : variation30d < -1 ? '📉' : '➡️'}
 
-<b>Medium term (30 days)</b>
-• Average: ${formatRate(avg30d, locale)}
-• Change: ${variation30d > 0 ? '+' : ''}${formatAmount(variation30d, 1, locale)}% ${variation30d > 1 ? '📈' : variation30d < -1 ? '📉' : '➡️'}
+<b>Medium term (90 days)</b>
+• Average: ${formatRate(avg90d, locale)}
+• Change: ${variation90d > 0 ? '+' : ''}${formatAmount(variation90d, 1, locale)}% ${variation90d > 1 ? '📈' : variation90d < -1 ? '📉' : '➡️'}
 
-<b>Long term (90 days)</b>
-• Average: ${avg90d ? formatRate(avg90d, locale) : 'N/A'}
-• Change: ${variation90d !== null ? (variation90d > 0 ? '+' : '') + formatAmount(variation90d, 1, locale) + '%' : 'N/A'} ${variation90d > 1 ? '📈' : variation90d < -1 ? '📉' : '➡️'}
+<b>Long term (1 year)</b>
+• Average: ${avg365d ? formatRate(avg365d, locale) : 'N/A'}
+• Change: ${variation365d !== null ? (variation365d > 0 ? '+' : '') + formatAmount(variation365d, 1, locale) + '%' : 'N/A'} ${variation365d > 1 ? '📈' : variation365d < -1 ? '📉' : '➡️'}
 
 💡 <b>What this means:</b>
 ${analysis}
