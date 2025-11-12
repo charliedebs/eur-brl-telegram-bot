@@ -233,10 +233,15 @@ case 'what_exchange':
     
     // Étapes du guide
     case 'step_1_1':
+      // For BRL→EUR, start with BR exchange (Binance BR)
+      // For EUR→BRL, start with EU exchange (Kraken)
       return Markup.inlineKeyboard([
         [Markup.button.callback(msg.btn.step1Done(route), `guide:step:1.2:${route}:${amount}`)],
-        [Markup.button.url(msg.btn.openKraken, LINKS.KRAKEN)],
+        route === 'brleur'
+          ? [Markup.button.url(msg.btn.openBinanceBR, LINKS.BINANCE_BR)]
+          : [Markup.button.url(msg.btn.openKraken, LINKS.KRAKEN)],
         [Markup.button.callback(msg.btn.skipToStep2, `guide:step:2.1:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.navigation, `action:guide_navigation:${route}:${amount}`)],
         [Markup.button.callback(msg.btn.back, `action:start_guide:${route}:${amount}`)],
       ]);
     
@@ -244,6 +249,7 @@ case 'what_exchange':
         return Markup.inlineKeyboard([
           [Markup.button.callback(msg.btn.step1_2Done(route), `guide:step:1.3:${route}:${amount}`)],
           [Markup.button.callback(msg.btn.skipToStep2, `guide:step:2.1:${route}:${amount}`)],
+          [Markup.button.callback(msg.btn.navigation, `action:guide_navigation:${route}:${amount}`)],
           [Markup.button.callback(msg.btn.back, `guide:step:1.1:${route}:${amount}`)],
         ]);
     
@@ -252,68 +258,82 @@ case 'what_exchange':
             [Markup.button.callback(msg.btn.step1_3Done, `guide:step:1.4:${route}:${amount}`)],
             [Markup.button.callback(msg.btn.marketVsLimit, 'action:market_vs_limit')],
             [Markup.button.callback(msg.btn.skipToStep2, `guide:step:2.1:${route}:${amount}`)],
+            [Markup.button.callback(msg.btn.navigation, `action:guide_navigation:${route}:${amount}`)],
             [Markup.button.callback(msg.btn.back, `guide:step:1.2:${route}:${amount}`)],
           ]);
     
     case 'step_1_4':
       return Markup.inlineKeyboard([
         [Markup.button.callback(msg.btn.nextStep2, `guide:step:2.1:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.navigation, `action:guide_navigation:${route}:${amount}`)],
         [Markup.button.callback(msg.btn.back, `guide:step:1.3:${route}:${amount}`)],
       ]);
-    
+
       case 'step_2_1':
+        // For BRL→EUR, destination is EU (Kraken)
+        // For EUR→BRL, destination is BR (Binance BR)
         return Markup.inlineKeyboard([
           [Markup.button.callback(msg.btn.step2Done, `guide:step:2.2:${route}:${amount}`)],
-          [Markup.button.url(msg.btn.openBinanceBR, LINKS.BINANCE_BR)],
+          route === 'brleur'
+            ? [Markup.button.url(msg.btn.openKraken, LINKS.KRAKEN)]
+            : [Markup.button.url(msg.btn.openBinanceBR, LINKS.BINANCE_BR)],
           [Markup.button.callback(msg.btn.skipToStep3, `guide:step:3.1:${route}:${amount}`)],
+          [Markup.button.callback(msg.btn.navigation, `action:guide_navigation:${route}:${amount}`)],
           [Markup.button.callback(msg.btn.back, `guide:step:1.4:${route}:${amount}`)],
         ]);
-    
+
         case 'step_2_2':
           return Markup.inlineKeyboard([
             [Markup.button.callback(msg.btn.step2_2Done, `guide:step:2.3:${route}:${amount}`)],
             [Markup.button.callback(msg.btn.skipToStep3, `guide:step:3.1:${route}:${amount}`)],
+            [Markup.button.callback(msg.btn.navigation, `action:guide_navigation:${route}:${amount}`)],
             [Markup.button.callback(msg.btn.back, `guide:step:2.1:${route}:${amount}`)],
           ]);
-    
+
           case 'step_2_3':
             return Markup.inlineKeyboard([
               [Markup.button.callback(msg.btn.step2_3Done, `guide:step:2.4:${route}:${amount}`)],
               [Markup.button.callback(msg.btn.skipToStep3, `guide:step:3.1:${route}:${amount}`)],
+              [Markup.button.callback(msg.btn.navigation, `action:guide_navigation:${route}:${amount}`)],
               [Markup.button.callback(msg.btn.back, `guide:step:2.2:${route}:${amount}`)],
             ]);
-    
+
     case 'step_2_4':
       return Markup.inlineKeyboard([
         [Markup.button.callback(msg.btn.step3Start(route), `guide:step:3.1:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.navigation, `action:guide_navigation:${route}:${amount}`)],
         [Markup.button.callback(msg.btn.back, `guide:step:2.3:${route}:${amount}`)],
       ]);
-    
+
     case 'step_3_1':
       return Markup.inlineKeyboard([
         [Markup.button.callback(msg.btn.step3_1Done, `guide:step:3.2:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.navigation, `action:guide_navigation:${route}:${amount}`)],
         [Markup.button.callback(msg.btn.back, `guide:step:2.4:${route}:${amount}`)],
       ]);
-    
+
     case 'step_3_2':
       return Markup.inlineKeyboard([
         [Markup.button.callback(msg.btn.step3_2Done, `guide:step:3.3:${route}:${amount}`)],
         [Markup.button.callback(msg.btn.marketVsLimit, 'action:market_vs_limit')],
+        [Markup.button.callback(msg.btn.navigation, `action:guide_navigation:${route}:${amount}`)],
         [Markup.button.callback(msg.btn.back, `guide:step:3.1:${route}:${amount}`)],
       ]);
-    
+
     case 'step_3_3':
       return Markup.inlineKeyboard([
         [Markup.button.callback(msg.btn.step3_3Done(route), `guide:step:3.4:${route}:${amount}`)],
         [Markup.button.callback(msg.btn.whyNotExact, 'action:why_not_exact')],
+        [Markup.button.callback(msg.btn.navigation, `action:guide_navigation:${route}:${amount}`)],
         [Markup.button.callback(msg.btn.back, `guide:step:3.2:${route}:${amount}`)],
       ]);
-    
+
     case 'step_3_4':
       return Markup.inlineKeyboard([
         [Markup.button.callback(msg.btn.setAlert, 'alerts:start')],
         [Markup.button.callback(msg.btn.premium, 'premium:open')],
         [Markup.button.callback(msg.btn.giveFeedback, 'action:feedback')],
+        [Markup.button.callback(msg.btn.navigation, `action:guide_navigation:${route}:${amount}`)],
         [Markup.button.callback(msg.btn.back, `guide:step:3.3:${route}:${amount}`)],
       ]);
     
@@ -327,7 +347,34 @@ case 'what_exchange':
       return Markup.inlineKeyboard([
         [Markup.button.callback(msg.btn.back, 'action:back_context')],
       ]);
-    
+
+    // Guide Navigation Menu
+    case 'guide_navigation':
+      return Markup.inlineKeyboard([
+        // Main navigation options
+        [Markup.button.callback(msg.btn.backToComparison, `action:back_comparison:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.viewOffchain, `action:stay_offchain:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.toMainMenu, 'action:back_main')],
+
+        // Guide steps - Section 1
+        [Markup.button.callback(msg.btn.goToStep11(route), `guide:step:1.1:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.goToStep12, `guide:step:1.2:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.goToStep13, `guide:step:1.3:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.goToStep14, `guide:step:1.4:${route}:${amount}`)],
+
+        // Guide steps - Section 2
+        [Markup.button.callback(msg.btn.goToStep21(route), `guide:step:2.1:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.goToStep22, `guide:step:2.2:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.goToStep23, `guide:step:2.3:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.goToStep24, `guide:step:2.4:${route}:${amount}`)],
+
+        // Guide steps - Section 3
+        [Markup.button.callback(msg.btn.goToStep31, `guide:step:3.1:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.goToStep32(route), `guide:step:3.2:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.goToStep33(route), `guide:step:3.3:${route}:${amount}`)],
+        [Markup.button.callback(msg.btn.goToStep34, `guide:step:3.4:${route}:${amount}`)],
+      ]);
+
  // Écran Premium Pricing (Subscriptions - recurring)
  case 'premium_pricing':
     return Markup.inlineKeyboard([

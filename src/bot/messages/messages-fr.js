@@ -608,10 +608,10 @@ Estimation de ton solde : €${formatAmount(amount, 0, locale)} (prêt pour acha
   STEP_1_3: (usdcAmount, locale, route = 'eurbrl') => `3️⃣ Acheter tes USDC
 
 • Choisis le type d'ordre :
-  • Au marché (Market) → instantané, simple, recommandé.
+  • Au marché (Market) → instantané, simple, souvent utilisé pour commencer.
   • Limite (Limit) → tu fixes ton prix, utile pour grosses sommes/liquidité.
 
-👉 Pour débuter : ordre au marché.
+💡 La plupart commencent avec ordre au marché pour la simplicité.
 
 Estimation de ton solde : ~${formatAmount(usdcAmount, 2, locale)} USDC
 *⚠️ Estimation proche du réel. Les frais & prix peuvent légèrement varier.*`,
@@ -755,10 +755,10 @@ Estimation : tu recevras ~${formatAmount(usdcAmount - 1, 2, locale)} USDC côté
     if (route === 'brleur') {
       return `2️⃣ Passer ton ordre
 
-• "Au marché / Market" → instantané, au prix actuel (simple, recommandé).
+• "Au marché / Market" → instantané, au prix actuel, simple.
 • "Limite / Limit" → tu fixes ton prix, utile pour grosses sommes.
 
-👉 Pour la plupart des gens, "ordre au marché" = le plus simple et rapide.
+💡 La plupart commencent avec "ordre au marché" pour la simplicité et la rapidité.
 
 Estimation de ton solde : ~€${formatAmount(finalAmount, 2, locale)}
 *⚠️ Estimation proche du réel (frais ~0,1%).*`;
@@ -767,10 +767,10 @@ Estimation de ton solde : ~€${formatAmount(finalAmount, 2, locale)}
     // Default: eurbrl
     return `2️⃣ Passer ton ordre
 
-• "Au marché / Market" → instantané, au prix actuel (simple, recommandé).
+• "Au marché / Market" → instantané, au prix actuel, simple.
 • "Limite / Limit" → tu fixes ton prix, utile pour grosses sommes.
 
-👉 Pour la plupart des gens, "ordre au marché" = le plus simple et rapide.
+💡 La plupart commencent avec "ordre au marché" pour la simplicité et la rapidité.
 
 Estimation de ton solde : ~R$ ${formatAmount(finalAmount, 2, locale)}
 *⚠️ Estimation proche du réel (frais ~0,1%).*`;
@@ -854,6 +854,12 @@ Ce que tu as appris aujourd'hui sera de plus en plus utilisé dans le futur : tu
 
 🙌 On espère que tu as kiffé l'expérience !`;
   },
+
+  GUIDE_NAVIGATION: (route = 'eurbrl') => `📍 NAVIGATION GUIDE
+
+Tu es dans le guide pas à pas ${route === 'brleur' ? 'BRL → EUR' : 'EUR → BRL'}.
+
+Choisis une option ci-dessous pour naviguer :`,
 
   // Premium et alertes
   PREMIUM_PRICING: `💎 PASSER À PREMIUM
@@ -1448,9 +1454,9 @@ Crée ta première alerte pour être notifié automatiquement !`;
     ALERT_CREATED_FULL: (pair, preset, threshold, cooldown, currentRate, avg30d, alertThreshold, locale) => {
       const pairText = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
       const presetText = {
-        conservative: '🛡️ Conservateur',
-        balanced: '⚖️ Équilibré',
-        aggressive: '🎯 Opportuniste',
+        conservative: '🛡️ Conservateur (2%)',
+        balanced: '⚖️ Équilibré (3%)',
+        aggressive: '🎯 Opportuniste (5%)',
         custom: '✏️ Personnalisé'
       }[preset] || '🔔';
       
@@ -1718,6 +1724,25 @@ btn: {
   addMoreTime: '💰 Ajouter plus de temps (paiement unique)',
   switchToSubscription: '🔄 Passer en abonnement récurrent',
 
+  // Navigation menu
+  navigation: '📍 Navigation',
+  backToComparison: '⚖️ Retour à la comparaison',
+  viewOffchain: '🏦 Voir alternatives offchain',
+  toMainMenu: '🏠 Menu principal',
+  guideSteps: '📚 Aller à une étape',
+  goToStep11: (route) => route === 'brleur' ? '1.1 🇧🇷 Déposer BRL' : '1.1 🇪🇺 Déposer EUR',
+  goToStep12: '1.2 🔍 Trouver marché USDC',
+  goToStep13: '1.3 💰 Acheter USDC',
+  goToStep14: '1.4 ✅ USDC achetés',
+  goToStep21: (route) => route === 'brleur' ? '2.1 🇪🇺 Créer compte Europe' : '2.1 🇧🇷 Créer compte Brésil',
+  goToStep22: '2.2 📍 Adresse de dépôt',
+  goToStep23: '2.3 📤 Envoyer on-chain',
+  goToStep24: '2.4 ✅ Transfert initié',
+  goToStep31: '3.1 ⏳ Attendre confirmation',
+  goToStep32: (route) => route === 'brleur' ? '3.2 💶 Vendre USDC → EUR' : '3.2 💵 Vendre USDC → BRL',
+  goToStep33: (route) => route === 'brleur' ? '3.3 🏦 Retirer par virement' : '3.3 🏦 Retirer en Pix',
+  goToStep34: '3.4 🎉 Terminé !',
+
   // Subscription plans (recurring)
   subMPMonthly: '🔄 R$ 6/mois',
   subMPQuarterly: '🔄 R$ 15/3 mois (-17%)',
@@ -1738,9 +1763,9 @@ btn: {
   premiumDetails: 'ℹ️ Voir toutes les fonctionnalités',
   createAlert: '➕ Créer une alerte',
   myAlerts: '🔔 Mes alertes',
-  conservative: '🛡️ Conservateur',
-  balanced: '⚖️ Équilibré',
-  aggressive: '🎯 Opportuniste',
+  conservative: '🛡️ Conservateur (2%)',
+  balanced: '⚖️ Équilibré (3%)',
+  aggressive: '🎯 Opportuniste (5%)',
   custom: '✏️ Personnalisé',
   disableAlert: '🔕 Désactiver',
   editAlert: '✏️ Modifier',

@@ -1,9 +1,9 @@
 // Affiliate/referral links
 export const LINKS = {
   // Exchanges
-  KRAKEN: 'https://www.kraken.com/sign-up',
-  BINANCE_EU: 'https://accounts.binance.com/register?ref=74116949',
-  BINANCE_BR: 'https://accounts.binance.com/register?ref=74116949',
+  KRAKEN: 'https://invite.kraken.com/JDNW/obpsfde9',
+  BINANCE_EU: 'https://www.binance.com/referral/earn-together/refer2earn-usdc/claim?hl=en&ref=GRO_28502_SN2CX&utm_source=default',
+  BINANCE_BR: 'https://www.binance.com/referral/earn-together/refer2earn-usdc/claim?hl=en&ref=GRO_28502_SN2CX&utm_source=default',
   BITVAVO: 'https://bitvavo.com/',
   BITSTAMP: 'https://www.bitstamp.net/',
   COINBASE: 'https://www.coinbase.com/',

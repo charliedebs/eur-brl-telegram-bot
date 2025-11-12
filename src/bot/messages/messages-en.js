@@ -602,13 +602,13 @@ We only recommend platforms we actually use and trust. Service quality always co
   },
     
       STEP_1_3: (usdcAmount, locale, route = 'eurbrl') => `3️⃣ Buy your USDC
-    
+
     • Choose the order type:
-      • Market → instant, simple, recommended.
+      • Market → instant, simple, commonly used to start.
       • Limit → you set your price, useful for large amounts/liquidity.
-    
-    👉 For beginners: market order.
-    
+
+    💡 Most people start with market order for simplicity.
+
     Balance estimate: ~${formatAmount(usdcAmount, 2, locale)} USDC
     *⚠️ Estimate close to reality. Fees & prices may vary slightly.*`,
     
@@ -751,10 +751,10 @@ We only recommend platforms we actually use and trust. Service quality always co
         if (route === 'brleur') {
           return `2️⃣ Place your order
 
-    • "Market" → instant, at current price (simple, recommended).
+    • "Market" → instant, at current price, simple.
     • "Limit" → you set your price, useful for large amounts.
 
-    👉 For most people, "market order" = simplest and fastest.
+    💡 Most people start with "market order" for simplicity and speed.
 
     Balance estimate: ~€${formatAmount(finalAmount, 2, locale)}
     *⚠️ Estimate close to reality (fees ~0.1%).*`;
@@ -763,10 +763,10 @@ We only recommend platforms we actually use and trust. Service quality always co
         // Default: eurbrl
         return `2️⃣ Place your order
 
-    • "Market" → instant, at current price (simple, recommended).
+    • "Market" → instant, at current price, simple.
     • "Limit" → you set your price, useful for large amounts.
 
-    👉 For most people, "market order" = simplest and fastest.
+    💡 Most people start with "market order" for simplicity and speed.
 
     Balance estimate: ~R$ ${formatAmount(finalAmount, 2, locale)}
     *⚠️ Estimate close to reality (fees ~0.1%).*`;
@@ -850,7 +850,13 @@ We only recommend platforms we actually use and trust. Service quality always co
 
     🙌 We hope you enjoyed the experience!`;
       },
-    
+
+      GUIDE_NAVIGATION: (route = 'eurbrl') => `📍 GUIDE NAVIGATION
+
+You are in the ${route === 'brleur' ? 'BRL → EUR' : 'EUR → BRL'} step-by-step guide.
+
+Choose an option below to navigate:`,
+
       // Premium and alerts
       PREMIUM_PRICING: `💎 GO PREMIUM
 
@@ -1456,9 +1462,9 @@ You ${gain30d > 0 ? 'gain' : 'lose'} ~${formatAmount(Math.abs(gain30d), 0, local
       ALERT_CREATED_FULL: (pair, preset, threshold, cooldown, currentRate, avg30d, alertThreshold, locale) => {
         const pairText = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
         const presetText = {
-          conservative: '🛡️ Conservative',
-          balanced: '⚖️ Balanced',
-          aggressive: '🎯 Opportunistic',
+          conservative: '🛡️ Conservative (2%)',
+          balanced: '⚖️ Balanced (3%)',
+          aggressive: '🎯 Opportunistic (5%)',
           custom: '✏️ Custom'
         }[preset] || '🔔';
         
@@ -1705,6 +1711,25 @@ You will receive spontaneous alerts again when there are interesting rate opport
         addMoreTime: '💰 Add more time (one-time payment)',
         switchToSubscription: '🔄 Switch to recurring subscription',
 
+        // Navigation menu
+        navigation: '📍 Navigation',
+        backToComparison: '⚖️ Back to comparison',
+        viewOffchain: '🏦 View offchain alternatives',
+        toMainMenu: '🏠 Main menu',
+        guideSteps: '📚 Go to a step',
+        goToStep11: (route) => route === 'brleur' ? '1.1 🇧🇷 Deposit BRL' : '1.1 🇪🇺 Deposit EUR',
+        goToStep12: '1.2 🔍 Find USDC market',
+        goToStep13: '1.3 💰 Buy USDC',
+        goToStep14: '1.4 ✅ USDC purchased',
+        goToStep21: (route) => route === 'brleur' ? '2.1 🇪🇺 Create Europe account' : '2.1 🇧🇷 Create Brazil account',
+        goToStep22: '2.2 📍 Deposit address',
+        goToStep23: '2.3 📤 Send on-chain',
+        goToStep24: '2.4 ✅ Transfer initiated',
+        goToStep31: '3.1 ⏳ Wait for confirmation',
+        goToStep32: (route) => route === 'brleur' ? '3.2 💶 Sell USDC → EUR' : '3.2 💵 Sell USDC → BRL',
+        goToStep33: (route) => route === 'brleur' ? '3.3 🏦 Withdraw via transfer' : '3.3 🏦 Withdraw via Pix',
+        goToStep34: '3.4 🎉 Completed!',
+
         // Subscription plans (recurring)
         subMPMonthly: '🔄 R$ 6/month',
         subMPQuarterly: '🔄 R$ 15/3 months (-17%)',
@@ -1725,9 +1750,9 @@ You will receive spontaneous alerts again when there are interesting rate opport
         premiumDetails: 'ℹ️ See all features',
         createAlert: '➕ Create an alert',
         myAlerts: '🔔 My alerts',
-        conservative: '🛡️ Conservative',
-        balanced: '⚖️ Balanced',
-        aggressive: '🎯 Opportunistic',
+        conservative: '🛡️ Conservative (2%)',
+        balanced: '⚖️ Balanced (3%)',
+        aggressive: '🎯 Opportunistic (5%)',
         custom: '✏️ Custom',
         disableAlert: '🔕 Disable',
         editAlert: '✏️ Edit',

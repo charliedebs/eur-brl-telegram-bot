@@ -604,10 +604,10 @@ Só recomendamos plataformas que realmente usamos e confiamos. A qualidade do se
       STEP_1_3: (usdcAmount, locale, route = 'eurbrl') => `3️⃣ Comprar seus USDC
 
     • Escolha o tipo de ordem:
-      • A mercado (Market) → instantâneo, simples, recomendado.
+      • A mercado (Market) → instantâneo, simples, frequentemente usado para começar.
       • Limite (Limit) → você fixa seu preço, útil para grandes valores/liquidez.
 
-    👉 Para começar: ordem a mercado.
+    💡 A maioria começa com ordem a mercado pela simplicidade.
 
     Estimativa do seu saldo: ~${formatAmount(usdcAmount, 2, locale)} USDC
     *⚠️ Estimativa próxima do real. Taxas e preços podem variar levemente.*`,
@@ -751,10 +751,10 @@ Só recomendamos plataformas que realmente usamos e confiamos. A qualidade do se
         if (route === 'brleur') {
           return `2️⃣ Fazer sua ordem
 
-    • "A mercado / Market" → instantâneo, ao preço atual (simples, recomendado).
+    • "A mercado / Market" → instantâneo, ao preço atual, simples.
     • "Limite / Limit" → você fixa seu preço, útil para grandes valores.
 
-    👉 Para a maioria das pessoas, "ordem a mercado" = o mais simples e rápido.
+    💡 A maioria começa com "ordem a mercado" pela simplicidade e rapidez.
 
     Estimativa do seu saldo: ~€${formatAmount(finalAmount, 2, locale)}
     *⚠️ Estimativa próxima do real (taxas ~0,1%).*`;
@@ -763,10 +763,10 @@ Só recomendamos plataformas que realmente usamos e confiamos. A qualidade do se
         // Default: eurbrl
         return `2️⃣ Fazer sua ordem
 
-    • "A mercado / Market" → instantâneo, ao preço atual (simples, recomendado).
+    • "A mercado / Market" → instantâneo, ao preço atual, simples.
     • "Limite / Limit" → você fixa seu preço, útil para grandes valores.
 
-    👉 Para a maioria das pessoas, "ordem a mercado" = o mais simples e rápido.
+    💡 A maioria começa com "ordem a mercado" pela simplicidade e rapidez.
 
     Estimativa do seu saldo: ~R$ ${formatAmount(finalAmount, 2, locale)}
     *⚠️ Estimativa próxima do real (taxas ~0,1%).*`;
@@ -850,7 +850,13 @@ Só recomendamos plataformas que realmente usamos e confiamos. A qualidade do se
 
     🙌 Esperamos que você tenha curtido a experiência!`;
       },
-    
+
+      GUIDE_NAVIGATION: (route = 'eurbrl') => `📍 NAVEGAÇÃO DO GUIA
+
+Você está no guia passo a passo ${route === 'brleur' ? 'BRL → EUR' : 'EUR → BRL'}.
+
+Escolha uma opção abaixo para navegar:`,
+
       // Premium e alertas
       PREMIUM_PRICING: `💎 ASSINAR PREMIUM
 
@@ -1456,9 +1462,9 @@ Você ${gain30d > 0 ? 'ganha' : 'perde'} ~${formatAmount(Math.abs(gain30d), 0, l
       ALERT_CREATED_FULL: (pair, preset, threshold, cooldown, currentRate, avg30d, alertThreshold, locale) => {
         const pairText = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
         const presetText = {
-          conservative: '🛡️ Conservador',
-          balanced: '⚖️ Equilibrado',
-          aggressive: '🎯 Oportunista',
+          conservative: '🛡️ Conservador (2%)',
+          balanced: '⚖️ Equilibrado (3%)',
+          aggressive: '🎯 Oportunista (5%)',
           custom: '✏️ Personalizado'
         }[preset] || '🔔';
         
@@ -1705,6 +1711,25 @@ Você voltará a receber alertas espontâneos quando houver oportunidades intere
         addMoreTime: '💰 Adicionar mais tempo (pagamento único)',
         switchToSubscription: '🔄 Passar para assinatura recorrente',
 
+        // Navigation menu
+        navigation: '📍 Navegação',
+        backToComparison: '⚖️ Voltar à comparação',
+        viewOffchain: '🏦 Ver alternativas offchain',
+        toMainMenu: '🏠 Menu principal',
+        guideSteps: '📚 Ir para uma etapa',
+        goToStep11: (route) => route === 'brleur' ? '1.1 🇧🇷 Depositar BRL' : '1.1 🇪🇺 Depositar EUR',
+        goToStep12: '1.2 🔍 Encontrar mercado USDC',
+        goToStep13: '1.3 💰 Comprar USDC',
+        goToStep14: '1.4 ✅ USDC comprados',
+        goToStep21: (route) => route === 'brleur' ? '2.1 🇪🇺 Criar conta Europa' : '2.1 🇧🇷 Criar conta Brasil',
+        goToStep22: '2.2 📍 Endereço de depósito',
+        goToStep23: '2.3 📤 Enviar on-chain',
+        goToStep24: '2.4 ✅ Transferência iniciada',
+        goToStep31: '3.1 ⏳ Esperar confirmação',
+        goToStep32: (route) => route === 'brleur' ? '3.2 💶 Vender USDC → EUR' : '3.2 💵 Vender USDC → BRL',
+        goToStep33: (route) => route === 'brleur' ? '3.3 🏦 Sacar por transferência' : '3.3 🏦 Sacar via Pix',
+        goToStep34: '3.4 🎉 Concluído!',
+
         // Subscription plans (recurring)
         subMPMonthly: '🔄 R$ 6/mês',
         subMPQuarterly: '🔄 R$ 15/3 meses (-17%)',
@@ -1725,9 +1750,9 @@ Você voltará a receber alertas espontâneos quando houver oportunidades intere
         premiumDetails: 'ℹ️ Ver todas as funcionalidades',
         createAlert: '➕ Criar um alerta',
         myAlerts: '🔔 Meus alertas',
-        conservative: '🛡️ Conservador',
-        balanced: '⚖️ Equilibrado',
-        aggressive: '🎯 Oportunista',
+        conservative: '🛡️ Conservador (2%)',
+        balanced: '⚖️ Equilibrado (3%)',
+        aggressive: '🎯 Oportunista (5%)',
         custom: '✏️ Personalizado',
         disableAlert: '🔕 Desativar',
         editAlert: '✏️ Modificar',
