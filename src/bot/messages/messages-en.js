@@ -1456,9 +1456,9 @@ You ${gain30d > 0 ? 'gain' : 'lose'} ~${formatAmount(Math.abs(gain30d), 0, local
       ALERT_CREATED_FULL: (pair, preset, threshold, cooldown, currentRate, avg30d, alertThreshold, locale) => {
         const pairText = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
         const presetText = {
-          conservative: '🛡️ Conservative',
-          balanced: '⚖️ Balanced',
-          aggressive: '🎯 Opportunistic',
+          conservative: '🛡️ Conservative (2%)',
+          balanced: '⚖️ Balanced (3%)',
+          aggressive: '🎯 Opportunistic (5%)',
           custom: '✏️ Custom'
         }[preset] || '🔔';
         
@@ -1725,9 +1725,9 @@ You will receive spontaneous alerts again when there are interesting rate opport
         premiumDetails: 'ℹ️ See all features',
         createAlert: '➕ Create an alert',
         myAlerts: '🔔 My alerts',
-        conservative: '🛡️ Conservative',
-        balanced: '⚖️ Balanced',
-        aggressive: '🎯 Opportunistic',
+        conservative: '🛡️ Conservative (2%)',
+        balanced: '⚖️ Balanced (3%)',
+        aggressive: '🎯 Opportunistic (5%)',
         custom: '✏️ Custom',
         disableAlert: '🔕 Disable',
         editAlert: '✏️ Edit',

@@ -1456,9 +1456,9 @@ Você ${gain30d > 0 ? 'ganha' : 'perde'} ~${formatAmount(Math.abs(gain30d), 0, l
       ALERT_CREATED_FULL: (pair, preset, threshold, cooldown, currentRate, avg30d, alertThreshold, locale) => {
         const pairText = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
         const presetText = {
-          conservative: '🛡️ Conservador',
-          balanced: '⚖️ Equilibrado',
-          aggressive: '🎯 Oportunista',
+          conservative: '🛡️ Conservador (2%)',
+          balanced: '⚖️ Equilibrado (3%)',
+          aggressive: '🎯 Oportunista (5%)',
           custom: '✏️ Personalizado'
         }[preset] || '🔔';
         
@@ -1725,9 +1725,9 @@ Você voltará a receber alertas espontâneos quando houver oportunidades intere
         premiumDetails: 'ℹ️ Ver todas as funcionalidades',
         createAlert: '➕ Criar um alerta',
         myAlerts: '🔔 Meus alertas',
-        conservative: '🛡️ Conservador',
-        balanced: '⚖️ Equilibrado',
-        aggressive: '🎯 Oportunista',
+        conservative: '🛡️ Conservador (2%)',
+        balanced: '⚖️ Equilibrado (3%)',
+        aggressive: '🎯 Oportunista (5%)',
         custom: '✏️ Personalizado',
         disableAlert: '🔕 Desativar',
         editAlert: '✏️ Modificar',

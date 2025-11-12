@@ -616,9 +616,24 @@ bot.action(/^lang:(.+)$/, async (ctx) => {
 
   const msg = getMsg(ctx);
   const locale = getLocale(lang);
-  const kb = buildKeyboards(msg, 'main', { locale });
 
-  await ctx.editMessageText(msg.promptAmt, { parse_mode: 'HTML', ...kb });
+  // Restore previous context if available (comparison screen)
+  if (ctx.session.lastRoute && ctx.session.lastAmount) {
+    logger.info('[LANG] Restoring comparison context after language change:', {
+      userId: ctx.from.id,
+      route: ctx.session.lastRoute,
+      amount: ctx.session.lastAmount,
+      isTargetMode: ctx.session.lastIsTargetMode
+    });
+
+    // Restore comparison screen with previous parameters in new language
+    await showComparison(ctx, ctx.session.lastRoute, ctx.session.lastAmount, ctx.session.lastIsTargetMode || false);
+  } else {
+    // No previous context - show main menu
+    const kb = buildKeyboards(msg, 'main', { locale });
+    await ctx.editMessageText(msg.promptAmt, { parse_mode: 'HTML', ...kb });
+  }
+
   await ctx.answerCbQuery();
 });
 

@@ -1448,9 +1448,9 @@ Crée ta première alerte pour être notifié automatiquement !`;
     ALERT_CREATED_FULL: (pair, preset, threshold, cooldown, currentRate, avg30d, alertThreshold, locale) => {
       const pairText = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
       const presetText = {
-        conservative: '🛡️ Conservateur',
-        balanced: '⚖️ Équilibré',
-        aggressive: '🎯 Opportuniste',
+        conservative: '🛡️ Conservateur (2%)',
+        balanced: '⚖️ Équilibré (3%)',
+        aggressive: '🎯 Opportuniste (5%)',
         custom: '✏️ Personnalisé'
       }[preset] || '🔔';
       
@@ -1738,9 +1738,9 @@ btn: {
   premiumDetails: 'ℹ️ Voir toutes les fonctionnalités',
   createAlert: '➕ Créer une alerte',
   myAlerts: '🔔 Mes alertes',
-  conservative: '🛡️ Conservateur',
-  balanced: '⚖️ Équilibré',
-  aggressive: '🎯 Opportuniste',
+  conservative: '🛡️ Conservateur (2%)',
+  balanced: '⚖️ Équilibré (3%)',
+  aggressive: '🎯 Opportuniste (5%)',
   custom: '✏️ Personnalisé',
   disableAlert: '🔕 Désactiver',
   editAlert: '✏️ Modifier',
