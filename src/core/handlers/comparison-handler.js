@@ -188,49 +188,39 @@ BRL → EUR : ${formatRate(crossInverse, locale)}
         }
       }
 
-      // Build comparison message
-      const now = new Date();
-      const timeStr = now.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
-      const tzAbbr = new Date().toLocaleTimeString('en-US', { timeZoneName: 'short' }).split(' ')[2];
+      // Build comparison message using buildComparison
+      const bestBank = offchain?.providers?.[0] || null;
+      const others = offchain?.providers?.slice(1) || [];
 
-      const currencySymbol = route === 'eurbrl' ? '€' : 'R$';
-      const targetCurrencySymbol = route === 'eurbrl' ? 'R$' : '€';
-
-      let text;
-
-      if (isTargetMode) {
-        // Target mode: Show how much source currency needed
-        text = msg.comparisonTarget({
-          route,
-          targetAmount: amount,
-          targetSymbol: targetCurrencySymbol,
-          sourceSymbol: currencySymbol,
-          onchainSource: onchain.in,
-          onchainFee: onchain.totalFee,
-          offchainBest: offchain?.providers?.[0] || null,
-          offchainOthers: offchain?.providers?.slice(1) || [],
-          timeStr,
-          tzAbbr,
-          locale
-        });
-      } else {
-        // Source mode: Show how much target currency received
-        text = msg.comparisonSource({
-          route,
-          sourceAmount: amount,
-          sourceSymbol: currencySymbol,
-          targetSymbol: targetCurrencySymbol,
-          onchainTarget: onchain.out,
-          onchainFee: onchain.totalFee,
-          offchainBest: offchain?.providers?.[0] || null,
-          offchainOthers: offchain?.providers?.slice(1) || [],
-          timeStr,
-          tzAbbr,
-          locale
-        });
+      // Calculate delta (percentage difference)
+      let delta = null;
+      if (bestBank) {
+        if (isTargetMode) {
+          // In target mode, compare source amounts needed
+          const onchainAmount = onchain.in;
+          const offchainAmount = bestBank.in;
+          delta = ((onchainAmount - offchainAmount) / offchainAmount) * 100;
+        } else {
+          // In source mode, compare target amounts received
+          const onchainAmount = onchain.out;
+          const offchainAmount = bestBank.out;
+          delta = ((onchainAmount - offchainAmount) / offchainAmount) * 100;
+        }
       }
 
-      const keyboard = kbBuilder(msg, 'comparison_main', {
+      const text = msg.buildComparison({
+        route,
+        amount,
+        rates,
+        onchain,
+        bestBank,
+        others,
+        delta,
+        locale,
+        isTargetMode
+      });
+
+      const keyboard = kbBuilder(msg, 'comparison', {
         route,
         amount,
         isTargetMode,
