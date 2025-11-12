@@ -2,6 +2,7 @@
 // WhatsApp-specific adapter for BotEngine
 
 import { logger } from '../../utils/logger.js';
+import { buildWhatsAppKeyboard } from './keyboards.js';
 
 export class WhatsAppAdapter {
   constructor(client) {
@@ -170,7 +171,24 @@ export class WhatsAppAdapter {
   async sendResponse(chatId, response, options = {}) {
     try {
       // Support both 'buttons' and 'keyboard' (bot-engine uses 'keyboard')
-      const buttons = response.buttons || response.keyboard || null;
+      let buttons = response.buttons || response.keyboard || null;
+
+      // If keyboard is an abstract object (with type, options, msg), convert it
+      if (buttons && typeof buttons === 'object' && buttons.type && buttons.msg) {
+        try {
+          buttons = buildWhatsAppKeyboard(buttons.msg, buttons.type, buttons.options || {});
+          logger.debug('[WHATSAPP-ADAPTER] Converted abstract keyboard to buttons:', {
+            type: buttons.type,
+            buttonCount: buttons.length
+          });
+        } catch (error) {
+          logger.error('[WHATSAPP-ADAPTER] Failed to build keyboard:', {
+            error: error.message,
+            type: buttons.type
+          });
+          buttons = null; // Fallback to no buttons
+        }
+      }
 
       // Handle different response types
       if (response.image) {

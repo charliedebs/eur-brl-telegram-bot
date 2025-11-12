@@ -6,6 +6,7 @@ const { Client, LocalAuth } = pkg;
 import qrcode from 'qrcode-terminal';
 import QRCode from 'qrcode';
 import { WhatsAppAdapter } from './adapter.js';
+import { buildWhatsAppKeyboard } from './keyboards.js';
 import { BotEngine } from '../../core/bot-engine.js';
 import { logger } from '../../utils/logger.js';
 
@@ -156,8 +157,22 @@ function setupEventHandlers(client, engine, adapter, userButtonCache) {
       }
 
       // Cache buttons for this user if response has buttons (support both 'buttons' and 'keyboard')
-      const buttons = response.buttons || response.keyboard;
-      if (buttons && buttons.length > 0) {
+      let buttons = response.buttons || response.keyboard;
+
+      // Convert abstract keyboard to concrete buttons if needed
+      if (buttons && typeof buttons === 'object' && buttons.type && buttons.msg) {
+        try {
+          buttons = buildWhatsAppKeyboard(buttons.msg, buttons.type, buttons.options || {});
+        } catch (error) {
+          logger.error('[WHATSAPP] Failed to build keyboard for cache:', {
+            error: error.message,
+            type: buttons.type
+          });
+          buttons = null;
+        }
+      }
+
+      if (buttons && Array.isArray(buttons) && buttons.length > 0) {
         userButtonCache.set(messageInfo.userId, buttons);
       }
 
