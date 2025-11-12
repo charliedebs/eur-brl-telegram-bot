@@ -168,8 +168,16 @@ export class WhatsAppAdapter {
    * Format text for WhatsApp (markdown)
    */
   formatText(text) {
+    // Handle undefined/null text
+    if (!text) {
+      return '';
+    }
+
+    // Ensure text is a string
+    const textStr = String(text);
+
     // Convert HTML/Markdown to WhatsApp format
-    return text
+    return textStr
       .replace(/<b>(.*?)<\/b>/g, '*$1*')         // <b> → *bold*
       .replace(/<i>(.*?)<\/i>/g, '_$1_')         // <i> → _italic_
       .replace(/<code>(.*?)<\/code>/g, '```$1```') // <code> → ```code```

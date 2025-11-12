@@ -622,6 +622,18 @@ export class BotEngine {
   }
 
   /**
+   * Alias for handleCallback - for backwards compatibility
+   * Platform adapters may call either handleButtonClick or handleCallback
+   */
+  async handleButtonClick({ userId, buttonId, platform }) {
+    return this.handleCallback({
+      userId,
+      callbackData: buttonId,
+      platform
+    });
+  }
+
+  /**
    * Handle generic actions
    */
   async handleAction(userId, lang, platform, params, session, msg) {
