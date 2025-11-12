@@ -6,7 +6,6 @@ const { Client, LocalAuth } = pkg;
 import qrcode from 'qrcode-terminal';
 import QRCode from 'qrcode';
 import { WhatsAppAdapter } from './adapter.js';
-import { buildWhatsAppKeyboard } from './keyboards.js';
 import { BotEngine } from '../../core/bot-engine.js';
 import { logger } from '../../utils/logger.js';
 
@@ -156,24 +155,14 @@ function setupEventHandlers(client, engine, adapter, userButtonCache) {
         });
       }
 
-      // Cache buttons for this user if response has buttons (support both 'buttons' and 'keyboard')
-      let buttons = response.buttons || response.keyboard;
-
-      // Convert abstract keyboard to concrete buttons if needed
-      if (buttons && typeof buttons === 'object' && buttons.type && buttons.msg) {
-        try {
-          buttons = buildWhatsAppKeyboard(buttons.msg, buttons.type, buttons.options || {});
-        } catch (error) {
-          logger.error('[WHATSAPP] Failed to build keyboard for cache:', {
-            error: error.message,
-            type: buttons.type
-          });
-          buttons = null;
+      // Cache buttons for this user (adapter will convert keyboard to buttons)
+      const keyboardData = response.buttons || response.keyboard;
+      if (keyboardData) {
+        // Use adapter to convert keyboard (same logic as sendMessage)
+        const buttons = adapter.convertKeyboard(keyboardData);
+        if (buttons && Array.isArray(buttons) && buttons.length > 0) {
+          userButtonCache.set(messageInfo.userId, buttons);
         }
-      }
-
-      if (buttons && Array.isArray(buttons) && buttons.length > 0) {
-        userButtonCache.set(messageInfo.userId, buttons);
       }
 
       // Send response

@@ -18,11 +18,14 @@ export class WhatsAppAdapter {
       // Format text for WhatsApp (markdown)
       const formattedText = this.formatText(text);
 
+      // Convert keyboard if needed
+      let buttons = this.convertKeyboard(options.keyboard || options.buttons);
+
       // WhatsApp doesn't support inline buttons like Telegram
       // Add buttons as text menu if provided
       let finalText = formattedText;
-      if (options.buttons && options.buttons.length > 0) {
-        finalText += '\n\n' + this.formatButtonsAsText(options.buttons);
+      if (buttons && buttons.length > 0) {
+        finalText += '\n\n' + this.formatButtonsAsText(buttons);
       }
 
       return await this.client.sendMessage(chatId, finalText);
@@ -57,10 +60,13 @@ export class WhatsAppAdapter {
         media = await MessageMedia.fromUrl(photo);
       }
 
+      // Convert keyboard if needed
+      let buttons = this.convertKeyboard(options.keyboard || options.buttons);
+
       // Format caption with buttons as text
       let caption = options.caption ? this.formatText(options.caption) : '';
-      if (options.buttons && options.buttons.length > 0) {
-        caption += '\n\n' + this.formatButtonsAsText(options.buttons);
+      if (buttons && buttons.length > 0) {
+        caption += '\n\n' + this.formatButtonsAsText(buttons);
       }
 
       return await this.client.sendMessage(chatId, media, { caption });
@@ -96,6 +102,41 @@ export class WhatsAppAdapter {
       });
       throw error;
     }
+  }
+
+  /**
+   * Convert bot-engine keyboard structure to WhatsApp button array
+   * Same as Telegram adapter but returns simple button array
+   */
+  convertKeyboard(keyboardData) {
+    if (!keyboardData) {
+      return null;
+    }
+
+    // If already an array of buttons, return as is
+    if (Array.isArray(keyboardData)) {
+      return keyboardData;
+    }
+
+    // If it's a bot-engine keyboard structure with type/options/msg
+    if (keyboardData.type && keyboardData.msg) {
+      try {
+        const buttons = buildWhatsAppKeyboard(
+          keyboardData.msg,
+          keyboardData.type,
+          keyboardData.options || {}
+        );
+        return buttons;
+      } catch (error) {
+        logger.error('[WHATSAPP-ADAPTER] Failed to convert keyboard:', {
+          error: error.message,
+          type: keyboardData.type
+        });
+        return null;
+      }
+    }
+
+    return null;
   }
 
   /**
@@ -170,38 +211,20 @@ export class WhatsAppAdapter {
    */
   async sendResponse(chatId, response, options = {}) {
     try {
-      // Support both 'buttons' and 'keyboard' (bot-engine uses 'keyboard')
-      let buttons = response.buttons || response.keyboard || null;
-
-      // If keyboard is an abstract object (with type, options, msg), convert it
-      if (buttons && typeof buttons === 'object' && buttons.type && buttons.msg) {
-        try {
-          buttons = buildWhatsAppKeyboard(buttons.msg, buttons.type, buttons.options || {});
-          logger.debug('[WHATSAPP-ADAPTER] Converted abstract keyboard to buttons:', {
-            type: buttons.type,
-            buttonCount: buttons.length
-          });
-        } catch (error) {
-          logger.error('[WHATSAPP-ADAPTER] Failed to build keyboard:', {
-            error: error.message,
-            type: buttons.type
-          });
-          buttons = null; // Fallback to no buttons
-        }
-      }
-
       // Handle different response types
       if (response.image) {
         // Send photo with caption
         return await this.sendPhoto(chatId, response.image, {
           caption: response.text,
-          buttons: buttons,
+          keyboard: response.keyboard,
+          buttons: response.buttons,
           ...options
         });
       } else {
         // Send text message with buttons
         return await this.sendMessage(chatId, response.text, {
-          buttons: buttons,
+          keyboard: response.keyboard,
+          buttons: response.buttons,
           ...options
         });
       }
