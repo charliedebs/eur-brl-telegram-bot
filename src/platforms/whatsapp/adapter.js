@@ -8,6 +8,69 @@ export class WhatsAppAdapter {
   constructor(client) {
     this.client = client;
     this.platform = 'whatsapp';
+    // Cache last buttons sent to each user for number-based selection
+    this.userButtonCache = new Map();
+  }
+
+  /**
+   * Process incoming message and route to BotEngine
+   * This is the main entry point for all WhatsApp messages
+   * Handles both regular text and number-based button selections
+   *
+   * @param {Object} msg - WhatsApp message object
+   * @param {Object} engine - BotEngine instance
+   * @returns {Object} Response from BotEngine
+   */
+  async processIncomingMessage(msg, engine) {
+    const messageInfo = this.extractMessageInfo(msg);
+
+    // Show typing indicator
+    await this.sendTyping(msg.from);
+
+    logger.info('[WHATSAPP] Processing message:', {
+      userId: messageInfo.userId,
+      text: messageInfo.text.substring(0, 50)
+    });
+
+    // Check if user's message is a button selection (number)
+    const lastButtons = this.userButtonCache.get(messageInfo.userId);
+    const buttonId = this.parseButtonSelection(messageInfo.text, lastButtons);
+
+    let response;
+
+    if (buttonId) {
+      // User selected a button by number
+      logger.info('[WHATSAPP] Button selected:', {
+        userId: messageInfo.userId,
+        buttonId
+      });
+
+      response = await engine.handleButtonClick({
+        userId: messageInfo.userId,
+        buttonId,
+        platform: 'whatsapp'
+      });
+    } else {
+      // Regular message processing
+      response = await engine.processMessage({
+        userId: messageInfo.userId,
+        text: messageInfo.text,
+        platform: 'whatsapp',
+        username: messageInfo.username,
+        messageId: messageInfo.messageId
+      });
+    }
+
+    // Cache buttons from response for next interaction
+    const keyboardData = response.buttons || response.keyboard;
+    if (keyboardData) {
+      const buttons = this.convertKeyboard(keyboardData);
+      if (buttons && Array.isArray(buttons) && buttons.length > 0) {
+        this.userButtonCache.set(messageInfo.userId, buttons);
+      }
+    }
+
+    return response;
   }
 
   /**

@@ -261,34 +261,8 @@ export class BotEngine {
    * Route message to appropriate handler
    */
   async routeMessage(context) {
-    const { text, lang, chatType, userId, platform } = context;
+    const { text, lang, chatType } = context;
     const lowerText = text.toLowerCase().trim();
-
-    // === LANGUAGE SELECTION ===
-    // Detect language keywords (important for WhatsApp where there are no buttons)
-    if (lowerText === 'français' || lowerText === 'french' || lowerText === 'francais') {
-      await this.db.updateUserByPlatform(platform, userId, { language: 'fr' });
-      const msg = messages['fr'];
-      return this.formatResponse(msg.WELCOME, {
-        keyboard: this.buildKeyboard(msg, 'main')
-      });
-    }
-
-    if (lowerText === 'português' || lowerText === 'portugues' || lowerText === 'portuguese') {
-      await this.db.updateUserByPlatform(platform, userId, { language: 'pt' });
-      const msg = messages['pt'];
-      return this.formatResponse(msg.WELCOME, {
-        keyboard: this.buildKeyboard(msg, 'main')
-      });
-    }
-
-    if (lowerText === 'english' || lowerText === 'inglês' || lowerText === 'ingles') {
-      await this.db.updateUserByPlatform(platform, userId, { language: 'en' });
-      const msg = messages['en'];
-      return this.formatResponse(msg.WELCOME, {
-        keyboard: this.buildKeyboard(msg, 'main')
-      });
-    }
 
     // === COMMANDS ===
 

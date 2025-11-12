@@ -43,11 +43,8 @@ export async function createWhatsAppBot() {
   const adapter = new WhatsAppAdapter(client);
   const engine = new BotEngine(adapter);
 
-  // Store last buttons sent to users for number-based selection
-  const userButtonCache = new Map();
-
   // Set up event handlers
-  setupEventHandlers(client, engine, adapter, userButtonCache);
+  setupEventHandlers(client, engine, adapter);
 
   // Initialize client
   client.initialize();
@@ -58,7 +55,7 @@ export async function createWhatsAppBot() {
 /**
  * Set up WhatsApp event handlers
  */
-function setupEventHandlers(client, engine, adapter, userButtonCache) {
+function setupEventHandlers(client, engine, adapter) {
   // QR Code for authentication
   client.on('qr', async (qr) => {
     // Update global status
@@ -120,50 +117,8 @@ function setupEventHandlers(client, engine, adapter, userButtonCache) {
         return;
       }
 
-      await adapter.sendTyping(msg.from);
-
-      const messageInfo = adapter.extractMessageInfo(msg);
-
-      logger.info('[WHATSAPP] Processing message:', {
-        userId: messageInfo.userId,
-        text: messageInfo.text.substring(0, 50)
-      });
-
-      // Check if message is a button number selection
-      const lastButtons = userButtonCache.get(messageInfo.userId);
-      const buttonId = adapter.parseButtonSelection(messageInfo.text, lastButtons);
-
-      let response;
-
-      if (buttonId) {
-        // User selected a button by number
-        logger.info('[WHATSAPP] Button selected:', { userId: messageInfo.userId, buttonId });
-
-        response = await engine.handleButtonClick({
-          userId: messageInfo.userId,
-          buttonId,
-          platform: 'whatsapp'
-        });
-      } else {
-        // Regular message processing
-        response = await engine.processMessage({
-          userId: messageInfo.userId,
-          text: messageInfo.text,
-          platform: 'whatsapp',
-          username: messageInfo.username,
-          messageId: messageInfo.messageId
-        });
-      }
-
-      // Cache buttons for this user (adapter will convert keyboard to buttons)
-      const keyboardData = response.buttons || response.keyboard;
-      if (keyboardData) {
-        // Use adapter to convert keyboard (same logic as sendMessage)
-        const buttons = adapter.convertKeyboard(keyboardData);
-        if (buttons && Array.isArray(buttons) && buttons.length > 0) {
-          userButtonCache.set(messageInfo.userId, buttons);
-        }
-      }
+      // Delegate all message processing to adapter
+      const response = await adapter.processIncomingMessage(msg, engine);
 
       // Send response
       await adapter.sendResponse(msg.from, response);
