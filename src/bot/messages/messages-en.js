@@ -850,7 +850,13 @@ We only recommend platforms we actually use and trust. Service quality always co
 
     🙌 We hope you enjoyed the experience!`;
       },
-    
+
+      GUIDE_NAVIGATION: (route = 'eurbrl') => `📍 GUIDE NAVIGATION
+
+You are in the ${route === 'brleur' ? 'BRL → EUR' : 'EUR → BRL'} step-by-step guide.
+
+Choose an option below to navigate:`,
+
       // Premium and alerts
       PREMIUM_PRICING: `💎 GO PREMIUM
 
@@ -1704,6 +1710,25 @@ You will receive spontaneous alerts again when there are interesting rate opport
         backToSubscriptions: '⬅️ Back to subscriptions',
         addMoreTime: '💰 Add more time (one-time payment)',
         switchToSubscription: '🔄 Switch to recurring subscription',
+
+        // Navigation menu
+        navigation: '📍 Navigation',
+        backToComparison: '⚖️ Back to comparison',
+        viewOffchain: '🏦 View offchain alternatives',
+        toMainMenu: '🏠 Main menu',
+        guideSteps: '📚 Go to a step',
+        goToStep11: (route) => route === 'brleur' ? '1.1 🇧🇷 Deposit BRL' : '1.1 🇪🇺 Deposit EUR',
+        goToStep12: '1.2 🔍 Find USDC market',
+        goToStep13: '1.3 💰 Buy USDC',
+        goToStep14: '1.4 ✅ USDC purchased',
+        goToStep21: (route) => route === 'brleur' ? '2.1 🇪🇺 Create Europe account' : '2.1 🇧🇷 Create Brazil account',
+        goToStep22: '2.2 📍 Deposit address',
+        goToStep23: '2.3 📤 Send on-chain',
+        goToStep24: '2.4 ✅ Transfer initiated',
+        goToStep31: '3.1 ⏳ Wait for confirmation',
+        goToStep32: (route) => route === 'brleur' ? '3.2 💶 Sell USDC → EUR' : '3.2 💵 Sell USDC → BRL',
+        goToStep33: (route) => route === 'brleur' ? '3.3 🏦 Withdraw via transfer' : '3.3 🏦 Withdraw via Pix',
+        goToStep34: '3.4 🎉 Completed!',
 
         // Subscription plans (recurring)
         subMPMonthly: '🔄 R$ 6/month',

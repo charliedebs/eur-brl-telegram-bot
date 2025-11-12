@@ -855,6 +855,12 @@ Ce que tu as appris aujourd'hui sera de plus en plus utilisé dans le futur : tu
 🙌 On espère que tu as kiffé l'expérience !`;
   },
 
+  GUIDE_NAVIGATION: (route = 'eurbrl') => `📍 NAVIGATION GUIDE
+
+Tu es dans le guide pas à pas ${route === 'brleur' ? 'BRL → EUR' : 'EUR → BRL'}.
+
+Choisis une option ci-dessous pour naviguer :`,
+
   // Premium et alertes
   PREMIUM_PRICING: `💎 PASSER À PREMIUM
 
@@ -1717,6 +1723,25 @@ btn: {
   backToSubscriptions: '⬅️ Retour aux abonnements',
   addMoreTime: '💰 Ajouter plus de temps (paiement unique)',
   switchToSubscription: '🔄 Passer en abonnement récurrent',
+
+  // Navigation menu
+  navigation: '📍 Navigation',
+  backToComparison: '⚖️ Retour à la comparaison',
+  viewOffchain: '🏦 Voir alternatives offchain',
+  toMainMenu: '🏠 Menu principal',
+  guideSteps: '📚 Aller à une étape',
+  goToStep11: (route) => route === 'brleur' ? '1.1 🇧🇷 Déposer BRL' : '1.1 🇪🇺 Déposer EUR',
+  goToStep12: '1.2 🔍 Trouver marché USDC',
+  goToStep13: '1.3 💰 Acheter USDC',
+  goToStep14: '1.4 ✅ USDC achetés',
+  goToStep21: (route) => route === 'brleur' ? '2.1 🇪🇺 Créer compte Europe' : '2.1 🇧🇷 Créer compte Brésil',
+  goToStep22: '2.2 📍 Adresse de dépôt',
+  goToStep23: '2.3 📤 Envoyer on-chain',
+  goToStep24: '2.4 ✅ Transfert initié',
+  goToStep31: '3.1 ⏳ Attendre confirmation',
+  goToStep32: (route) => route === 'brleur' ? '3.2 💶 Vendre USDC → EUR' : '3.2 💵 Vendre USDC → BRL',
+  goToStep33: (route) => route === 'brleur' ? '3.3 🏦 Retirer par virement' : '3.3 🏦 Retirer en Pix',
+  goToStep34: '3.4 🎉 Terminé !',
 
   // Subscription plans (recurring)
   subMPMonthly: '🔄 R$ 6/mois',

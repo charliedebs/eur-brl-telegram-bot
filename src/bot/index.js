@@ -1073,6 +1073,18 @@ bot.action('action:market_vs_limit', async (ctx) => {
   await ctx.answerCbQuery();
 });
 
+bot.action(/^action:guide_navigation:(.+):(\d+)$/, async (ctx) => {
+  const route = ctx.match[1];
+  const amount = parseFloat(ctx.match[2]);
+  const msg = getMsg(ctx);
+
+  const text = msg.GUIDE_NAVIGATION(route);
+  const kb = buildKeyboards(msg, 'guide_navigation', { route, amount });
+
+  await ctx.editMessageText(text, { parse_mode: 'HTML', ...kb });
+  await ctx.answerCbQuery();
+});
+
 bot.action(/^action:change_amount:(.+)$/, async (ctx) => {
   const route = ctx.match[1];
   
