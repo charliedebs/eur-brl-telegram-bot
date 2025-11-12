@@ -1,7 +1,8 @@
 // src/platforms/whatsapp/index.js
 // WhatsApp platform integration with BotEngine
 
-import { Client, LocalAuth } from 'whatsapp-web.js';
+import pkg from 'whatsapp-web.js';
+const { Client, LocalAuth } = pkg;
 import qrcode from 'qrcode-terminal';
 import QRCode from 'qrcode';
 import { WhatsAppAdapter } from './adapter.js';
