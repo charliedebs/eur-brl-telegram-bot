@@ -15,7 +15,7 @@ services:
     # Disk for WhatsApp session persistence
     disk:
       name: whatsapp-session
-      mountPath: /opt/render/project/src/.wwebjs_auth
+      mountPath: /opt/render/project/.wwebjs_auth
       sizeGB: 1
     envVars:
       - key: NODE_ENV
