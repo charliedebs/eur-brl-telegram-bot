@@ -3,9 +3,14 @@
 
 import { Client, LocalAuth } from 'whatsapp-web.js';
 import qrcode from 'qrcode-terminal';
+import QRCode from 'qrcode';
 import { WhatsAppAdapter } from './adapter.js';
 import { BotEngine } from '../../core/bot-engine.js';
 import { logger } from '../../utils/logger.js';
+
+// Global state for QR code (accessible from server.js)
+export let currentQRCode = null;
+export let whatsappStatus = 'initializing';
 
 /**
  * Initialize WhatsApp bot with BotEngine
@@ -54,24 +59,43 @@ export async function createWhatsAppBot() {
  */
 function setupEventHandlers(client, engine, adapter, userButtonCache) {
   // QR Code for authentication
-  client.on('qr', (qr) => {
+  client.on('qr', async (qr) => {
     logger.info('[WHATSAPP] QR Code received. Please scan with your phone:');
+
+    // Update global status
+    whatsappStatus = 'waiting_qr_scan';
+
+    // Generate QR code as base64 image for web display
+    try {
+      currentQRCode = await QRCode.toDataURL(qr);
+      logger.info('[WHATSAPP] QR Code generated and ready for display');
+      logger.info('[WHATSAPP] 🌐 Go to: https://your-app.onrender.com/admin/whatsapp-qr');
+    } catch (error) {
+      logger.error('[WHATSAPP] Error generating QR code image:', error);
+    }
+
+    // Also display in terminal for local development
     console.log('\n📱 WhatsApp QR Code:\n');
     qrcode.generate(qr, { small: true });
     console.log('\n✅ Open WhatsApp on your phone');
     console.log('✅ Go to Settings > Linked Devices');
     console.log('✅ Tap "Link a Device"');
     console.log('✅ Scan the QR code above\n');
+    console.log('🌐 Or visit: /admin/whatsapp-qr in your browser\n');
   });
 
   // Ready
   client.on('ready', () => {
+    whatsappStatus = 'ready';
+    currentQRCode = null; // Clear QR code once authenticated
     logger.info('[WHATSAPP] WhatsApp bot is ready!');
     console.log('✅ WhatsApp bot is connected and ready!');
   });
 
   // Authenticated
   client.on('authenticated', () => {
+    whatsappStatus = 'authenticated';
+    currentQRCode = null; // Clear QR code
     logger.info('[WHATSAPP] WhatsApp authenticated successfully');
   });
 

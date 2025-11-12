@@ -4,8 +4,19 @@ services:
     runtime: node
     # IMPORTANT: Root directory doit être la racine du projet, pas src/
     rootDir: .
-    buildCommand: npm install
+    # Build command with Chromium installation for WhatsApp
+    buildCommand: |
+      # Install Chromium dependencies for WhatsApp Web
+      apt-get update
+      apt-get install -y chromium-browser chromium-codecs-ffmpeg
+      # Install Node dependencies
+      PUPPETEER_SKIP_DOWNLOAD=false npm install
     startCommand: npm start
+    # Disk for WhatsApp session persistence
+    disk:
+      name: whatsapp-session
+      mountPath: /opt/render/project/src/.wwebjs_auth
+      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
@@ -22,4 +33,15 @@ services:
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_KEY
+        sync: false
+      # WhatsApp configuration
+      - key: WHATSAPP_ENABLED
+        value: false
+      # Puppeteer configuration for WhatsApp
+      - key: PUPPETEER_SKIP_DOWNLOAD
+        value: false
+      - key: PUPPETEER_EXECUTABLE_PATH
+        value: /usr/bin/chromium-browser
+      # Admin password for QR code access
+      - key: ADMIN_PASSWORD
         sync: false

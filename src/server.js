@@ -191,6 +191,376 @@ app.get('/admin/debug', async (req, res) => {
   }
 });
 
+// WhatsApp QR Code endpoint
+app.get('/admin/whatsapp-qr', async (req, res) => {
+  try {
+    // Simple password check via query param or header
+    const password = req.query.password || req.headers['x-admin-password'];
+
+    if (password !== ADMIN_PASSWORD) {
+      return res.status(401).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Admin Login</title>
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+              min-height: 100vh;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              margin: 0;
+            }
+            .login-box {
+              background: white;
+              padding: 40px;
+              border-radius: 20px;
+              box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+              text-align: center;
+              max-width: 400px;
+            }
+            h1 { color: #333; margin-bottom: 10px; }
+            input {
+              width: 100%;
+              padding: 15px;
+              margin: 20px 0;
+              border: 2px solid #e0e0e0;
+              border-radius: 10px;
+              font-size: 16px;
+            }
+            button {
+              width: 100%;
+              padding: 15px;
+              background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+              color: white;
+              border: none;
+              border-radius: 10px;
+              font-size: 16px;
+              font-weight: 600;
+              cursor: pointer;
+            }
+            button:hover { opacity: 0.9; }
+          </style>
+        </head>
+        <body>
+          <div class="login-box">
+            <h1>🔐 WhatsApp QR Code</h1>
+            <p style="color: #666; margin-bottom: 20px;">Enter admin password</p>
+            <form method="GET">
+              <input type="password" name="password" placeholder="Password" required autofocus>
+              <button type="submit">🔓 View QR Code</button>
+            </form>
+          </div>
+        </body>
+        </html>
+      `);
+    }
+
+    // Check if WhatsApp is enabled
+    if (!whatsappClient) {
+      return res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>WhatsApp Not Enabled</title>
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+              min-height: 100vh;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              margin: 0;
+              padding: 20px;
+            }
+            .info-box {
+              background: white;
+              padding: 40px;
+              border-radius: 20px;
+              box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+              max-width: 600px;
+            }
+            h1 { color: #333; margin-bottom: 20px; }
+            code {
+              background: #f5f5f5;
+              padding: 2px 6px;
+              border-radius: 4px;
+              font-family: monospace;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="info-box">
+            <h1>⚠️ WhatsApp Not Enabled</h1>
+            <p>WhatsApp bot is not enabled. To enable it:</p>
+            <ol>
+              <li>Set environment variable: <code>WHATSAPP_ENABLED=true</code></li>
+              <li>Restart the server</li>
+              <li>Return to this page to scan QR code</li>
+            </ol>
+            <p style="margin-top: 30px; color: #666; font-size: 14px;">
+              <a href="/admin" style="color: #128C7E;">← Back to Admin Dashboard</a>
+            </p>
+          </div>
+        </body>
+        </html>
+      `);
+    }
+
+    // Import WhatsApp state
+    const { currentQRCode, whatsappStatus } = await import('./platforms/whatsapp/index.js');
+
+    // Check status and display accordingly
+    if (whatsappStatus === 'ready' || whatsappStatus === 'authenticated') {
+      return res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>WhatsApp Connected</title>
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+              min-height: 100vh;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              margin: 0;
+            }
+            .success-box {
+              background: white;
+              padding: 60px;
+              border-radius: 20px;
+              box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+              text-align: center;
+              max-width: 500px;
+            }
+            .checkmark {
+              font-size: 80px;
+              color: #25D366;
+              margin-bottom: 20px;
+            }
+            h1 { color: #333; margin-bottom: 10px; }
+            p { color: #666; margin: 10px 0; }
+            a {
+              display: inline-block;
+              margin-top: 30px;
+              padding: 15px 30px;
+              background: #128C7E;
+              color: white;
+              text-decoration: none;
+              border-radius: 10px;
+              font-weight: 600;
+            }
+            a:hover { opacity: 0.9; }
+          </style>
+        </head>
+        <body>
+          <div class="success-box">
+            <div class="checkmark">✅</div>
+            <h1>WhatsApp Connected!</h1>
+            <p>Your WhatsApp bot is connected and ready to receive messages.</p>
+            <p style="font-size: 14px; color: #999; margin-top: 20px;">Status: ${whatsappStatus}</p>
+            <a href="/admin">← Back to Admin Dashboard</a>
+          </div>
+        </body>
+        </html>
+      `);
+    }
+
+    if (!currentQRCode) {
+      return res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <meta http-equiv="refresh" content="5">
+          <title>Generating QR Code...</title>
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+              min-height: 100vh;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              margin: 0;
+            }
+            .loading-box {
+              background: white;
+              padding: 60px;
+              border-radius: 20px;
+              box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+              text-align: center;
+            }
+            .spinner {
+              border: 4px solid #f3f3f3;
+              border-top: 4px solid #25D366;
+              border-radius: 50%;
+              width: 50px;
+              height: 50px;
+              animation: spin 1s linear infinite;
+              margin: 0 auto 20px;
+            }
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+            h1 { color: #333; margin-bottom: 10px; }
+            p { color: #666; }
+          </style>
+        </head>
+        <body>
+          <div class="loading-box">
+            <div class="spinner"></div>
+            <h1>⏳ Generating QR Code...</h1>
+            <p>WhatsApp is initializing. This page will refresh automatically.</p>
+            <p style="font-size: 14px; color: #999; margin-top: 20px;">Status: ${whatsappStatus}</p>
+          </div>
+        </body>
+        </html>
+      `);
+    }
+
+    // Display QR code
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>WhatsApp QR Code</title>
+        <style>
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 20px;
+          }
+          .qr-box {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 600px;
+          }
+          h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+          }
+          .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+          }
+          .qr-code {
+            margin: 30px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            border: 2px solid #25D366;
+            display: inline-block;
+          }
+          .qr-code img {
+            max-width: 300px;
+            width: 100%;
+            height: auto;
+          }
+          .instructions {
+            text-align: left;
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 30px;
+          }
+          .instructions h3 {
+            margin-top: 0;
+            color: #128C7E;
+          }
+          .instructions ol {
+            margin: 15px 0;
+            padding-left: 20px;
+          }
+          .instructions li {
+            margin: 10px 0;
+            line-height: 1.5;
+          }
+          .note {
+            background: #FFF9E6;
+            border-left: 4px solid #FFC107;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #666;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="qr-box">
+          <h1>📱 WhatsApp QR Code</h1>
+          <p class="subtitle">Scan this code with your phone to connect WhatsApp</p>
+
+          <div class="qr-code">
+            <img src="${currentQRCode}" alt="WhatsApp QR Code">
+          </div>
+
+          <div class="instructions">
+            <h3>📋 How to scan:</h3>
+            <ol>
+              <li>Open <strong>WhatsApp</strong> on your phone</li>
+              <li>Go to <strong>Settings</strong> → <strong>Linked Devices</strong></li>
+              <li>Tap <strong>"Link a Device"</strong></li>
+              <li>Point your camera at this QR code</li>
+              <li>Wait for confirmation ✅</li>
+            </ol>
+          </div>
+
+          <div class="note">
+            <strong>⚡ Note:</strong> This QR code will expire after a few minutes.
+            If it expires, simply refresh this page to generate a new one.
+          </div>
+
+          <p style="margin-top: 30px; color: #999; font-size: 14px;">
+            <a href="/admin" style="color: #128C7E; text-decoration: none;">← Back to Admin Dashboard</a>
+          </p>
+        </div>
+      </body>
+      </html>
+    `);
+
+  } catch (error) {
+    logger.error('[ADMIN] WhatsApp QR error:', { error: error.message });
+    res.status(500).send(`
+      <!DOCTYPE html>
+      <html>
+      <head><title>Error</title></head>
+      <body>
+        <h1>Error Loading WhatsApp QR Code</h1>
+        <p>Error: ${error.message}</p>
+        <p><a href="/admin">← Back to Admin</a></p>
+      </body>
+      </html>
+    `);
+  }
+});
+
 // Serve admin dashboard (with basic password protection)
 app.get('/admin', async (req, res) => {
   try {
