@@ -61,28 +61,23 @@ export async function createWhatsAppBot() {
 function setupEventHandlers(client, engine, adapter, userButtonCache) {
   // QR Code for authentication
   client.on('qr', async (qr) => {
-    logger.info('[WHATSAPP] QR Code received. Please scan with your phone:');
-
     // Update global status
     whatsappStatus = 'waiting_qr_scan';
 
     // Generate QR code as base64 image for web display
     try {
       currentQRCode = await QRCode.toDataURL(qr);
-      logger.info('[WHATSAPP] QR Code generated and ready for display');
-      logger.info('[WHATSAPP] 🌐 Go to: https://your-app.onrender.com/admin/whatsapp-qr');
+      logger.info('[WHATSAPP] QR Code ready - Visit /admin/whatsapp-qr to scan');
     } catch (error) {
       logger.error('[WHATSAPP] Error generating QR code image:', error);
     }
 
-    // Also display in terminal for local development
-    console.log('\n📱 WhatsApp QR Code:\n');
-    qrcode.generate(qr, { small: true });
-    console.log('\n✅ Open WhatsApp on your phone');
-    console.log('✅ Go to Settings > Linked Devices');
-    console.log('✅ Tap "Link a Device"');
-    console.log('✅ Scan the QR code above\n');
-    console.log('🌐 Or visit: /admin/whatsapp-qr in your browser\n');
+    // Display ASCII QR in terminal only in development
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('\n📱 WhatsApp QR Code:\n');
+      qrcode.generate(qr, { small: true });
+      console.log('\n🌐 Or visit: /admin/whatsapp-qr in your browser\n');
+    }
   });
 
   // Ready
