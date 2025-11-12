@@ -23,18 +23,7 @@
 
 ## 🚀 En Cours
 
-### WhatsApp Integration
-**Priority:** High
-**Status:** In Progress
-**Description:** Implémenter support WhatsApp avec l'architecture multi-plateforme
-
-**Tasks:**
-- [ ] Implémenter WhatsApp adapter complet
-- [ ] Créer menus texte (équivalent keyboards)
-- [ ] Tester flows principaux
-- [ ] Déployer WhatsApp webhook
-
-**Estimation:** 6-8 heures
+_Aucune tâche en cours_
 
 ---
 
@@ -48,7 +37,13 @@
 - [x] Keyboards migré vers platforms/telegram/
 - [x] Fix import paths keyboards.js
 - [x] Deploy Render réussi
+- [x] WhatsApp adapter complet (src/platforms/whatsapp/)
+- [x] WhatsApp menus texte avec sélection numérique
+- [x] WhatsApp authentication (QR code)
+- [x] Integration WhatsApp dans server.js
+- [x] Documentation WhatsApp complète (docs/WHATSAPP_INTEGRATION.md)
+- [x] Guide de démarrage rapide (WHATSAPP_QUICKSTART.md)
 
 ---
 
-**Last Updated:** 12 novembre 2025, 19:00 UTC
+**Last Updated:** 12 novembre 2025, 19:40 UTC
