@@ -87,12 +87,28 @@ export class BotEngine {
         // Detect language from first message or default to Portuguese
         const detectedLang = this.detectLanguage(text) || 'pt';
         user = await this.db.createUserByPlatform(platform, userId, detectedLang);
+
+        // Check if user creation failed
+        if (!user) {
+          logger.error('[BOT-ENGINE] Failed to create user - database schema issue?', {
+            userId,
+            platform,
+            hint: 'If using WhatsApp, ensure telegram_id column is nullable in Supabase'
+          });
+
+          // Return error message
+          return {
+            text: '❌ Erro de configuração. Contate o administrador.\n\nError: Database configuration issue. Please contact admin.',
+            error: true
+          };
+        }
+
         logger.info('[BOT-ENGINE] New user created:', { userId, platform, lang: detectedLang });
       }
 
       // Get session
       const session = this.getSession(userId, platform);
-      const lang = user.language || 'pt';
+      const lang = user?.language || 'pt';
 
       // Create context for handlers
       const context = {
