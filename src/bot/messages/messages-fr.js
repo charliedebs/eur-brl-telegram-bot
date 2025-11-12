@@ -608,10 +608,10 @@ Estimation de ton solde : €${formatAmount(amount, 0, locale)} (prêt pour acha
   STEP_1_3: (usdcAmount, locale, route = 'eurbrl') => `3️⃣ Acheter tes USDC
 
 • Choisis le type d'ordre :
-  • Au marché (Market) → instantané, simple, recommandé.
+  • Au marché (Market) → instantané, simple, souvent utilisé pour commencer.
   • Limite (Limit) → tu fixes ton prix, utile pour grosses sommes/liquidité.
 
-👉 Pour débuter : ordre au marché.
+💡 La plupart commencent avec ordre au marché pour la simplicité.
 
 Estimation de ton solde : ~${formatAmount(usdcAmount, 2, locale)} USDC
 *⚠️ Estimation proche du réel. Les frais & prix peuvent légèrement varier.*`,
@@ -755,10 +755,10 @@ Estimation : tu recevras ~${formatAmount(usdcAmount - 1, 2, locale)} USDC côté
     if (route === 'brleur') {
       return `2️⃣ Passer ton ordre
 
-• "Au marché / Market" → instantané, au prix actuel (simple, recommandé).
+• "Au marché / Market" → instantané, au prix actuel, simple.
 • "Limite / Limit" → tu fixes ton prix, utile pour grosses sommes.
 
-👉 Pour la plupart des gens, "ordre au marché" = le plus simple et rapide.
+💡 La plupart commencent avec "ordre au marché" pour la simplicité et la rapidité.
 
 Estimation de ton solde : ~€${formatAmount(finalAmount, 2, locale)}
 *⚠️ Estimation proche du réel (frais ~0,1%).*`;
@@ -767,10 +767,10 @@ Estimation de ton solde : ~€${formatAmount(finalAmount, 2, locale)}
     // Default: eurbrl
     return `2️⃣ Passer ton ordre
 
-• "Au marché / Market" → instantané, au prix actuel (simple, recommandé).
+• "Au marché / Market" → instantané, au prix actuel, simple.
 • "Limite / Limit" → tu fixes ton prix, utile pour grosses sommes.
 
-👉 Pour la plupart des gens, "ordre au marché" = le plus simple et rapide.
+💡 La plupart commencent avec "ordre au marché" pour la simplicité et la rapidité.
 
 Estimation de ton solde : ~R$ ${formatAmount(finalAmount, 2, locale)}
 *⚠️ Estimation proche du réel (frais ~0,1%).*`;

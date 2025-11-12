@@ -604,10 +604,10 @@ Só recomendamos plataformas que realmente usamos e confiamos. A qualidade do se
       STEP_1_3: (usdcAmount, locale, route = 'eurbrl') => `3️⃣ Comprar seus USDC
 
     • Escolha o tipo de ordem:
-      • A mercado (Market) → instantâneo, simples, recomendado.
+      • A mercado (Market) → instantâneo, simples, frequentemente usado para começar.
       • Limite (Limit) → você fixa seu preço, útil para grandes valores/liquidez.
 
-    👉 Para começar: ordem a mercado.
+    💡 A maioria começa com ordem a mercado pela simplicidade.
 
     Estimativa do seu saldo: ~${formatAmount(usdcAmount, 2, locale)} USDC
     *⚠️ Estimativa próxima do real. Taxas e preços podem variar levemente.*`,
@@ -751,10 +751,10 @@ Só recomendamos plataformas que realmente usamos e confiamos. A qualidade do se
         if (route === 'brleur') {
           return `2️⃣ Fazer sua ordem
 
-    • "A mercado / Market" → instantâneo, ao preço atual (simples, recomendado).
+    • "A mercado / Market" → instantâneo, ao preço atual, simples.
     • "Limite / Limit" → você fixa seu preço, útil para grandes valores.
 
-    👉 Para a maioria das pessoas, "ordem a mercado" = o mais simples e rápido.
+    💡 A maioria começa com "ordem a mercado" pela simplicidade e rapidez.
 
     Estimativa do seu saldo: ~€${formatAmount(finalAmount, 2, locale)}
     *⚠️ Estimativa próxima do real (taxas ~0,1%).*`;
@@ -763,10 +763,10 @@ Só recomendamos plataformas que realmente usamos e confiamos. A qualidade do se
         // Default: eurbrl
         return `2️⃣ Fazer sua ordem
 
-    • "A mercado / Market" → instantâneo, ao preço atual (simples, recomendado).
+    • "A mercado / Market" → instantâneo, ao preço atual, simples.
     • "Limite / Limit" → você fixa seu preço, útil para grandes valores.
 
-    👉 Para a maioria das pessoas, "ordem a mercado" = o mais simples e rápido.
+    💡 A maioria começa com "ordem a mercado" pela simplicidade e rapidez.
 
     Estimativa do seu saldo: ~R$ ${formatAmount(finalAmount, 2, locale)}
     *⚠️ Estimativa próxima do real (taxas ~0,1%).*`;

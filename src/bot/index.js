@@ -1000,7 +1000,12 @@ bot.action(/^guide:step:(.+):(.+):(\d+)$/, async (ctx) => {
       kbType = 'step_1_2';
       break;
     case '1.3':
-      const usdcAfterBuy = rates ? amount * (1 / rates.usdcEUR) * 0.999 : amount;
+      // Calculate USDC amount based on route
+      const usdcAfterBuy = rates
+        ? (route === 'brleur'
+            ? (amount / rates.usdcBRL) * 0.999   // BRL → USDC
+            : amount * (1 / rates.usdcEUR) * 0.999)  // EUR → USDC
+        : amount;
       text = msg.STEP_1_3(usdcAfterBuy, locale, route);
       kbType = 'step_1_3';
       break;
@@ -1013,7 +1018,12 @@ bot.action(/^guide:step:(.+):(.+):(\d+)$/, async (ctx) => {
       kbType = 'step_2_1';
       break;
     case '2.2':
-      const usdcAmount = rates ? amount * (1 / rates.usdcEUR) * 0.999 : amount;
+      // Calculate USDC amount based on route
+      const usdcAmount = rates
+        ? (route === 'brleur'
+            ? (amount / rates.usdcBRL) * 0.999   // BRL → USDC
+            : amount * (1 / rates.usdcEUR) * 0.999)  // EUR → USDC
+        : amount;
       text = msg.STEP_2_2(usdcAmount, locale, route);
       kbType = 'step_2_2';
       break;

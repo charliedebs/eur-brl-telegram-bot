@@ -602,13 +602,13 @@ We only recommend platforms we actually use and trust. Service quality always co
   },
     
       STEP_1_3: (usdcAmount, locale, route = 'eurbrl') => `3️⃣ Buy your USDC
-    
+
     • Choose the order type:
-      • Market → instant, simple, recommended.
+      • Market → instant, simple, commonly used to start.
       • Limit → you set your price, useful for large amounts/liquidity.
-    
-    👉 For beginners: market order.
-    
+
+    💡 Most people start with market order for simplicity.
+
     Balance estimate: ~${formatAmount(usdcAmount, 2, locale)} USDC
     *⚠️ Estimate close to reality. Fees & prices may vary slightly.*`,
     
@@ -751,10 +751,10 @@ We only recommend platforms we actually use and trust. Service quality always co
         if (route === 'brleur') {
           return `2️⃣ Place your order
 
-    • "Market" → instant, at current price (simple, recommended).
+    • "Market" → instant, at current price, simple.
     • "Limit" → you set your price, useful for large amounts.
 
-    👉 For most people, "market order" = simplest and fastest.
+    💡 Most people start with "market order" for simplicity and speed.
 
     Balance estimate: ~€${formatAmount(finalAmount, 2, locale)}
     *⚠️ Estimate close to reality (fees ~0.1%).*`;
@@ -763,10 +763,10 @@ We only recommend platforms we actually use and trust. Service quality always co
         // Default: eurbrl
         return `2️⃣ Place your order
 
-    • "Market" → instant, at current price (simple, recommended).
+    • "Market" → instant, at current price, simple.
     • "Limit" → you set your price, useful for large amounts.
 
-    👉 For most people, "market order" = simplest and fastest.
+    💡 Most people start with "market order" for simplicity and speed.
 
     Balance estimate: ~R$ ${formatAmount(finalAmount, 2, locale)}
     *⚠️ Estimate close to reality (fees ~0.1%).*`;

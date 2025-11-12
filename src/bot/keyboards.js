@@ -233,9 +233,13 @@ case 'what_exchange':
     
     // Étapes du guide
     case 'step_1_1':
+      // For BRL→EUR, start with BR exchange (Binance BR)
+      // For EUR→BRL, start with EU exchange (Kraken)
       return Markup.inlineKeyboard([
         [Markup.button.callback(msg.btn.step1Done(route), `guide:step:1.2:${route}:${amount}`)],
-        [Markup.button.url(msg.btn.openKraken, LINKS.KRAKEN)],
+        route === 'brleur'
+          ? [Markup.button.url(msg.btn.openBinanceBR, LINKS.BINANCE_BR)]
+          : [Markup.button.url(msg.btn.openKraken, LINKS.KRAKEN)],
         [Markup.button.callback(msg.btn.skipToStep2, `guide:step:2.1:${route}:${amount}`)],
         [Markup.button.callback(msg.btn.back, `action:start_guide:${route}:${amount}`)],
       ]);
@@ -262,9 +266,13 @@ case 'what_exchange':
       ]);
     
       case 'step_2_1':
+        // For BRL→EUR, destination is EU (Kraken)
+        // For EUR→BRL, destination is BR (Binance BR)
         return Markup.inlineKeyboard([
           [Markup.button.callback(msg.btn.step2Done, `guide:step:2.2:${route}:${amount}`)],
-          [Markup.button.url(msg.btn.openBinanceBR, LINKS.BINANCE_BR)],
+          route === 'brleur'
+            ? [Markup.button.url(msg.btn.openKraken, LINKS.KRAKEN)]
+            : [Markup.button.url(msg.btn.openBinanceBR, LINKS.BINANCE_BR)],
           [Markup.button.callback(msg.btn.skipToStep3, `guide:step:3.1:${route}:${amount}`)],
           [Markup.button.callback(msg.btn.back, `guide:step:1.4:${route}:${amount}`)],
         ]);
