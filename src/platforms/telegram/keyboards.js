@@ -1,6 +1,6 @@
 import { Markup } from 'telegraf';
-import { DEFAULTS, LINKS, PROVIDER_LINKS } from '../config/constants.js';
-import { formatRate } from '../services/rates.js';
+import { DEFAULTS, LINKS, PROVIDER_LINKS } from '../../config/constants.js';
+import { formatRate } from '../../services/rates.js';
 
 export function buildKeyboards(msg, type, options = {}) {
   const { route = 'eurbrl', amount = DEFAULTS.EUR, alerts = [] } = options;
