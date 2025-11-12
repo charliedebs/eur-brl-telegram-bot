@@ -127,6 +127,77 @@ export class TelegramAdapter {
   }
 
   /**
+   * Process incoming text message
+   * Main entry point for text messages - harmonized with WhatsApp architecture
+   *
+   * @param {Object} ctx - Telegraf context
+   * @param {Object} engine - BotEngine instance
+   * @returns {Object} Response from BotEngine
+   */
+  async processIncomingMessage(ctx, engine) {
+    // Send typing indicator
+    await this.sendTyping(ctx.chat.id);
+
+    // Extract message info
+    const messageInfo = this.extractMessageInfo(ctx);
+
+    logger.info('[TELEGRAM] Processing message:', {
+      userId: messageInfo.userId,
+      text: messageInfo.text.substring(0, 50)
+    });
+
+    // Process message through BotEngine
+    const response = await engine.processMessage({
+      userId: messageInfo.userId,
+      text: messageInfo.text,
+      platform: 'telegram',
+      username: messageInfo.username,
+      messageId: messageInfo.messageId
+    });
+
+    return response;
+  }
+
+  /**
+   * Process button click (callback query)
+   * Main entry point for button clicks - Telegram-specific with message editing
+   *
+   * @param {Object} ctx - Telegraf context (callback_query)
+   * @param {Object} engine - BotEngine instance
+   * @returns {Object} { response, editInfo } - Response + info for message editing
+   */
+  async processButtonClick(ctx, engine) {
+    // Answer callback query first (removes loading state on button)
+    await ctx.answerCbQuery();
+
+    // Extract user info and button ID
+    const userInfo = this.extractUserInfo(ctx);
+    const buttonId = ctx.callbackQuery.data;
+
+    logger.info('[TELEGRAM] Processing button click:', {
+      userId: userInfo.userId,
+      buttonId
+    });
+
+    // Process button click through BotEngine
+    const response = await engine.handleButtonClick({
+      userId: userInfo.userId,
+      buttonId,
+      platform: 'telegram'
+    });
+
+    // Return response with edit info for Telegram-specific message editing
+    return {
+      response,
+      editInfo: {
+        shouldEdit: !!ctx.callbackQuery.message, // Only edit if message exists
+        chatId: ctx.callbackQuery.message?.chat.id || ctx.chat?.id,
+        messageId: ctx.callbackQuery.message?.message_id
+      }
+    };
+  }
+
+  /**
    * Convert bot-engine keyboard structure to Telegram inline keyboard
    *
    * Input from bot-engine: { type: 'main', options: {...}, msg: {...} }

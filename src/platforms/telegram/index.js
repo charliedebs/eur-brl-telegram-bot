@@ -45,23 +45,8 @@ function setupMessageHandlers(bot, engine, adapter) {
   // Handle all text messages
   bot.on('text', async (ctx) => {
     try {
-      await adapter.sendTyping(ctx.chat.id);
-
-      const messageInfo = adapter.extractMessageInfo(ctx);
-
-      logger.info('[TELEGRAM] Processing message:', {
-        userId: messageInfo.userId,
-        text: messageInfo.text.substring(0, 50)
-      });
-
-      // Process message through BotEngine
-      const response = await engine.processMessage({
-        userId: messageInfo.userId,
-        text: messageInfo.text,
-        platform: 'telegram',
-        username: messageInfo.username,
-        messageId: messageInfo.messageId
-      });
+      // Delegate all message processing to adapter (harmonized architecture)
+      const response = await adapter.processIncomingMessage(ctx, engine);
 
       // Send response
       await adapter.sendResponse(ctx.chat.id, response);
@@ -69,7 +54,7 @@ function setupMessageHandlers(bot, engine, adapter) {
     } catch (error) {
       logger.error('[TELEGRAM] Error handling message:', {
         error: error.message,
-        userId: ctx.from.id
+        userId: ctx.from?.id
       });
 
       await ctx.reply('❌ Erro ao processar mensagem. Tente novamente.');
@@ -84,31 +69,17 @@ function setupButtonHandlers(bot, engine, adapter) {
   // Handle all callback queries (button clicks)
   bot.on('callback_query', async (ctx) => {
     try {
-      await ctx.answerCbQuery();
+      // Delegate button processing to adapter (harmonized architecture)
+      const { response, editInfo } = await adapter.processButtonClick(ctx, engine);
 
-      const userInfo = adapter.extractUserInfo(ctx);
-      const buttonId = ctx.callbackQuery.data;
-
-      logger.info('[TELEGRAM] Processing button click:', {
-        userId: userInfo.userId,
-        buttonId
-      });
-
-      // Process button click through BotEngine
-      const response = await engine.handleButtonClick({
-        userId: userInfo.userId,
-        buttonId,
-        platform: 'telegram'
-      });
-
-      // Edit the message with new response
-      if (ctx.callbackQuery.message) {
+      // Telegram-specific: Try to edit the message for better UX
+      if (editInfo.shouldEdit) {
         try {
           await adapter.editMessage(
-            ctx.callbackQuery.message.chat.id,
-            ctx.callbackQuery.message.message_id,
+            editInfo.chatId,
+            editInfo.messageId,
             adapter.formatText(response.text),
-            { buttons: response.buttons }
+            { keyboard: response.keyboard, buttons: response.buttons }
           );
         } catch (editError) {
           // If edit fails (e.g., message too old), send new message
@@ -116,6 +87,7 @@ function setupButtonHandlers(bot, engine, adapter) {
           await adapter.sendResponse(ctx.chat.id, response);
         }
       } else {
+        // No message to edit, send new response
         await adapter.sendResponse(ctx.chat.id, response);
       }
 
