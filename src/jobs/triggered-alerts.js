@@ -59,7 +59,7 @@ async function getCompleteStats(pair) {
 // BROADCAST SELON AUDIENCE
 // ==========================================
 
-async function broadcastTriggered(pair, currentRate, stats, audience = 'all') {
+async function broadcastTriggered(pair, currentRate, stats, audience = 'all', customText = null) {
   console.log(`[TRIGGERED] 📢 Broadcasting ${pair} to ${audience}...`);
   
   try {
@@ -90,7 +90,7 @@ async function broadcastTriggered(pair, currentRate, stats, audience = 'all') {
         const locale = getLocale(user.language);
         const msg = messages[user.language];
         
-        const text = buildTriggeredMessage(pair, currentRate, stats, amountExample, locale, msg);
+        const text = buildTriggeredMessage(pair, currentRate, stats, amountExample, locale, msg, customText);
         const kb = buildKeyboards(msg, 'triggered_alert', { pair, amount: amountExample });
         
         await bot.telegram.sendMessage(user.telegram_id, text, {
@@ -120,56 +120,18 @@ async function broadcastTriggered(pair, currentRate, stats, audience = 'all') {
 // CONSTRUIRE MESSAGE
 // ==========================================
 
-function buildTriggeredMessage(pair, currentRate, stats, amountExample, locale, msg) {
-  const pairText = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
-  const currency = pair === 'eurbrl' ? '€' : ' R$';
-  
-  const var30d = stats.avg30d ? ((currentRate - stats.avg30d.avg) / stats.avg30d.avg * 100) : null;
-  const var90d = stats.stats90d ? ((currentRate - stats.stats90d.avg) / stats.stats90d.avg * 100) : null;
-  const var365d = stats.stats365d ? ((currentRate - stats.stats365d.avg) / stats.stats365d.avg * 100) : null;
-  
-  const gain30d = stats.avg30d ? (currentRate - stats.avg30d.avg) * amountExample : null;
-  
-  let text = `📢 ALERTE ADMIN
+function buildTriggeredMessage(pair, currentRate, stats, amountExample, locale, msg, customText = null) {
+  // Use the TRIGGERED_ALERT message function (supports all languages + context-aware)
+  const baseMessage = msg.TRIGGERED_ALERT
+    ? msg.TRIGGERED_ALERT(pair, currentRate, stats, amountExample, locale)
+    : `📢 ALERTA DO ADMIN\n\n${pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'} : ${formatRate(currentRate, locale)}\n\n📊 Taxa atual vs médias históricas`;
 
-${pairText} : ${formatRate(currentRate, locale)}
+  // Add custom text if provided
+  if (customText) {
+    return `${baseMessage}\n\n💬 <b>Mensagem do Admin:</b>\n<i>${customText}</i>`;
+  }
 
-📊 <b>Position actuelle :</b>
-
-`;
-  
-  if (stats.stats30d) {
-    text += `<b>30 derniers jours :</b>
-• Moyenne : ${formatRate(stats.stats30d.avg, locale)}
-• Min : ${formatRate(stats.stats30d.min, locale)}
-• Max : ${formatRate(stats.stats30d.max, locale)}
-• Écart vs moyenne : ${var30d > 0 ? '+' : ''}${formatAmount(var30d, 1, locale)}%\n\n`;
-  }
-  
-  if (stats.stats90d) {
-    text += `<b>90 derniers jours :</b>
-• Moyenne : ${formatRate(stats.stats90d.avg, locale)}
-• Min : ${formatRate(stats.stats90d.min, locale)}
-• Max : ${formatRate(stats.stats90d.max, locale)}
-• Écart vs moyenne : ${var90d > 0 ? '+' : ''}${formatAmount(var90d, 1, locale)}%\n\n`;
-  }
-  
-  if (stats.stats365d) {
-    text += `<b>12 derniers mois :</b>
-• Moyenne : ${formatRate(stats.stats365d.avg, locale)}
-• Min : ${formatRate(stats.stats365d.min, locale)}
-• Max : ${formatRate(stats.stats365d.max, locale)}
-• Écart vs moyenne : ${var365d > 0 ? '+' : ''}${formatAmount(var365d, 1, locale)}%\n\n`;
-  }
-  
-  if (gain30d) {
-    text += `💰 <b>Exemple sur ${formatAmount(amountExample, 0, locale)}${currency} :</b>
-${gain30d > 0 ? 'Tu gagnes' : 'Tu perds'} ~${formatAmount(Math.abs(gain30d), 0, locale)}${pair === 'eurbrl' ? ' R$' : '€'} vs moyenne 30j\n\n`;
-  }
-  
-  text += `💡 C'est le bon moment pour transférer !`;
-  
-  return text;
+  return baseMessage;
 }
 
 // ==========================================
@@ -179,12 +141,14 @@ ${gain30d > 0 ? 'Tu gagnes' : 'Tu perds'} ~${formatAmount(Math.abs(gain30d), 0, 
 export async function triggerManualAlert(options = {}) {
   const {
     pairs = ['eurbrl', 'brleur'],
-    audience = 'all'
+    audience = 'all',
+    text = null
   } = options;
-  
+
   console.log('\n📢 [TRIGGERED] Manual alert triggered');
   console.log(`   Pairs: ${pairs.join(', ')}`);
   console.log(`   Audience: ${audience}`);
+  if (text) console.log(`   Custom text: "${text}"`);
   
   try {
     console.log('[TRIGGERED] Fetching rates...');
@@ -213,7 +177,7 @@ export async function triggerManualAlert(options = {}) {
       console.log(`  30d avg: ${stats.stats30d?.avg.toFixed(4)}`);
       console.log(`  90d avg: ${stats.stats90d?.avg.toFixed(4)}`);
       
-      const sent = await broadcastTriggered(pair, currentRate, stats, audience);
+      const sent = await broadcastTriggered(pair, currentRate, stats, audience, text);
       results.push({ pair, sent });
     }
     
@@ -239,21 +203,36 @@ const isDirectExecution = currentFile === argFile;
 
 if (isDirectExecution) {
   console.log('🚀 Triggered Alerts CLI\n');
-  
+
   const args = process.argv.slice(2);
   const options = {};
-  
+
+  // Show help if requested
+  if (args.includes('--help') || args.includes('-h')) {
+    console.log('Usage: node triggered-alerts.js [options]\n');
+    console.log('Options:');
+    console.log('  --pairs=eurbrl,brleur  Pairs to send (default: both)');
+    console.log('  --audience=all|free|premium  Target audience (default: all)');
+    console.log('  --text="Your message"  Optional custom message to add');
+    console.log('\nExample:');
+    console.log('  node triggered-alerts.js --pairs=eurbrl --audience=premium --text="Excellent rate today!"');
+    process.exit(0);
+  }
+
   args.forEach(arg => {
     if (arg.startsWith('--')) {
       const [key, value] = arg.slice(2).split('=');
       if (key === 'pairs') {
         options.pairs = value.split(',');
+      } else if (key === 'text') {
+        // Handle quoted text
+        options[key] = value.replace(/^["']|["']$/g, '');
       } else {
         options[key] = value;
       }
     }
   });
-  
+
   console.log('Options:', options, '\n');
   
   triggerManualAlert(options)

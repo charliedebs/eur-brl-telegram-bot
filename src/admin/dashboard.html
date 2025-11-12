@@ -373,9 +373,19 @@
             </div>
         </div>
 
+        <!-- Custom Message -->
+        <div class="section">
+            <div class="section-title">3️⃣ Add Custom Message (Optional)</div>
+            <textarea id="custom-message" placeholder="Add a custom message to the alert (optional)..."
+                      style="width: 100%; min-height: 100px; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; font-family: inherit; resize: vertical;"></textarea>
+            <div style="font-size: 12px; color: #666; margin-top: 8px;">
+                💬 This message will appear at the end of the alert with "Mensagem do Admin" header
+            </div>
+        </div>
+
         <!-- Preview -->
         <div class="section">
-            <div class="section-title">3️⃣ Preview</div>
+            <div class="section-title">4️⃣ Preview</div>
             <div class="preview-box">
                 <div class="preview-title">📊 What users will receive:</div>
                 <div class="preview-content" id="preview">
@@ -456,6 +466,9 @@
             checkbox.addEventListener('change', updatePreview);
         });
 
+        // Handle custom message input
+        document.getElementById('custom-message').addEventListener('input', updatePreview);
+
         // Update preview
         async function updatePreview() {
             if (!selectedAudience || !currentRates) {
@@ -484,8 +497,9 @@
                 p === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'
             ).join(' and ');
 
-            document.getElementById('preview').textContent =
-                `✅ Sending to: ${audienceText}\n` +
+            const customMessage = document.getElementById('custom-message').value.trim();
+
+            let previewText = `✅ Sending to: ${audienceText}\n` +
                 `💱 Pairs: ${pairsText}\n\n` +
                 `📊 Message includes:\n` +
                 `• Current exchange rate\n` +
@@ -494,6 +508,12 @@
                 `• Percentage deviation from averages\n` +
                 `• Example savings calculation\n` +
                 `• Quick action buttons`;
+
+            if (customMessage) {
+                previewText += `\n\n💬 Custom message:\n"${customMessage}"`;
+            }
+
+            document.getElementById('preview').textContent = previewText;
 
             // Fetch user count
             try {
@@ -514,18 +534,26 @@
             const selectedPairs = Array.from(document.querySelectorAll('input[name="pair"]:checked'))
                 .map(cb => cb.value);
 
+            const customMessage = document.getElementById('custom-message').value.trim();
+
             document.getElementById('loading').style.display = 'block';
             document.getElementById('result').style.display = 'none';
             this.disabled = true;
 
             try {
+                const requestBody = {
+                    audience: selectedAudience,
+                    pairs: selectedPairs
+                };
+
+                if (customMessage) {
+                    requestBody.text = customMessage;
+                }
+
                 const response = await fetch('/api/admin/trigger-alert', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        audience: selectedAudience,
-                        pairs: selectedPairs
-                    })
+                    body: JSON.stringify(requestBody)
                 });
 
                 const result = await response.json();

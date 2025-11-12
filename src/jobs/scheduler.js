@@ -2,7 +2,6 @@
 import cron from 'node-cron';
 import { saveRatesHistory } from './rates-history.js';
 import { checkSpontaneousAlerts } from './spontaneous-alerts.js';
-import { checkPremiumAlerts } from './alerts.js'; // Alertes PROGRAMMÉES uniquement
 import { checkProgrammedAlerts } from './programmed-alerts.js';
 import { logger } from '../utils/logger.js';
 

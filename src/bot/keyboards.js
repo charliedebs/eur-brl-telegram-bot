@@ -438,18 +438,12 @@ case 'what_exchange':
       }
       
       case 'alert_choose_reference': {
-        const { pair, currentRate, avg7d, avg30d, avg90d, locale, msg } = options;
-        // NOTE: si 'msg' n'est pas passé dans options, récupère-le comme d'habitude:
-        // const msg = getMsg(locale) ou messages[locale]
-      
+        const { pair, currentRate, avg30d, avg90d, avg365d, locale } = options;
+
         return Markup.inlineKeyboard([
           [Markup.button.callback(
             msg.btn.refCurrent(currentRate, locale),
             `alert:ref:current:${pair}`
-          )],
-          [Markup.button.callback(
-            msg.btn.refAvg7d(avg7d, locale),
-            `alert:ref:avg7d:${pair}`
           )],
           [Markup.button.callback(
             msg.btn.refAvg30d(avg30d, locale),
@@ -458,6 +452,10 @@ case 'what_exchange':
           [Markup.button.callback(
             msg.btn.refAvg90d(avg90d, locale),
             `alert:ref:avg90d:${pair}`
+          )],
+          [Markup.button.callback(
+            msg.btn.refAvg365d(avg365d, locale),
+            `alert:ref:avg365d:${pair}`
           )],
           [Markup.button.callback(
             msg.btn.back,
@@ -481,10 +479,15 @@ case 'what_exchange':
       case 'alert_choose_cooldown_v2': {
         const { alertData } = options;
         // Créer un shortcode : type-value-ref-pair
-        // Ex: "rel-3-avg30d-eurbrl" ou "abs-6.3-null-eurbrl"
+        // Ex: "rel-3-avg30d-eurbrl" ou "abs-6.3456-null-eurbrl"
+        // Preserve full precision by explicitly formatting the number
+        const thresholdStr = typeof alertData.threshold_value === 'number'
+          ? alertData.threshold_value.toString()
+          : alertData.threshold_value;
+
         const shortcode = [
           alertData.threshold_type.slice(0, 3), // 'rel' ou 'abs'
-          alertData.threshold_value,
+          thresholdStr,
           alertData.reference_type || 'null',
           alertData.pair
         ].join('-');
@@ -500,45 +503,50 @@ case 'what_exchange':
       }
     // Liste des alertes (mise à jour)
     case 'alerts_list': {
-      const { alerts } = options;
-      
+      const { alerts, isPaused } = options;
+
       const buttons = [];
-      
+
       alerts.forEach((alert) => {
         let label;
-        
+
         if (alert.name) {
           const pairText = alert.pair === 'eurbrl' ? 'EUR→BRL' : 'BRL→EUR';
           label = `${alert.name} - ${pairText}`;
         } else {
           const pairText = alert.pair === 'eurbrl' ? 'EUR→BRL' : 'BRL→EUR';
-          
+
           let criteria;
           if (alert.threshold_type === 'absolute') {
             criteria = `≥${alert.threshold_value}`;
           } else {
             const refShort = {
               current: 'actuel',
-              avg7d: '7j',
               avg30d: '30j',
-              avg90d: '90j'
+              avg90d: '90j',
+              avg365d: '1an'
             };
             criteria = `+${alert.threshold_value}% vs ${refShort[alert.reference_type] || alert.reference_type}`;
           }
-          
+
           label = `${pairText}: ${criteria}`;
         }
-        
+
         if (label.length > 60) {
           label = label.substring(0, 57) + '...';
         }
-        
+
         buttons.push([Markup.button.callback(label, `alert:view:${alert.id}`)]);
       });
-      
+
+      // Add resume button if spontaneous alerts are paused
+      if (isPaused) {
+        buttons.push([Markup.button.callback(msg.btn.resumeSpontaneousAlerts, 'spontaneous:resume')]);
+      }
+
       buttons.push([Markup.button.callback(msg.btn.createAlert, 'alert:choose_pair')]);
       buttons.push([Markup.button.callback(msg.btn.back, 'action:back_main')]);
-      
+
       return Markup.inlineKeyboard(buttons);
     }
     
@@ -551,7 +559,7 @@ case 'what_exchange':
         [Markup.button.callback(msg.btn.seePremium, 'premium:pricing')]
       ]);
     
-    // Alerte premium déclenchée (depuis broadcast)
+    // Alerte premium programmée déclenchée (avec alertId)
     case 'premium_alert':
       const alertPair = options.pair || 'eurbrl';
       const alertAmount = options.amount || 1000;
@@ -561,6 +569,15 @@ case 'what_exchange':
         [Markup.button.callback(msg.btn.editMyAlert, `alert:view:${alertId}`)],
         [Markup.button.callback(msg.btn.deleteMyAlert, `alert:delete:${alertId}`)],
         [Markup.button.callback(msg.btn.myAlerts, 'alert:list')]
+      ]);
+
+    // Alerte spontanée premium (sans alertId - automatique)
+    case 'spontaneous_premium_alert':
+      const spontPair = options.pair || 'eurbrl';
+      const spontAmount = options.amount || 1000;
+      return Markup.inlineKeyboard([
+        [Markup.button.callback(msg.btn.compareNow, `route:${spontPair}:${spontAmount}`)],
+        [Markup.button.callback(msg.btn.pauseSpontaneousAlerts, 'spontaneous:pause')]
       ]);
 
     // Alerte déclenchée manuellement (admin)

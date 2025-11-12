@@ -519,8 +519,8 @@ Só recomendamos plataformas que realmente usamos e confiamos. A qualidade do se
       GUIDE_TRANSITION: (route = 'eurbrl') => {
         if (route === 'brleur') {
           return `✅ Você tem (ou vai ter):
-    • Uma conta 🇧🇷 para depositar seus BRL (Pix → USDC)
-    • Uma conta 🇪🇺 para sacar seus EUR (USDC → transferência bancária)
+    • Uma conta 🇧🇷 para: depositar BRL via Pix → comprar USDC
+    • Uma conta 🇪🇺 para: receber USDC → vender por EUR → sacar via transferência bancária
 
     🌐 Você está dando seu primeiro passo on-chain.
     É mais que uma simples transferência:
@@ -533,8 +533,8 @@ Só recomendamos plataformas que realmente usamos e confiamos. A qualidade do se
 
         // Default: eurbrl
         return `✅ Você tem (ou vai ter):
-    • Uma conta 🇪🇺 para depositar seus EUR (transferência bancária → USDC)
-    • Uma conta 🇧🇷 para sacar seus BRL (USDC → Pix)
+    • Uma conta 🇪🇺 para: depositar EUR via transferência bancária → comprar USDC
+    • Uma conta 🇧🇷 para: receber USDC → vender por BRL → sacar via Pix
 
     🌐 Você está dando seu primeiro passo on-chain.
     É mais que uma simples transferência:
@@ -999,21 +999,263 @@ Pague uma vez, use pelo período escolhido, sem renovação automática.
     💰 Em ${formatAmount(amountExample, 0, locale)}${pair === 'eurbrl' ? '€' : ' R$'}, você ganha ~${formatAmount(savings, 0, locale)}${pair === 'eurbrl' ? ' R$' : '€'} vs a média`,
     
       FREE_ALERT: (pair, currentRate, recordDays, amountExample, savings, locale) => `🔔 ALERTA ESPECIAL
-    
+
     ${pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'} : ${formatRate(currentRate, locale)}
-    
+
     📊 É a MELHOR taxa dos últimos ${recordDays} dias!
-    
+
     💰 Em ${formatAmount(amountExample, 0, locale)}${pair === 'eurbrl' ? '€' : ' R$'}, você ganha ~${formatAmount(savings, 0, locale)}${pair === 'eurbrl' ? ' R$' : '€'} vs a média
-    
+
+    💡 <i>Pode ser um bom momento para considerar sua transferência</i>
+
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    
+
     💎 Com Premium (5 R$/mês):
     • Configure seus próprios alertas
     • Multi-pares (EUR→BRL + BRL→EUR)
     • Vários limites personalizados
     • Alertas regulares (não apenas recordes)`,
-    
+
+      PREMIUM_ALERT: (pair, currentRate, avg30d, variation, amountExample, savings, locale) => {
+        const isGoodTime = variation > 0;
+        const direction = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+
+        return `🔔 ALERTA ESPONTÂNEO PREMIUM
+
+${direction} : ${formatRate(currentRate, locale)}
+
+${isGoodTime ? '💡 Bom momento para transferir!' : '⚠️ Taxa abaixo da média - talvez esperar seja melhor'}
+
+📊 Análise:
+• Taxa atual: ${formatRate(currentRate, locale)}
+• Média 30d: ${formatRate(avg30d, locale)}
+• Diferença: ${variation > 0 ? '+' : ''}${formatAmount(variation, 1, locale)}% ${variation > 0 ? '🎯' : '📉'}
+
+💰 Em ${formatAmount(amountExample, 0, locale)}${pair === 'eurbrl' ? '€' : ' R$'}, você ${variation > 0 ? 'ganha' : 'perde'} ~${formatAmount(Math.abs(savings), 0, locale)}${pair === 'eurbrl' ? ' R$' : '€'} vs a média
+
+${isGoodTime ? '✅ A taxa está favorável comparada ao último mês' : '⏳ Considere aguardar uma taxa melhor'}
+
+⏰ Próxima alerta espontânea possível em 6h`;
+      },
+
+      PREMIUM_ALERT_ENHANCED: (pair, currentRate, stats, amountExample, locale) => {
+        const direction = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+        const {avg30d, avg90d, avg365d, variation30d, variation90d, variation365d} = stats;
+
+        // If key data is missing, fall back to simple version
+        if (variation30d === null || variation90d === null) {
+          const savings = avg30d ? (currentRate - avg30d) * amountExample : 0;
+          return this.PREMIUM_ALERT ? this.PREMIUM_ALERT(pair, currentRate, avg30d, variation30d || 0, amountExample, savings, locale) : '';
+        }
+
+        const shortTerm = variation30d;
+        const mediumTerm = variation90d;
+        const longTerm = variation365d;
+
+        // Determine overall observation based on data (factual only)
+        let observation, emoji, analysis;
+
+        // Scenario 1: Rate significantly above average (> 2%)
+        if (mediumTerm > 2) {
+          if (shortTerm > mediumTerm) {
+            observation = '📈 Taxa bem acima das médias e em aceleração';
+            emoji = '✅';
+            analysis = 'Tendência de alta consistente em todos os períodos. Pode ser um momento favorável.';
+          } else if (shortTerm > 0) {
+            observation = '📊 Taxa bem acima das médias históricas';
+            emoji = '✅';
+            analysis = 'Taxa acima das médias de 30, 90 e 365 dias.';
+          } else {
+            observation = '⚠️ Taxa acima das médias, mas perdendo força';
+            emoji = '➡️';
+            analysis = 'Taxa está acima das médias de longo prazo, mas caindo no curto prazo.';
+          }
+        }
+        // Scenario 2: Rate slightly above average (0 < rate ≤ 2%)
+        else if (mediumTerm > 0) {
+          if (shortTerm > mediumTerm + 1) {
+            observation = '📈 Taxa em alta no curto prazo';
+            emoji = '➡️';
+            analysis = 'Taxa ligeiramente acima da média e melhorando rapidamente.';
+          } else {
+            observation = '📊 Taxa ligeiramente acima da média';
+            emoji = '➡️';
+            analysis = 'Taxa próxima das médias históricas.';
+          }
+        }
+        // Scenario 3: Rate below average
+        else {
+          if (shortTerm > 0) {
+            // Recovery: short term turned positive while medium term negative
+            observation = '📈 Taxa em recuperação';
+            emoji = '➡️';
+            analysis = 'Taxa abaixo da média 30d, mas mostrando sinais de recuperação no curto prazo.';
+          } else if (shortTerm < mediumTerm - 0.5) {
+            // Getting worse: short term more negative than medium term
+            observation = '📉 Taxa em tendência de baixa';
+            emoji = '⏳';
+            analysis = 'Taxa abaixo das médias e continuando em queda no curto prazo.';
+          } else if (shortTerm > mediumTerm) {
+            // Improving: short term less negative than medium term
+            observation = '📊 Taxa abaixo da média, mas melhorando';
+            emoji = '⏳';
+            analysis = 'Taxa ainda abaixo das médias históricas, mas com leve recuperação.';
+          } else {
+            observation = '📊 Taxa abaixo das médias históricas';
+            emoji = '⏳';
+            analysis = 'Taxa está abaixo das médias de 30, 90 e 365 dias.';
+          }
+        }
+
+        const savings30d = avg30d ? (currentRate - avg30d) * amountExample : 0;
+
+        return `🔔 ALERTA PREMIUM - ANÁLISE COMPLETA
+
+${direction} : ${formatRate(currentRate, locale)}
+
+${emoji} ${observation}
+
+📊 <b>Análise Multi-período:</b>
+
+<b>Curto prazo (30 dias)</b>
+• Média: ${avg30d ? formatRate(avg30d, locale) : 'N/D'}
+• Variação: ${variation30d !== null ? (variation30d > 0 ? '+' : '') + formatAmount(variation30d, 1, locale) + '%' : 'N/D'} ${variation30d > 1 ? '📈' : variation30d < -1 ? '📉' : '➡️'}
+
+<b>Médio prazo (90 dias)</b>
+• Média: ${formatRate(avg90d, locale)}
+• Variação: ${variation90d > 0 ? '+' : ''}${formatAmount(variation90d, 1, locale)}% ${variation90d > 1 ? '📈' : variation90d < -1 ? '📉' : '➡️'}
+
+<b>Longo prazo (1 ano)</b>
+• Média: ${avg365d ? formatRate(avg365d, locale) : 'N/D'}
+• Variação: ${variation365d !== null ? (variation365d > 0 ? '+' : '') + formatAmount(variation365d, 1, locale) + '%' : 'N/D'} ${variation365d > 1 ? '📈' : variation365d < -1 ? '📉' : '➡️'}
+
+💡 <b>O que isso significa:</b>
+${analysis}
+
+💰 <b>Impacto financeiro:</b>
+Em ${formatAmount(amountExample, 0, locale)}${pair === 'eurbrl' ? '€' : ' R$'}, você ${savings30d > 0 ? 'ganha' : 'perde'} ~${formatAmount(Math.abs(savings30d), 0, locale)}${pair === 'eurbrl' ? ' R$' : '€'} vs média 30d
+
+⏰ Próxima alerta espontânea em 6h`;
+      },
+
+      PROGRAMMED_ALERT: (pair, currentRate, threshold, refValue, alert, locale) => {
+        const typeLabels = {
+          absolute: '🎯 Absoluto',
+          relative: '📊 Relativo'
+        };
+
+        const refLabels = {
+          current: 'Taxa atual',
+          avg30d: 'Média 30 dias',
+          avg90d: 'Média 90 dias',
+          avg365d: 'Média 1 ano'
+        };
+
+        const pairText = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+        const typeLabel = typeLabels[alert.threshold_type] || '🔔';
+
+        let text = `🔔 ALERTA DISPARADO
+
+${pairText}
+${typeLabel}`;
+
+        if (alert.threshold_type === 'relative') {
+          const refLabel = refLabels[alert.reference_type];
+          text += ` : +${formatAmount(alert.threshold_value, 1, locale)}% vs ${refLabel}`;
+        } else {
+          text += ` : ≥ ${formatRate(alert.threshold_value, locale)}`;
+        }
+
+        text += `
+
+💡 Seu limite foi atingido!
+
+<b>Análise:</b>
+• Taxa atual: ${formatRate(currentRate, locale)}`;
+
+        if (alert.threshold_type === 'relative' && refValue) {
+          const refLabel = refLabels[alert.reference_type];
+          const delta = ((currentRate - refValue) / refValue) * 100;
+          text += `
+• ${refLabel}: ${formatRate(refValue, locale)}
+• Diferença: +${formatAmount(delta, 1, locale)}%`;
+        }
+
+        text += `
+• Limite alerta: ${formatRate(threshold, locale)}`;
+
+        // Format cooldown
+        const minutes = alert.cooldown_minutes || 60;
+        let cooldownText;
+        if (minutes < 60) cooldownText = `${minutes} min`;
+        else if (minutes < 1440) cooldownText = `${Math.floor(minutes / 60)}h`;
+        else if (minutes < 10080) cooldownText = `${Math.floor(minutes / 1440)} dia(s)`;
+        else cooldownText = `${Math.floor(minutes / 10080)} semana(s)`;
+
+        text += `
+
+⏰ Próximo alerta possível em ${cooldownText}`;
+
+        return text;
+      },
+
+      TRIGGERED_ALERT: (pair, currentRate, stats, amountExample, locale) => {
+        const pairText = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+        const currency = pair === 'eurbrl' ? '€' : ' R$';
+
+        const var30d = stats.stats30d ? ((currentRate - stats.stats30d.avg) / stats.stats30d.avg * 100) : null;
+        const var90d = stats.stats90d ? ((currentRate - stats.stats90d.avg) / stats.stats90d.avg * 100) : null;
+        const var365d = stats.stats365d ? ((currentRate - stats.stats365d.avg) / stats.stats365d.avg * 100) : null;
+
+        const gain30d = stats.stats30d ? (currentRate - stats.stats30d.avg) * amountExample : null;
+
+        // Determine if it's a good time based on averages
+        const isGoodTime = var30d > 0;
+
+        let text = `📢 ALERTA DO ADMIN
+
+${pairText} : ${formatRate(currentRate, locale)}
+
+📊 <b>Posição atual:</b>
+
+`;
+
+        if (stats.stats30d) {
+          text += `<b>Últimos 30 dias:</b>
+• Média: ${formatRate(stats.stats30d.avg, locale)}
+• Mín: ${formatRate(stats.stats30d.min, locale)}
+• Máx: ${formatRate(stats.stats30d.max, locale)}
+• Variação vs média: ${var30d > 0 ? '+' : ''}${formatAmount(var30d, 1, locale)}%\n\n`;
+        }
+
+        if (stats.stats90d) {
+          text += `<b>Últimos 90 dias:</b>
+• Média: ${formatRate(stats.stats90d.avg, locale)}
+• Mín: ${formatRate(stats.stats90d.min, locale)}
+• Máx: ${formatRate(stats.stats90d.max, locale)}
+• Variação vs média: ${var90d > 0 ? '+' : ''}${formatAmount(var90d, 1, locale)}%\n\n`;
+        }
+
+        if (stats.stats365d) {
+          text += `<b>Últimos 12 meses:</b>
+• Média: ${formatRate(stats.stats365d.avg, locale)}
+• Mín: ${formatRate(stats.stats365d.min, locale)}
+• Máx: ${formatRate(stats.stats365d.max, locale)}
+• Variação vs média: ${var365d > 0 ? '+' : ''}${formatAmount(var365d, 1, locale)}%\n\n`;
+        }
+
+        if (gain30d !== null) {
+          text += `💰 <b>Exemplo em ${formatAmount(amountExample, 0, locale)}${currency}:</b>
+Você ${gain30d > 0 ? 'ganha' : 'perde'} ~${formatAmount(Math.abs(gain30d), 0, locale)}${pair === 'eurbrl' ? ' R$' : '€'} vs média 30d\n\n`;
+        }
+
+        text += isGoodTime
+          ? `💡 Taxa acima da média - bom momento para transferir!`
+          : `⏳ Taxa abaixo da média - considere aguardar.`;
+
+        return text;
+      },
+
     ALERTS_LIST: (alerts, locale) => {
       if (alerts.length === 0) {
         return `🔔 <b>Meus alertas</b>
@@ -1050,9 +1292,9 @@ Pague uma vez, use pelo período escolhido, sem renovação automática.
         } else {
           const refLabels = {
             current: 'taxa atual',
-            avg7d: 'média 7d',
             avg30d: 'média 30d',
-            avg90d: 'média 90d'
+            avg90d: 'média 90d',
+            avg365d: 'média 1 ano'
           };
           const refLabel = refLabels[alert.reference_type] || alert.reference_type;
           threshold = `+${formatAmount(alert.threshold_value, 1, locale)}% vs ${refLabel}`;
@@ -1117,25 +1359,25 @@ Pague uma vez, use pelo período escolhido, sem renovação automática.
     
     Como você quer definir seu limite?`,
     
-    ALERT_CHOOSE_REFERENCE: (pair, currentRate, avg7d, avg30d, avg90d, locale) => `📊 LIMITE RELATIVO
-    
+    ALERT_CHOOSE_REFERENCE: (pair, currentRate, avg30d, avg90d, avg365d, locale) => `📊 LIMITE RELATIVO
+
     Taxa atual: ${formatRate(currentRate, locale)}
-    
+
     +X% em relação a quê?
-    
+
     💡 <i>A referência será recalculada a cada verificação (a cada 2h)</i>`,
-    
+
     ALERT_CHOOSE_PERCENT: (pair, refType, refValue, locale) => {
       const refLabels = {
         current: `Taxa atual (${formatRate(refValue, locale)})`,
-        avg7d: `Média 7 dias (${formatRate(refValue, locale)})`,
         avg30d: `Média 30 dias (${formatRate(refValue, locale)})`,
-        avg90d: `Média 90 dias (${formatRate(refValue, locale)})`
+        avg90d: `Média 90 dias (${formatRate(refValue, locale)})`,
+        avg365d: `Média 1 ano (${formatRate(refValue, locale)})`
       };
-      
+
       return `📊 LIMITE RELATIVO
     Referência: ${refLabels[refType]}
-    
+
     Digite a porcentagem de aumento:`;
     },
     
@@ -1161,9 +1403,9 @@ Pague uma vez, use pelo período escolhido, sem renovação automática.
       
       const refLabels = {
         current: 'Taxa atual',
-        avg7d: 'Média 7 dias',
         avg30d: 'Média 30 dias',
-        avg90d: 'Média 90 dias'
+        avg90d: 'Média 90 dias',
+        avg365d: 'Média 1 ano'
       };
       
       let text = `✅ ALERTA CRIADO
@@ -1250,9 +1492,9 @@ Pague uma vez, use pelo período escolhido, sem renovação automática.
         
         const refLabels = {
           current: 'Taxa atual',
-          avg7d: 'Média 7 dias',
           avg30d: 'Média 30 dias',
-          avg90d: 'Média 90 dias'
+          avg90d: 'Média 90 dias',
+          avg365d: 'Média 1 ano'
         };
         
         const pairText = alert.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
@@ -1363,8 +1605,21 @@ Pague uma vez, use pelo período escolhido, sem renovação automática.
     CONVERT_ASK_AMOUNT: "💱 Que valor você quer converter?\n\nExemplo: 253 ou 1500 brl",
     RATE_LABEL: "Taxa", // ou "Taxa" (PT), "Rate" (EN)
     BETTER_BY: "melhor em", // ou "melhor em" (PT), "better by" (EN)
-    
-    
+
+    // Pause/Resume spontaneous alerts
+    SPONTANEOUS_ALERTS_PAUSED: (pausedUntil, locale) => `⏸️ <b>Alertas espontâneos pausados</b>
+
+Você não receberá mais alertas espontâneos até <b>${new Date(pausedUntil).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })}</b>.
+
+Seus alertas personalizados (que você criou) continuarão funcionando normalmente.
+
+Para reativar os alertas espontâneos antes dessa data, clique no botão abaixo.`,
+
+    SPONTANEOUS_ALERTS_RESUMED: `▶️ <b>Alertas espontâneos reativados</b>
+
+Você voltará a receber alertas espontâneos quando houver oportunidades interessantes de taxa.`,
+
+
       btn: {
         langFR: '🇫🇷 Français',
         langPT: '🇧🇷 Português',
@@ -1480,9 +1735,9 @@ Pague uma vez, use pelo período escolhido, sem renovação automática.
         absoluteAlert:'🎯 Absoluta (taxa fixa)',
     
         refCurrent: (rate, locale) => `💵 Taxa atual (${formatRate(rate, locale)})`,
-    refAvg7d:   (rate, locale) => `📈 Média 7d (${formatRate(rate, locale)})`,
-    refAvg30d:  (rate, locale) => `📊 Média 30d (${formatRate(rate, locale)}) ⭐`,
-    refAvg90d:  (rate, locale) => `📉 Média 90d (${formatRate(rate, locale)})`,
+        refAvg30d:  (rate, locale) => `📊 Média 30d (${formatRate(rate, locale)}) ⭐`,
+        refAvg90d:  (rate, locale) => `📈 Média 90d (${formatRate(rate, locale)})`,
+        refAvg365d: (rate, locale) => `📅 Média 1 ano (${formatRate(rate, locale)})`,
     
         backToPricing: '⬅️ Voltar aos preços',
         chooseCooldown15: '⚡ 15 minutos',
@@ -1499,6 +1754,8 @@ Pague uma vez, use pelo período escolhido, sem renovação automática.
         compareNow: '🚀 Comparar agora',
         editMyAlert: '⚙️ Editar meu alerta',
         deleteMyAlert: '🗑️ Apagar este alerta',
+        pauseSpontaneousAlerts: '⏸️ Pausar alertas (1 semana)',
+        resumeSpontaneousAlerts: '▶️ Reativar alertas',
         help: '❓ Ajuda',
         paymentHelp: '💬 Ajuda com pagamento',
         mainMenu: '🏠 Menu principal',

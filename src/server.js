@@ -335,12 +335,15 @@ app.get('/api/admin/user-count', async (req, res) => {
 // API: Trigger alert
 app.post('/api/admin/trigger-alert', async (req, res) => {
   try {
-    const { audience = 'all', pairs = ['eurbrl', 'brleur'] } = req.body;
+    const { audience = 'all', pairs = ['eurbrl', 'brleur'], text } = req.body;
 
-    logger.info('[ADMIN] Triggering alert:', { audience, pairs });
+    logger.info('[ADMIN] Triggering alert:', { audience, pairs, hasCustomText: !!text });
 
     const { triggerManualAlert } = await import('./jobs/triggered-alerts.js');
-    const result = await triggerManualAlert({ audience, pairs });
+    const options = { audience, pairs };
+    if (text) options.text = text;
+
+    const result = await triggerManualAlert(options);
 
     res.json(result);
   } catch (error) {

@@ -522,8 +522,8 @@ Tu l'utilises comme "monnaie pivot" : EUR → USDC → BRL.`;
   GUIDE_TRANSITION: (route = 'eurbrl') => {
     if (route === 'brleur') {
       return `✅ Tu as (ou tu vas avoir) :
-• Un compte 🇧🇷 pour déposer tes BRL (Pix → USDC)
-• Un compte 🇪🇺 pour retirer tes EUR (USDC → virement bancaire)
+• Un compte 🇧🇷 pour : déposer BRL via Pix → acheter USDC
+• Un compte 🇪🇺 pour : recevoir USDC → vendre pour EUR → retirer via virement bancaire
 
 🌐 Tu fais ton premier pas on-chain.
 C'est plus qu'un simple transfert :
@@ -536,8 +536,8 @@ C'est plus qu'un simple transfert :
 
     // Default: eurbrl
     return `✅ Tu as (ou tu vas avoir) :
-• Un compte 🇪🇺 pour déposer tes EUR (virement bancaire → USDC)
-• Un compte 🇧🇷 pour retirer tes BRL (USDC → Pix)
+• Un compte 🇪🇺 pour : déposer EUR via virement bancaire → acheter USDC
+• Un compte 🇧🇷 pour : recevoir USDC → vendre pour BRL → retirer via Pix
 
 🌐 Tu fais ton premier pas on-chain.
 C'est plus qu'un simple transfert :
@@ -1004,21 +1004,263 @@ Payez une fois, utilisez pour la période choisie, sans renouvellement automatiq
   💰 Sur ${formatAmount(amountExample, 0, locale)}${pair === 'eurbrl' ? '€' : ' R$'}, tu gagnes ~${formatAmount(savings, 0, locale)}${pair === 'eurbrl' ? ' R$' : '€'} vs la moyenne`,
   
     FREE_ALERT: (pair, currentRate, recordDays, amountExample, savings, locale) => `🔔 ALERTE SPÉCIALE
-  
+
   ${pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'} : ${formatRate(currentRate, locale)}
-  
+
   📊 C'est le MEILLEUR taux depuis ${recordDays} jours !
-  
+
   💰 Sur ${formatAmount(amountExample, 0, locale)}${pair === 'eurbrl' ? '€' : ' R$'}, tu gagnes ~${formatAmount(savings, 0, locale)}${pair === 'eurbrl' ? ' R$' : '€'} vs la moyenne
-  
+
+  💡 <i>Cela pourrait être un bon moment à considérer pour ton transfert</i>
+
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  
+
   💎 Avec Premium (5 R$/mois) :
   • Configure tes propres alertes
   • Multi-paires (EUR→BRL + BRL→EUR)
   • Plusieurs seuils personnalisés
   • Alertes régulières (pas juste les records)`,
-  
+
+  PREMIUM_ALERT: (pair, currentRate, avg30d, variation, amountExample, savings, locale) => {
+    const isGoodTime = variation > 0;
+    const direction = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+
+    return `🔔 ALERTE SPONTANÉE PREMIUM
+
+${direction} : ${formatRate(currentRate, locale)}
+
+${isGoodTime ? '💡 Bon moment pour transférer !' : '⚠️ Taux en-dessous de la moyenne - mieux vaut peut-être attendre'}
+
+📊 Analyse :
+• Taux actuel : ${formatRate(currentRate, locale)}
+• Moyenne 30j : ${formatRate(avg30d, locale)}
+• Écart : ${variation > 0 ? '+' : ''}${formatAmount(variation, 1, locale)}% ${variation > 0 ? '🎯' : '📉'}
+
+💰 Sur ${formatAmount(amountExample, 0, locale)}${pair === 'eurbrl' ? '€' : ' R$'}, tu ${variation > 0 ? 'gagnes' : 'perds'} ~${formatAmount(Math.abs(savings), 0, locale)}${pair === 'eurbrl' ? ' R$' : '€'} vs la moyenne
+
+${isGoodTime ? '✅ Le taux est favorable par rapport au dernier mois' : '⏳ Considère attendre un meilleur taux'}
+
+⏰ Prochaine alerte spontanée possible dans 6h`;
+  },
+
+  PREMIUM_ALERT_ENHANCED: (pair, currentRate, stats, amountExample, locale) => {
+    const direction = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+    const {avg30d, avg90d, avg365d, variation30d, variation90d, variation365d} = stats;
+
+    // If key data is missing, fall back to simple version
+    if (variation30d === null || variation90d === null) {
+      const savings = avg30d ? (currentRate - avg30d) * amountExample : 0;
+      return this.PREMIUM_ALERT ? this.PREMIUM_ALERT(pair, currentRate, avg30d, variation30d || 0, amountExample, savings, locale) : '';
+    }
+
+    const shortTerm = variation30d;
+    const mediumTerm = variation90d;
+    const longTerm = variation365d;
+
+    // Determine overall observation based on data (factual only)
+    let observation, emoji, analysis;
+
+    // Scenario 1: Rate significantly above average (> 2%)
+    if (mediumTerm > 2) {
+      if (shortTerm > mediumTerm) {
+        observation = '📈 Taux bien au-dessus des moyennes et en accélération';
+        emoji = '✅';
+        analysis = 'Tendance haussière cohérente sur toutes les périodes. Ça pourrait être un moment favorable.';
+      } else if (shortTerm > 0) {
+        observation = '📊 Taux bien au-dessus des moyennes historiques';
+        emoji = '✅';
+        analysis = 'Taux au-dessus des moyennes de 30, 90 et 365 jours.';
+      } else {
+        observation = '⚠️ Taux au-dessus des moyennes, mais perd de la force';
+        emoji = '➡️';
+        analysis = 'Taux est au-dessus des moyennes long terme, mais baisse à court terme.';
+      }
+    }
+    // Scenario 2: Rate slightly above average (0 < rate ≤ 2%)
+    else if (mediumTerm > 0) {
+      if (shortTerm > mediumTerm + 1) {
+        observation = '📈 Taux en hausse à court terme';
+        emoji = '➡️';
+        analysis = 'Taux légèrement au-dessus de la moyenne et s\'améliore rapidement.';
+      } else {
+        observation = '📊 Taux légèrement au-dessus de la moyenne';
+        emoji = '➡️';
+        analysis = 'Taux proche des moyennes historiques.';
+      }
+    }
+    // Scenario 3: Rate below average
+    else {
+      if (shortTerm > 0) {
+        // Recovery: short term turned positive while medium term negative
+        observation = '📈 Taux en récupération';
+        emoji = '➡️';
+        analysis = 'Taux sous la moyenne 30j, mais montre des signes de récupération à court terme.';
+      } else if (shortTerm < mediumTerm - 0.5) {
+        // Getting worse: short term more negative than medium term
+        observation = '📉 Taux en tendance baissière';
+        emoji = '⏳';
+        analysis = 'Taux sous les moyennes et continue de baisser à court terme.';
+      } else if (shortTerm > mediumTerm) {
+        // Improving: short term less negative than medium term
+        observation = '📊 Taux sous la moyenne, mais s\'améliore';
+        emoji = '⏳';
+        analysis = 'Taux encore sous les moyennes historiques, mais avec légère récupération.';
+      } else {
+        observation = '📊 Taux sous les moyennes historiques';
+        emoji = '⏳';
+        analysis = 'Taux est sous les moyennes de 30, 90 et 365 jours.';
+      }
+    }
+
+    const savings30d = avg30d ? (currentRate - avg30d) * amountExample : 0;
+
+    return `🔔 ALERTE PREMIUM - ANALYSE COMPLÈTE
+
+${direction} : ${formatRate(currentRate, locale)}
+
+${emoji} ${observation}
+
+📊 <b>Analyse multi-période :</b>
+
+<b>Court terme (30 jours)</b>
+• Moyenne : ${avg30d ? formatRate(avg30d, locale) : 'N/D'}
+• Variation : ${variation30d !== null ? (variation30d > 0 ? '+' : '') + formatAmount(variation30d, 1, locale) + '%' : 'N/D'} ${variation30d > 1 ? '📈' : variation30d < -1 ? '📉' : '➡️'}
+
+<b>Moyen terme (90 jours)</b>
+• Moyenne : ${formatRate(avg90d, locale)}
+• Variation : ${variation90d > 0 ? '+' : ''}${formatAmount(variation90d, 1, locale)}% ${variation90d > 1 ? '📈' : variation90d < -1 ? '📉' : '➡️'}
+
+<b>Long terme (1 an)</b>
+• Moyenne : ${avg365d ? formatRate(avg365d, locale) : 'N/D'}
+• Variation : ${variation365d !== null ? (variation365d > 0 ? '+' : '') + formatAmount(variation365d, 1, locale) + '%' : 'N/D'} ${variation365d > 1 ? '📈' : variation365d < -1 ? '📉' : '➡️'}
+
+💡 <b>Ce que ça signifie :</b>
+${analysis}
+
+💰 <b>Impact financier :</b>
+Sur ${formatAmount(amountExample, 0, locale)}${pair === 'eurbrl' ? '€' : ' R$'}, tu ${savings30d > 0 ? 'gagnes' : 'perds'} ~${formatAmount(Math.abs(savings30d), 0, locale)}${pair === 'eurbrl' ? ' R$' : '€'} vs moyenne 30j
+
+⏰ Prochaine alerte spontanée dans 6h`;
+  },
+
+  PROGRAMMED_ALERT: (pair, currentRate, threshold, refValue, alert, locale) => {
+    const typeLabels = {
+      absolute: '🎯 Absolu',
+      relative: '📊 Relatif'
+    };
+
+    const refLabels = {
+      current: 'Taux actuel',
+      avg30d: 'Moyenne 30j',
+      avg90d: 'Moyenne 90j',
+      avg365d: 'Moyenne 1 an'
+    };
+
+    const pairText = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+    const typeLabel = typeLabels[alert.threshold_type] || '🔔';
+
+    let text = `🔔 ALERTE DÉCLENCHÉE
+
+${pairText}
+${typeLabel}`;
+
+    if (alert.threshold_type === 'relative') {
+      const refLabel = refLabels[alert.reference_type];
+      text += ` : +${formatAmount(alert.threshold_value, 1, locale)}% vs ${refLabel}`;
+    } else {
+      text += ` : ≥ ${formatRate(alert.threshold_value, locale)}`;
+    }
+
+    text += `
+
+💡 Ton seuil est atteint !
+
+<b>Analyse :</b>
+• Taux actuel : ${formatRate(currentRate, locale)}`;
+
+    if (alert.threshold_type === 'relative' && refValue) {
+      const refLabel = refLabels[alert.reference_type];
+      const delta = ((currentRate - refValue) / refValue) * 100;
+      text += `
+• ${refLabel} : ${formatRate(refValue, locale)}
+• Écart : +${formatAmount(delta, 1, locale)}%`;
+    }
+
+    text += `
+• Seuil alerte : ${formatRate(threshold, locale)}`;
+
+    // Format cooldown
+    const minutes = alert.cooldown_minutes || 60;
+    let cooldownText;
+    if (minutes < 60) cooldownText = `${minutes} min`;
+    else if (minutes < 1440) cooldownText = `${Math.floor(minutes / 60)}h`;
+    else if (minutes < 10080) cooldownText = `${Math.floor(minutes / 1440)} jour(s)`;
+    else cooldownText = `${Math.floor(minutes / 10080)} semaine(s)`;
+
+    text += `
+
+⏰ Prochaine alerte possible dans ${cooldownText}`;
+
+    return text;
+  },
+
+  TRIGGERED_ALERT: (pair, currentRate, stats, amountExample, locale) => {
+    const pairText = pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+    const currency = pair === 'eurbrl' ? '€' : ' R$';
+
+    const var30d = stats.stats30d ? ((currentRate - stats.stats30d.avg) / stats.stats30d.avg * 100) : null;
+    const var90d = stats.stats90d ? ((currentRate - stats.stats90d.avg) / stats.stats90d.avg * 100) : null;
+    const var365d = stats.stats365d ? ((currentRate - stats.stats365d.avg) / stats.stats365d.avg * 100) : null;
+
+    const gain30d = stats.stats30d ? (currentRate - stats.stats30d.avg) * amountExample : null;
+
+    // Determine if it's a good time based on averages
+    const isGoodTime = var30d > 0;
+
+    let text = `📢 ALERTE ADMIN
+
+${pairText} : ${formatRate(currentRate, locale)}
+
+📊 <b>Position actuelle :</b>
+
+`;
+
+    if (stats.stats30d) {
+      text += `<b>30 derniers jours :</b>
+• Moyenne : ${formatRate(stats.stats30d.avg, locale)}
+• Min : ${formatRate(stats.stats30d.min, locale)}
+• Max : ${formatRate(stats.stats30d.max, locale)}
+• Écart vs moyenne : ${var30d > 0 ? '+' : ''}${formatAmount(var30d, 1, locale)}%\n\n`;
+    }
+
+    if (stats.stats90d) {
+      text += `<b>90 derniers jours :</b>
+• Moyenne : ${formatRate(stats.stats90d.avg, locale)}
+• Min : ${formatRate(stats.stats90d.min, locale)}
+• Max : ${formatRate(stats.stats90d.max, locale)}
+• Écart vs moyenne : ${var90d > 0 ? '+' : ''}${formatAmount(var90d, 1, locale)}%\n\n`;
+    }
+
+    if (stats.stats365d) {
+      text += `<b>12 derniers mois :</b>
+• Moyenne : ${formatRate(stats.stats365d.avg, locale)}
+• Min : ${formatRate(stats.stats365d.min, locale)}
+• Max : ${formatRate(stats.stats365d.max, locale)}
+• Écart vs moyenne : ${var365d > 0 ? '+' : ''}${formatAmount(var365d, 1, locale)}%\n\n`;
+    }
+
+    if (gain30d !== null) {
+      text += `💰 <b>Exemple sur ${formatAmount(amountExample, 0, locale)}${currency} :</b>
+Tu ${gain30d > 0 ? 'gagnes' : 'perds'} ~${formatAmount(Math.abs(gain30d), 0, locale)}${pair === 'eurbrl' ? ' R$' : '€'} vs moyenne 30j\n\n`;
+    }
+
+    text += isGoodTime
+      ? `💡 Taux au-dessus de la moyenne - bon moment pour transférer !`
+      : `⏳ Taux en-dessous de la moyenne - considère attendre.`;
+
+    return text;
+  },
+
 ALERTS_LIST: (alerts, locale) => {
   if (alerts.length === 0) {
     return `🔔 <b>Mes alertes</b>
@@ -1057,9 +1299,9 @@ Crée ta première alerte pour être notifié automatiquement !`;
     } else {
       const refLabels = {
         current: 'taux actuel',
-        avg7d: 'moy. 7j',
         avg30d: 'moy. 30j',
-        avg90d: 'moy. 90j'
+        avg90d: 'moy. 90j',
+        avg365d: 'moy. 1 an'
       };
       const refLabel = refLabels[alert.reference_type] || alert.reference_type;
       threshold = `+${formatAmount(alert.threshold_value, 1, locale)}% vs ${refLabel}`;
@@ -1107,26 +1349,26 @@ Crée ta première alerte pour être notifié automatiquement !`;
   Comment veux-tu définir ton seuil ?`,
   
   // Étape 2a : Choix référence (si relatif)
-  ALERT_CHOOSE_REFERENCE: (pair, currentRate, avg7d, avg30d, avg90d, locale) => `📊 SEUIL RELATIF
-  
+  ALERT_CHOOSE_REFERENCE: (pair, currentRate, avg30d, avg90d, avg365d, locale) => `📊 SEUIL RELATIF
+
   Taux actuel : ${formatRate(currentRate, locale)}
-  
+
   +X% par rapport à quoi ?
-  
+
   💡 <i>La référence sera recalculée à chaque vérification (toutes les 2h)</i>`,
-  
+
   // Étape 2b : Pourcentage (si relatif)
   ALERT_CHOOSE_PERCENT: (pair, refType, refValue, locale) => {
     const refLabels = {
       current: `Taux actuel (${formatRate(refValue, locale)})`,
-      avg7d: `Moyenne 7j (${formatRate(refValue, locale)})`,
       avg30d: `Moyenne 30j (${formatRate(refValue, locale)})`,
-      avg90d: `Moyenne 90j (${formatRate(refValue, locale)})`
+      avg90d: `Moyenne 90j (${formatRate(refValue, locale)})`,
+      avg365d: `Moyenne 1 an (${formatRate(refValue, locale)})`
     };
-    
+
     return `📊 SEUIL RELATIF
   Référence : ${refLabels[refType]}
-  
+
   Entre le pourcentage d'augmentation :`;
   },
   
@@ -1154,9 +1396,9 @@ Crée ta première alerte pour être notifié automatiquement !`;
     
     const refLabels = {
       current: 'Taux actuel',
-      avg7d: 'Moyenne 7 jours',
       avg30d: 'Moyenne 30 jours',
-      avg90d: 'Moyenne 90 jours'
+      avg90d: 'Moyenne 90 jours',
+      avg365d: 'Moyenne 1 an'
     };
     
     let text = `✅ ALERTE CRÉÉE
@@ -1242,9 +1484,9 @@ Crée ta première alerte pour être notifié automatiquement !`;
       
       const refLabels = {
         current: 'Taux actuel',
-        avg7d: 'Moyenne 7 jours',
         avg30d: 'Moyenne 30 jours',
-        avg90d: 'Moyenne 90 jours'
+        avg90d: 'Moyenne 90 jours',
+        avg365d: 'Moyenne 1 an'
       };
       
       const pairText = alert.pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
@@ -1378,6 +1620,19 @@ CONVERT_ASK_AMOUNT: "💱 Quel montant veux-tu convertir?\n\nExemple: 253 ou 150
 RATE_LABEL: "Taux", // ou "Taxa" (PT), "Rate" (EN)
 BETTER_BY: "meilleur de", // ou "melhor em" (PT), "better by" (EN)
 
+// Pause/Resume spontaneous alerts
+SPONTANEOUS_ALERTS_PAUSED: (pausedUntil, locale) => `⏸️ <b>Alertes spontanées en pause</b>
+
+Tu ne recevras plus d'alertes spontanées jusqu'au <b>${new Date(pausedUntil).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })}</b>.
+
+Tes alertes personnalisées (que tu as créées) continueront de fonctionner normalement.
+
+Pour réactiver les alertes spontanées avant cette date, clique sur le bouton ci-dessous.`,
+
+SPONTANEOUS_ALERTS_RESUMED: `▶️ <b>Alertes spontanées réactivées</b>
+
+Tu recevras à nouveau des alertes spontanées lorsqu'il y aura des opportunités intéressantes de taux.`,
+
 btn: {
   langFR: '🇫🇷 Français',
   langPT: '🇧🇷 Português',
@@ -1493,9 +1748,9 @@ btn: {
   absoluteAlert:'🎯 Absolu (valeur fixe)',
 
   refCurrent: (rate, locale) => `💵 Taux actuel (${formatRate(rate, locale)})`,
-refAvg7d:   (rate, locale) => `📈 Moyenne 7j (${formatRate(rate, locale)})`,
-refAvg30d:  (rate, locale) => `📊 Moyenne 30j (${formatRate(rate, locale)}) ⭐`,
-refAvg90d:  (rate, locale) => `📉 Moyenne 90j (${formatRate(rate, locale)})`,
+  refAvg30d:  (rate, locale) => `📊 Moyenne 30j (${formatRate(rate, locale)}) ⭐`,
+  refAvg90d:  (rate, locale) => `📈 Moyenne 90j (${formatRate(rate, locale)})`,
+  refAvg365d: (rate, locale) => `📅 Moyenne 1 an (${formatRate(rate, locale)})`,
 
   backToPricing: '⬅️ Retour aux tarifs',
   chooseCooldown15: '⚡ 15 minutes',
@@ -1512,6 +1767,8 @@ refAvg90d:  (rate, locale) => `📉 Moyenne 90j (${formatRate(rate, locale)})`,
   compareNow: '🚀 Comparer maintenant',
   editMyAlert: '⚙️ Modifier mon alerte',
   deleteMyAlert: '🗑️ Supprimer cette alerte',
+  pauseSpontaneousAlerts: '⏸️ Mettre en pause (1 semaine)',
+  resumeSpontaneousAlerts: '▶️ Réactiver les alertes',
   help: '❓ Aide',
   paymentHelp: '💬 Aide pour le paiement',
   mainMenu: '🏠 Menu principal',

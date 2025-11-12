@@ -1920,34 +1920,34 @@ bot.action(/^alert:type:relative:(eurbrl|brleur)$/, async (ctx) => {
     return;
   }
   
-  // Récupérer taux et moyennes
+  // Récupérer taux et moyennes (30d, 90d, 365d)
   const rates = await getRates();
   const currentRate = pair === 'eurbrl' ? rates.cross : 1 / rates.cross;
-  
-  const [avg7d, avg30d, avg90d] = await Promise.all([
-    db.getAverage(pair, 7),
+
+  const [avg30d, avg90d, avg365d] = await Promise.all([
     db.getAverage30Days(pair),
-    db.getAverage(pair, 90)
+    db.getAverage(pair, 90),
+    db.getAverage(pair, 365)
   ]);
-  
+
   const kb = buildKeyboards(msg, 'alert_choose_reference', {
     pair,
     currentRate,
-    avg7d: avg7d || currentRate,
     avg30d: avg30d || currentRate,
     avg90d: avg90d || currentRate,
+    avg365d: avg365d || currentRate,
     locale
   });
-  
+
   await ctx.editMessageText(
-    msg.ALERT_CHOOSE_REFERENCE(pair, currentRate, avg7d, avg30d, avg90d, locale),
+    msg.ALERT_CHOOSE_REFERENCE(pair, currentRate, avg30d, avg90d, avg365d, locale),
     { parse_mode: 'HTML', ...kb }
   );
   await ctx.answerCbQuery();
 });
 
 // Handler: Référence choisie → Choix pourcentage
-bot.action(/^alert:ref:(current|avg7d|avg30d|avg90d):(eurbrl|brleur)$/, async (ctx) => {
+bot.action(/^alert:ref:(current|avg30d|avg90d|avg365d):(eurbrl|brleur)$/, async (ctx) => {
   const refType = ctx.match[1];
   const pair = ctx.match[2];
   const msg = getMsg(ctx);
@@ -1978,19 +1978,19 @@ bot.action(/^alert:ref:(current|avg7d|avg30d|avg90d):(eurbrl|brleur)$/, async (c
     return;
   }
   
-  // Autres références : comportement normal
-  if (refType === 'avg7d') {
-    refValue = await db.getAverage(pair, 7) || currentRate;
-  } else if (refType === 'avg30d') {
+  // Autres références : comportement normal (30d, 90d, 365d)
+  if (refType === 'avg30d') {
     refValue = await db.getAverage30Days(pair) || currentRate;
   } else if (refType === 'avg90d') {
     refValue = await db.getAverage(pair, 90) || currentRate;
+  } else if (refType === 'avg365d') {
+    refValue = await db.getAverage(pair, 365) || currentRate;
   }
-  
+
   ctx.session.alertDraft = { pair, refType, refValue };
-  
+
   const kb = buildKeyboards(msg, 'alert_choose_percent', { pair, refType });
-  
+
   await ctx.editMessageText(
     msg.ALERT_CHOOSE_PERCENT(pair, refType, refValue, locale),
     { parse_mode: 'HTML', ...kb }
@@ -1999,7 +1999,7 @@ bot.action(/^alert:ref:(current|avg7d|avg30d|avg90d):(eurbrl|brleur)$/, async (c
 });
 
 // Handler: Pourcentage choisi (preset ou custom)
-bot.action(/^alert:percent:(2|3|5|custom):(current|avg7d|avg30d|avg90d):(eurbrl|brleur)$/, async (ctx) => {
+bot.action(/^alert:percent:(2|3|5|custom):(current|avg30d|avg90d|avg365d):(eurbrl|brleur)$/, async (ctx) => {
   const percent = ctx.match[1];
   const refType = ctx.match[2];
   const pair = ctx.match[3];
@@ -2074,6 +2074,8 @@ bot.action(/^alert:cd2:(\d+):(.+)$/, async (ctx) => {
     pair: parts[3],
     cooldown_minutes: cooldown
   };
+
+  console.log(`[ALERT-DECODE] Shortcode: "${shortcode}" → parts[1]: "${parts[1]}" → parsed: ${alertData.threshold_value}`);
   
   // 🔥 TÂCHE 5.1 : Si reference_type = 'current' ET relatif, convertir en absolu
   if (alertData.threshold_type === 'relative' && alertData.reference_type === 'current') {
@@ -2113,14 +2115,14 @@ bot.action(/^alert:cd2:(\d+):(.+)$/, async (ctx) => {
     calculatedThreshold = alertData.threshold_value;
     refValue = null;
   } else {
-    if (alertData.reference_type === 'avg7d') {
-      refValue = await db.getAverage(alertData.pair, 7);
-    } else if (alertData.reference_type === 'avg30d') {
+    if (alertData.reference_type === 'avg30d') {
       refValue = await db.getAverage30Days(alertData.pair);
     } else if (alertData.reference_type === 'avg90d') {
       refValue = await db.getAverage(alertData.pair, 90);
+    } else if (alertData.reference_type === 'avg365d') {
+      refValue = await db.getAverage(alertData.pair, 365);
     }
-    
+
     calculatedThreshold = refValue * (1 + alertData.threshold_value / 100);
   }
   
@@ -2168,12 +2170,12 @@ bot.action(/^alert:view:(.+)$/, async (ctx) => {
     } else {
       if (alert.reference_type === 'current') {
         refValue = currentRate;
-      } else if (alert.reference_type === 'avg7d') {
-        refValue = await db.getAverage(alert.pair, 7);
       } else if (alert.reference_type === 'avg30d') {
         refValue = await db.getAverage30Days(alert.pair);
       } else if (alert.reference_type === 'avg90d') {
         refValue = await db.getAverage(alert.pair, 90);
+      } else if (alert.reference_type === 'avg365d') {
+        refValue = await db.getAverage(alert.pair, 365);
       }
       calculatedThreshold = refValue * (1 + alert.threshold_value / 100);
     }
@@ -2233,19 +2235,83 @@ bot.action(/^alert:delete:(.+)$/, async (ctx) => {
 bot.action('alert:list', async (ctx) => {
   const msg = getMsg(ctx);
   const locale = getLocale(ctx.state.lang);
-  
+
   const isPremium = await db.isPremium(ctx.from.id);
   if (!isPremium) {
     await ctx.answerCbQuery('🔒 Fonctionnalité Premium');
     const kb = buildKeyboards(msg, 'not_premium');
     return ctx.reply(msg.NOT_PREMIUM, { parse_mode: 'HTML', ...kb });
   }
-  
+
   const userAlerts = await db.getUserAlerts(ctx.from.id);
-  const kb = buildKeyboards(msg, 'alerts_list', { alerts: userAlerts });
-  
+  const isPaused = await db.isSpontaneousAlertsPaused(ctx.from.id);
+  const kb = buildKeyboards(msg, 'alerts_list', { alerts: userAlerts, isPaused });
+
   await ctx.editMessageText(msg.ALERTS_LIST(userAlerts, locale), { parse_mode: 'HTML', ...kb });
   await ctx.answerCbQuery();
+});
+
+// ==================== SPONTANEOUS ALERTS PAUSE/RESUME ====================
+
+bot.action('spontaneous:pause', async (ctx) => {
+  const msg = getMsg(ctx);
+  const locale = getLocale(ctx.state.lang);
+
+  const isPremium = await db.isPremium(ctx.from.id);
+  if (!isPremium) {
+    await ctx.answerCbQuery('🔒 Fonctionnalité Premium');
+    return;
+  }
+
+  // Pause for 7 days
+  const result = await db.pauseSpontaneousAlerts(ctx.from.id, 7);
+
+  if (result) {
+    const kb = Markup.inlineKeyboard([
+      [Markup.button.callback(msg.btn.resumeSpontaneousAlerts, 'spontaneous:resume')]
+    ]);
+
+    await ctx.editMessageReplyMarkup(kb.reply_markup);
+    await ctx.answerCbQuery('⏸️ Alertas pausados por 1 semana');
+
+    // Send confirmation message
+    await ctx.reply(msg.SPONTANEOUS_ALERTS_PAUSED(result.spontaneous_alerts_paused_until, locale), {
+      parse_mode: 'HTML',
+      ...kb
+    });
+  } else {
+    await ctx.answerCbQuery('❌ Erro ao pausar alertas');
+  }
+});
+
+bot.action('spontaneous:resume', async (ctx) => {
+  const msg = getMsg(ctx);
+
+  const isPremium = await db.isPremium(ctx.from.id);
+  if (!isPremium) {
+    await ctx.answerCbQuery('🔒 Fonctionnalité Premium');
+    return;
+  }
+
+  const result = await db.resumeSpontaneousAlerts(ctx.from.id);
+
+  if (result) {
+    await ctx.answerCbQuery('▶️ Alertas reativados');
+
+    // Edit the message to remove the resume button
+    try {
+      await ctx.editMessageReplyMarkup({ inline_keyboard: [] });
+    } catch (e) {
+      // Message might be too old to edit
+    }
+
+    // Send confirmation message
+    await ctx.reply(msg.SPONTANEOUS_ALERTS_RESUMED, {
+      parse_mode: 'HTML'
+    });
+  } else {
+    await ctx.answerCbQuery('❌ Erro ao reativar alertas');
+  }
 });
 
 
@@ -2504,6 +2570,8 @@ bot.on('text', async (ctx) => {
       const threshold = parseFloat(match[1].replace(',', '.'));
       const validThreshold = validateThreshold(threshold, 'absolute', pair);
 
+      console.log(`[ALERT-INPUT] User entered: "${match[1]}" → Parsed: ${threshold} → Validated: ${validThreshold}`);
+
       if (!validThreshold) {
         const range = pair === 'eurbrl'
           ? 'entre 3.0 et 10.0'
@@ -2519,6 +2587,8 @@ bot.on('text', async (ctx) => {
         threshold_value: validThreshold,
         reference_type: null
       };
+
+      console.log(`[ALERT-DATA] alertData.threshold_value = ${alertData.threshold_value} (type: ${typeof alertData.threshold_value})`);
 
       const kb = buildKeyboards(msg, 'alert_choose_cooldown_v2', { alertData });
       return ctx.reply(msg.ALERT_CHOOSE_COOLDOWN, { parse_mode: 'HTML', ...kb });

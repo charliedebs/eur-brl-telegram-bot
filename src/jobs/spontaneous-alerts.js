@@ -139,26 +139,43 @@ async function broadcastFreeAlert(pair, currentRate, stats) {
 
 async function shouldSendPremiumAlert(pair, currentRate, userId, params) {
   try {
-    // 1. Variation >X% vs avg30d
-    const history30d = await db.getRateHistory(pair, 30);
+    // 1. Fetch multiple timeframes for comprehensive analysis (30d, 90d, 365d)
+    const [history30d, history90d, history365d] = await Promise.all([
+      db.getRateHistory(pair, 30),
+      db.getRateHistory(pair, 90),
+      db.getRateHistory(pair, 365)
+    ]);
+
     if (history30d.length < 20) return { send: false };
 
-    const rates = history30d.map(h => parseFloat(h.rate));
-    const avg30d = rates.reduce((a, b) => a + b, 0) / rates.length;
-    const variation = ((currentRate - avg30d) / avg30d) * 100;
+    // Calculate averages for each timeframe
+    const calc30d = history30d.map(h => parseFloat(h.rate));
+    const calc90d = history90d.map(h => parseFloat(h.rate));
+    const calc365d = history365d.map(h => parseFloat(h.rate));
 
-    if (variation < params.premiumThreshold) {
+    const avg30d = calc30d.reduce((a, b) => a + b, 0) / calc30d.length;
+    const avg90d = calc90d.length > 0 ? calc90d.reduce((a, b) => a + b, 0) / calc90d.length : null;
+    const avg365d = calc365d.length > 0 ? calc365d.reduce((a, b) => a + b, 0) / calc365d.length : null;
+
+    // Calculate variations vs each timeframe
+    const variation30d = ((currentRate - avg30d) / avg30d) * 100;
+    const variation90d = avg90d ? ((currentRate - avg90d) / avg90d) * 100 : null;
+    const variation365d = avg365d ? ((currentRate - avg365d) / avg365d) * 100 : null;
+
+    // Check primary threshold (30d)
+    if (variation30d < params.premiumThreshold) {
       return { send: false };
     }
 
-    // 2. Cooldown (configurable hours - global dans le CRON)
-    // Option simple : pas de tracking précis par utilisateur, juste global dans le CRON
-
-    logger.info(`[PREMIUM-SPONTANEOUS] ✅ ${pair} for user ${userId}: +${variation.toFixed(1)}%`);
+    logger.info(`[PREMIUM-SPONTANEOUS] ✅ ${pair} for user ${userId}: 30d:${variation30d.toFixed(1)}% 90d:${variation90d?.toFixed(1)}% 365d:${variation365d?.toFixed(1)}%`);
     return {
       send: true,
       avg30d,
-      variation
+      avg90d,
+      avg365d,
+      variation30d,
+      variation90d,
+      variation365d
     };
 
   } catch (error) {
@@ -168,52 +185,52 @@ async function shouldSendPremiumAlert(pair, currentRate, userId, params) {
 }
 
 async function broadcastPremiumAlert(pair, currentRate, stats, premiumUsers) {
-  logger.info(`[PREMIUM-SPONTANEOUS] Broadcasting ${pair} to ${premiumUsers.length} premium users...`);
-  
-  let successCount = 0;
-  
+  // Filter out users who have paused spontaneous alerts
+  const activeUsers = [];
   for (const user of premiumUsers) {
+    const isPaused = await db.isSpontaneousAlertsPaused(user.telegram_id);
+    if (!isPaused) {
+      activeUsers.push(user);
+    }
+  }
+
+  logger.info(`[PREMIUM-SPONTANEOUS] Broadcasting ${pair} to ${activeUsers.length}/${premiumUsers.length} premium users (${premiumUsers.length - activeUsers.length} paused)...`);
+
+  let successCount = 0;
+
+  for (const user of activeUsers) {
     try {
       const locale = getLocale(user.language);
       const msg = messages[user.language];
-      
+
       const amountExample = pair === 'eurbrl' ? 1000 : 5000;
-      const savings = (currentRate - stats.avg30d) * amountExample;
-      
-      const text = `🔔 ALERTE SPONTANÉE PREMIUM
 
-${pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'} : ${formatRate(currentRate, locale)}
+      // Use the enhanced PREMIUM_ALERT message function with multi-timeframe analysis
+      const text = msg.PREMIUM_ALERT_ENHANCED
+        ? msg.PREMIUM_ALERT_ENHANCED(pair, currentRate, stats, amountExample, locale)
+        : msg.PREMIUM_ALERT
+        ? msg.PREMIUM_ALERT(pair, currentRate, stats.avg30d, stats.variation30d, amountExample, (currentRate - stats.avg30d) * amountExample, locale)
+        : `🔔 ALERTA ESPONTÂNEO PREMIUM\n\n${pair === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR'} : ${formatRate(currentRate, locale)}\n\n📊 Variação: ${stats.variation30d > 0 ? '+' : ''}${formatAmount(stats.variation30d, 1, locale)}%`;
 
-💡 Bon moment pour transférer !
-
-📊 Analyse :
-• Taux actuel : ${formatRate(currentRate, locale)}
-• Moyenne 30j : ${formatRate(stats.avg30d, locale)}
-• Écart : +${formatAmount(stats.variation, 1, locale)}% 🎯
-
-💰 Sur ${formatAmount(amountExample, 0, locale)}${pair === 'eurbrl' ? '€' : ' R$'}, tu gagnes ~${formatAmount(Math.abs(savings), 0, locale)}${pair === 'eurbrl' ? ' R$' : '€'} vs la moyenne
-
-⏰ Prochaine alerte possible dans 6h (spontanées)`;
-      
-      const kb = buildKeyboards(msg, 'premium_alert', {
+      const kb = buildKeyboards(msg, 'spontaneous_premium_alert', {
         pair,
         amount: amountExample
       });
-      
+
       await bot.telegram.sendMessage(user.telegram_id, text, {
         parse_mode: 'HTML',
         ...kb
       });
-      
+
       successCount++;
       await new Promise(resolve => setTimeout(resolve, 50));
-      
+
     } catch (error) {
       logger.error(`[PREMIUM-SPONTANEOUS] Failed for user ${user.telegram_id}:`, { error: error.message });
     }
   }
 
-  logger.info(`[PREMIUM-SPONTANEOUS] ✅ ${pair}: Sent to ${successCount}/${premiumUsers.length} users`);
+  logger.info(`[PREMIUM-SPONTANEOUS] ✅ ${pair}: Sent to ${successCount}/${activeUsers.length} users`);
 }
 
 // ==========================================

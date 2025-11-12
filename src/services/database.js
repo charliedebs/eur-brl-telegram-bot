@@ -112,19 +112,72 @@ export class DatabaseService {
   async getUsersExpiringIn(days) {
     const targetDate = new Date();
     targetDate.setDate(targetDate.getDate() + days);
-    
+
     const { data, error } = await supabase
       .from('users')
       .select('*')
       .gte('premium_until', new Date().toISOString())
       .lte('premium_until', targetDate.toISOString());
-    
+
     if (error) {
       console.error('[DB] Failed to get expiring users:', error);
       return [];
     }
-    
+
     return data || [];
+  }
+
+  // ==========================================
+  // SPONTANEOUS ALERTS PAUSE/RESUME
+  // ==========================================
+
+  async pauseSpontaneousAlerts(telegramId, durationDays = 7) {
+    const pauseUntil = new Date();
+    pauseUntil.setDate(pauseUntil.getDate() + durationDays);
+
+    const { data, error } = await supabase
+      .from('users')
+      .update({ spontaneous_alerts_paused_until: pauseUntil.toISOString() })
+      .eq('telegram_id', telegramId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[DB] Failed to pause spontaneous alerts:', error);
+      return null;
+    }
+
+    console.log(`[DB] ✅ Paused spontaneous alerts for user ${telegramId} until ${pauseUntil.toISOString()}`);
+    return data;
+  }
+
+  async resumeSpontaneousAlerts(telegramId) {
+    const { data, error } = await supabase
+      .from('users')
+      .update({ spontaneous_alerts_paused_until: null })
+      .eq('telegram_id', telegramId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[DB] Failed to resume spontaneous alerts:', error);
+      return null;
+    }
+
+    console.log(`[DB] ✅ Resumed spontaneous alerts for user ${telegramId}`);
+    return data;
+  }
+
+  async isSpontaneousAlertsPaused(telegramId) {
+    const user = await this.getUser(telegramId);
+    if (!user || !user.spontaneous_alerts_paused_until) {
+      return false;
+    }
+
+    const pausedUntil = new Date(user.spontaneous_alerts_paused_until);
+    const now = new Date();
+
+    return pausedUntil > now;
   }
 
   // ==========================================
@@ -234,7 +287,7 @@ async createAlert(userId, alertData) {
       pair: alertData.pair,
       threshold_type: alertData.threshold_type,    // 'absolute' | 'relative'
       threshold_value: alertData.threshold_value,   // 6.30 | 3.0
-      reference_type: alertData.reference_type,     // 'current' | 'avg7d' | 'avg30d' | 'avg90d' | null
+      reference_type: alertData.reference_type,     // 'current' | 'avg30d' | 'avg90d' | 'avg365d' | null
       preset: alertData.preset || null,
       cooldown_minutes: alertData.cooldown_minutes || 60,
       active: true
