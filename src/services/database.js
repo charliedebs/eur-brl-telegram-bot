@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { logger } from '../utils/logger.js';
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
@@ -13,68 +14,127 @@ export class DatabaseService {
   constructor() {
     this.supabase = supabase; // Important pour bot/index.js
   }
+
   // ==========================================
-  // USERS
+  // USERS - MULTI-PLATFORM METHODS (NEW)
   // ==========================================
-  
-  async getUser(telegramId) {
+
+  /**
+   * Get user by platform and platform-specific user ID
+   * @param {string} platform - 'telegram' | 'whatsapp' | etc.
+   * @param {string} platformUserId - Platform-specific user ID
+   */
+  async getUserByPlatform(platform, platformUserId) {
     const { data, error } = await supabase
       .from('users')
       .select('*')
-      .eq('telegram_id', telegramId)
+      .eq('platform', platform)
+      .eq('platform_user_id', platformUserId)
       .single();
-    
+
     if (error && error.code !== 'PGRST116') {
-      console.error('[DB] Failed to get user:', error);
+      logger.error('[DB] Failed to get user:', { error, platform, platformUserId });
       return null;
     }
-    
+
     return data;
   }
-  
-  async createUser(telegramId, language = 'pt') {
+
+  /**
+   * Create user with platform specification
+   * @param {string} platform - 'telegram' | 'whatsapp' | etc.
+   * @param {string} platformUserId - Platform-specific user ID
+   * @param {string} language - 'pt' | 'en' | 'fr'
+   */
+  async createUserByPlatform(platform, platformUserId, language = 'pt') {
+    const userData = {
+      platform,
+      platform_user_id: platformUserId,
+      language
+    };
+
+    // For Telegram, also set telegram_id for backwards compatibility
+    if (platform === 'telegram') {
+      userData.telegram_id = platformUserId;
+    }
+
     const { data, error } = await supabase
       .from('users')
-      .insert([{ telegram_id: telegramId, language }])
+      .insert([userData])
       .select()
       .single();
-    
+
     if (error) {
-      console.error('[DB] Failed to create user:', error);
+      logger.error('[DB] Failed to create user:', { error, platform, platformUserId });
       return null;
     }
-    
-    console.log(`[DB] ✅ User created: ${telegramId} (${language})`);
+
+    logger.info(`[DB] ✅ User created: ${platform}:${platformUserId} (${language})`);
     return data;
   }
-  
-  async updateUser(telegramId, updates) {
+
+  /**
+   * Update user by platform
+   * @param {string} platform - 'telegram' | 'whatsapp' | etc.
+   * @param {string} platformUserId - Platform-specific user ID
+   * @param {object} updates - Fields to update
+   */
+  async updateUserByPlatform(platform, platformUserId, updates) {
     const { data, error } = await supabase
       .from('users')
       .update(updates)
-      .eq('telegram_id', telegramId)
+      .eq('platform', platform)
+      .eq('platform_user_id', platformUserId)
       .select()
       .single();
-    
+
     if (error) {
-      console.error('[DB] Failed to update user:', error);
+      logger.error('[DB] Failed to update user:', { error, platform, platformUserId });
       return null;
     }
-    
+
     return data;
+  }
+
+  // ==========================================
+  // USERS - LEGACY METHODS (BACKWARDS COMPATIBLE)
+  // ==========================================
+
+  /**
+   * Get user by Telegram ID (legacy method for backwards compatibility)
+   * @deprecated Use getUserByPlatform('telegram', telegramId) instead
+   */
+  async getUser(telegramId) {
+    return this.getUserByPlatform('telegram', telegramId);
+  }
+
+  /**
+   * Create user with Telegram ID (legacy method for backwards compatibility)
+   * @deprecated Use createUserByPlatform('telegram', telegramId, language) instead
+   */
+  async createUser(telegramId, language = 'pt') {
+    return this.createUserByPlatform('telegram', telegramId, language);
+  }
+
+  /**
+   * Update user by Telegram ID (legacy method for backwards compatibility)
+   * @deprecated Use updateUserByPlatform('telegram', telegramId, updates) instead
+   */
+  async updateUser(telegramId, updates) {
+    return this.updateUserByPlatform('telegram', telegramId, updates);
   }
 
   async getAllActiveUsers() {
     const { data, error } = await supabase
       .from('users')
-      .select('telegram_id, language')
-      .order('created_at', { ascending: false });
-    
+      .select('telegram_id, platform, platform_user_id, language')
+      .order('created_at', { ascending: false});
+
     if (error) {
-      console.error('[DB] Failed to get active users:', error);
+      logger.error('[DB] Failed to get active users:', error);
       return [];
     }
-    
+
     return data || [];
   }
 
@@ -82,16 +142,27 @@ export class DatabaseService {
   // PREMIUM
   // ==========================================
 
-  async isPremium(telegramId) {
-    const user = await this.getUser(telegramId);
+  /**
+   * Check if user is premium by platform
+   */
+  async isPremiumByPlatform(platform, platformUserId) {
+    const user = await this.getUserByPlatform(platform, platformUserId);
     if (!user) return false;
-    
+
     if (!user.premium_until) return false;
-    
+
     const now = new Date();
     const premiumUntil = new Date(user.premium_until);
-    
+
     return premiumUntil > now;
+  }
+
+  /**
+   * Check if user is premium by Telegram ID (legacy)
+   * @deprecated Use isPremiumByPlatform('telegram', telegramId) instead
+   */
+  async isPremium(telegramId) {
+    return this.isPremiumByPlatform('telegram', telegramId);
   }
 
   async getPremiumUsers() {
@@ -100,12 +171,12 @@ export class DatabaseService {
       .select('*')
       .not('premium_until', 'is', null)
       .gte('premium_until', new Date().toISOString());
-    
+
     if (error) {
-      console.error('[DB] Failed to get premium users:', error);
+      logger.error('[DB] Failed to get premium users:', error);
       return [];
     }
-    
+
     return data || [];
   }
 
@@ -120,7 +191,7 @@ export class DatabaseService {
       .lte('premium_until', targetDate.toISOString());
 
     if (error) {
-      console.error('[DB] Failed to get expiring users:', error);
+      logger.error('[DB] Failed to get expiring users:', error);
       return [];
     }
 
@@ -143,11 +214,11 @@ export class DatabaseService {
       .single();
 
     if (error) {
-      console.error('[DB] Failed to pause spontaneous alerts:', error);
+      logger.error('[DB] Failed to pause spontaneous alerts:', error);
       return null;
     }
 
-    console.log(`[DB] ✅ Paused spontaneous alerts for user ${telegramId} until ${pauseUntil.toISOString()}`);
+    logger.info(`[DB] ✅ Paused spontaneous alerts for user ${telegramId} until ${pauseUntil.toISOString()}`);
     return data;
   }
 
@@ -160,11 +231,11 @@ export class DatabaseService {
       .single();
 
     if (error) {
-      console.error('[DB] Failed to resume spontaneous alerts:', error);
+      logger.error('[DB] Failed to resume spontaneous alerts:', error);
       return null;
     }
 
-    console.log(`[DB] ✅ Resumed spontaneous alerts for user ${telegramId}`);
+    logger.info(`[DB] ✅ Resumed spontaneous alerts for user ${telegramId}`);
     return data;
   }
 
@@ -190,39 +261,39 @@ export class DatabaseService {
       .insert([rateData])
       .select()
       .single();
-    
+
     if (error) {
-      console.error('[DB] Failed to save rate history:', error);
+      logger.error('[DB] Failed to save rate history:', error);
       return null;
     }
-    
-    console.log(`[DB] ✅ Rate saved: ${rateData.pair} = ${rateData.rate}`);
+
+    logger.info(`[DB] ✅ Rate saved: ${rateData.pair} = ${rateData.rate}`);
     return data;
   }
 
   async getRateHistory(pair, days = 30) {
     const since = new Date();
     since.setDate(since.getDate() - days);
-    
+
     const { data, error } = await supabase
       .from('rates_history')
       .select('*')
       .eq('pair', pair)
       .gte('timestamp', since.toISOString())
       .order('timestamp', { ascending: true });
-    
+
     if (error) {
-      console.error('[DB] Failed to get rate history:', error);
+      logger.error('[DB] Failed to get rate history:', error);
       return [];
     }
-    
+
     return data || [];
   }
 
   async getAverage30Days(pair) {
     const history = await this.getRateHistory(pair, 30);
     if (history.length === 0) return null;
-    
+
     const sum = history.reduce((acc, h) => acc + parseFloat(h.rate), 0);
     return sum / history.length;
   }
@@ -235,115 +306,111 @@ export class DatabaseService {
       .order('timestamp', { ascending: false })
       .limit(1)
       .single();
-    
+
     if (error && error.code !== 'PGRST116') {
-      console.error('[DB] Failed to get last rate:', error);
+      logger.error('[DB] Failed to get last rate:', error);
       return null;
     }
-    
+
     return data;
   }
 
-// ==========================================
-// RATES HISTORY - Ajouter méthode getAverage générique
-// ==========================================
+  async getAverage(pair, days = 30) {
+    const history = await this.getRateHistory(pair, days);
+    if (history.length === 0) return null;
 
-async getAverage(pair, days = 30) {
-  const history = await this.getRateHistory(pair, days);
-  if (history.length === 0) return null;
-  
-  const sum = history.reduce((acc, h) => acc + parseFloat(h.rate), 0);
-  return sum / history.length;
-}
-
-// ==========================================
-// ALERTS - Méthode createAlert mise à jour
-// ==========================================
-
-async createAlert(userId, alertData) {
-  // Validation : threshold_type requis
-  if (!alertData.threshold_type) {
-    console.error('[DB] Missing threshold_type');
-    return null;
+    const sum = history.reduce((acc, h) => acc + parseFloat(h.rate), 0);
+    return sum / history.length;
   }
 
-  // Validation : threshold_value requis
-  if (alertData.threshold_value === undefined || alertData.threshold_value === null) {
-    console.error('[DB] Missing threshold_value');
-    return null;
-  }
-  
-  // Validation : reference_type requis si relatif
-  if (alertData.threshold_type === 'relative' && !alertData.reference_type) {
-    console.error('[DB] Missing reference_type for relative threshold');
-    return null;
+  // ==========================================
+  // ALERTS
+  // ==========================================
+
+  async createAlert(userId, alertData) {
+    // Validation : threshold_type requis
+    if (!alertData.threshold_type) {
+      logger.error('[DB] Missing threshold_type');
+      return null;
+    }
+
+    // Validation : threshold_value requis
+    if (alertData.threshold_value === undefined || alertData.threshold_value === null) {
+      logger.error('[DB] Missing threshold_value');
+      return null;
+    }
+
+    // Validation : reference_type requis si relatif
+    if (alertData.threshold_type === 'relative' && !alertData.reference_type) {
+      logger.error('[DB] Missing reference_type for relative threshold');
+      return null;
+    }
+
+    const { data, error } = await this.supabase
+      .from('user_alerts')
+      .insert([{
+        user_id: userId,
+        alert_type: 'programmed',
+        pair: alertData.pair,
+        threshold_type: alertData.threshold_type,    // 'absolute' | 'relative'
+        threshold_value: alertData.threshold_value,   // 6.30 | 3.0
+        reference_type: alertData.reference_type,     // 'current' | 'avg30d' | 'avg90d' | 'avg365d' | null
+        preset: alertData.preset || null,
+        cooldown_minutes: alertData.cooldown_minutes || 60,
+        active: true
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      logger.error('[DB] Failed to create alert:', error);
+      return null;
+    }
+
+    const typeLabel = alertData.threshold_type === 'absolute'
+      ? `seuil ${alertData.threshold_value}`
+      : `+${alertData.threshold_value}% vs ${alertData.reference_type}`;
+
+    logger.info(`[DB] ✅ Alert created: ${alertData.pair} ${typeLabel} (cooldown: ${alertData.cooldown_minutes}min)`);
+    return data;
   }
 
-  const { data, error } = await this.supabase
-    .from('user_alerts')
-    .insert([{ 
-      user_id: userId, 
-      alert_type: 'programmed',
-      pair: alertData.pair,
-      threshold_type: alertData.threshold_type,    // 'absolute' | 'relative'
-      threshold_value: alertData.threshold_value,   // 6.30 | 3.0
-      reference_type: alertData.reference_type,     // 'current' | 'avg30d' | 'avg90d' | 'avg365d' | null
-      preset: alertData.preset || null,
-      cooldown_minutes: alertData.cooldown_minutes || 60,
-      active: true
-    }])
-    .select()
-    .single();
-  
-  if (error) {
-    console.error('[DB] Failed to create alert:', error);
-    return null;
-  }
-  
-  const typeLabel = alertData.threshold_type === 'absolute' 
-    ? `seuil ${alertData.threshold_value}` 
-    : `+${alertData.threshold_value}% vs ${alertData.reference_type}`;
-  
-  console.log(`[DB] ✅ Alert created: ${alertData.pair} ${typeLabel} (cooldown: ${alertData.cooldown_minutes}min)`);
-  return data;
-}
-  
   async getUserAlerts(telegramId) {
     const user = await this.getUser(telegramId);
     if (!user) return [];
-    
+
     const { data, error } = await supabase
       .from('user_alerts')
       .select('*')
       .eq('user_id', user.id)
       .eq('active', true)
       .order('created_at', { ascending: false });
-    
+
     if (error) {
-      console.error('[DB] Failed to get user alerts:', error);
+      logger.error('[DB] Failed to get user alerts:', error);
       return [];
     }
-    
+
     return data || [];
   }
-  
+
   async getActiveAlerts() {
     const { data, error } = await supabase
       .from('user_alerts')
       .select(`
         *,
-        users!inner (telegram_id, language)
+        users!inner (telegram_id, platform, platform_user_id, language)
       `)
       .eq('active', true);
-    
+
     if (error) {
-      console.error('[DB] Failed to get active alerts:', error);
+      logger.error('[DB] Failed to get active alerts:', error);
       return [];
     }
-    
+
     return data || [];
   }
-  
+
   async updateAlert(alertId, updates) {
     const { data, error } = await supabase
       .from('user_alerts')
@@ -351,15 +418,15 @@ async createAlert(userId, alertData) {
       .eq('id', alertId)
       .select()
       .single();
-    
+
     if (error) {
-      console.error('[DB] Failed to update alert:', error);
+      logger.error('[DB] Failed to update alert:', error);
       return null;
     }
-    
+
     return data;
   }
-  
+
   async disableAlert(alertId) {
     return this.updateAlert(alertId, { active: false });
   }
@@ -374,13 +441,13 @@ async createAlert(userId, alertData) {
       .insert([paymentData])
       .select()
       .single();
-    
+
     if (error) {
-      console.error('[DB] Failed to create pix payment:', error);
+      logger.error('[DB] Failed to create pix payment:', error);
       return null;
     }
-    
-    console.log(`[DB] ✅ Pix payment created: ${paymentData.amount} R$ (${paymentData.duration_months}m)`);
+
+    logger.info(`[DB] ✅ Pix payment created: ${paymentData.amount} R$ (${paymentData.duration_months}m)`);
     return data;
   }
 
@@ -390,12 +457,12 @@ async createAlert(userId, alertData) {
       .select('*')
       .eq('payment_id', paymentId)
       .single();
-    
+
     if (error && error.code !== 'PGRST116') {
-      console.error('[DB] Failed to get pix payment:', error);
+      logger.error('[DB] Failed to get pix payment:', error);
       return null;
     }
-    
+
     return data;
   }
 
@@ -406,12 +473,12 @@ async createAlert(userId, alertData) {
       .eq('payment_id', paymentId)
       .select()
       .single();
-    
+
     if (error) {
-      console.error('[DB] Failed to update pix payment:', error);
+      logger.error('[DB] Failed to update pix payment:', error);
       return null;
     }
-    
+
     return data;
   }
 
@@ -442,7 +509,7 @@ async createAlert(userId, alertData) {
         subscription_amount: payment.amount
       });
 
-      console.log(`[DB] ✅ Premium activated until ${premiumUntil.toISOString()}`);
+      logger.info(`[DB] ✅ Premium activated until ${premiumUntil.toISOString()}`);
     }
 
     return payment;
@@ -454,12 +521,12 @@ async createAlert(userId, alertData) {
       .select('*')
       .eq('status', 'pending')
       .lt('expires_at', new Date().toISOString());
-    
+
     if (error) {
-      console.error('[DB] Failed to get expired payments:', error);
+      logger.error('[DB] Failed to get expired payments:', error);
       return [];
     }
-    
+
     return data || [];
   }
 
@@ -477,13 +544,13 @@ async createAlert(userId, alertData) {
       }])
       .select()
       .single();
-    
+
     if (error) {
-      console.error('[DB] Failed to log free alert:', error);
+      logger.error('[DB] Failed to log free alert:', error);
       return null;
     }
-    
-    console.log(`[DB] ✅ Free alert logged: ${pair} = ${rate} (${usersCount} users)`);
+
+    logger.info(`[DB] ✅ Free alert logged: ${pair} = ${rate} (${usersCount} users)`);
     return data;
   }
 
@@ -495,17 +562,17 @@ async createAlert(userId, alertData) {
       .order('sent_at', { ascending: false })
       .limit(1)
       .single();
-    
+
     if (error && error.code !== 'PGRST116') {
-      console.error('[DB] Failed to get last free alert:', error);
+      logger.error('[DB] Failed to get last free alert:', error);
       return null;
     }
-    
+
     return data;
   }
 
   // ==========================================
-  // NLU LOGS (déjà existant, on garde)
+  // NLU LOGS
   // ==========================================
 
   async logNLU(logData) {
@@ -514,12 +581,12 @@ async createAlert(userId, alertData) {
       .insert([logData])
       .select()
       .single();
-    
+
     if (error) {
-      console.error('[DB] Failed to log NLU:', error);
+      logger.error('[DB] Failed to log NLU:', error);
       return null;
     }
-    
+
     return data;
   }
 
@@ -531,7 +598,7 @@ async createAlert(userId, alertData) {
       .eq('input_text', inputText)
       .order('created_at', { ascending: false })
       .limit(1);
-    
+
     if (logs && logs[0]) {
       const { error } = await supabase
         .from('nlu_logs')
@@ -541,9 +608,9 @@ async createAlert(userId, alertData) {
           updated_at: new Date().toISOString()
         })
         .eq('id', logs[0].id);
-      
+
       if (error) {
-        console.error('[DB] Failed to update NLU feedback:', error);
+        logger.error('[DB] Failed to update NLU feedback:', error);
       }
     }
   }
@@ -557,7 +624,7 @@ async createAlert(userId, alertData) {
       .limit(limit);
 
     if (error) {
-      console.error('[DB] Failed to get NLU feedbacks:', error);
+      logger.error('[DB] Failed to get NLU feedbacks:', error);
       return [];
     }
 
@@ -565,7 +632,7 @@ async createAlert(userId, alertData) {
   }
 
   // ==========================================
-  // PAYMENTS (NEW - Enhanced payment tracking)
+  // PAYMENTS
   // ==========================================
 
   async createPayment(paymentData) {
@@ -586,11 +653,11 @@ async createAlert(userId, alertData) {
       .single();
 
     if (error) {
-      console.error('[DB] Failed to create payment:', error);
+      logger.error('[DB] Failed to create payment:', error);
       return null;
     }
 
-    console.log(`[DB] ✅ Payment created: ${paymentData.payment_id}`);
+    logger.info(`[DB] ✅ Payment created: ${paymentData.payment_id}`);
     return data;
   }
 
@@ -602,7 +669,7 @@ async createAlert(userId, alertData) {
       .single();
 
     if (error && error.code !== 'PGRST116') {
-      console.error('[DB] Failed to get payment:', error);
+      logger.error('[DB] Failed to get payment:', error);
       return null;
     }
 
@@ -617,7 +684,7 @@ async createAlert(userId, alertData) {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('[DB] Failed to get user payments:', error);
+      logger.error('[DB] Failed to get user payments:', error);
       return [];
     }
 
@@ -637,11 +704,11 @@ async createAlert(userId, alertData) {
       .single();
 
     if (error) {
-      console.error('[DB] Failed to update payment status:', error);
+      logger.error('[DB] Failed to update payment status:', error);
       return null;
     }
 
-    console.log(`[DB] ✅ Payment status updated: ${payment_id} -> ${status}`);
+    logger.info(`[DB] ✅ Payment status updated: ${payment_id} -> ${status}`);
     return data;
   }
 
@@ -653,7 +720,7 @@ async createAlert(userId, alertData) {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('[DB] Failed to get pending payments:', error);
+      logger.error('[DB] Failed to get pending payments:', error);
       return [];
     }
 
@@ -670,7 +737,7 @@ async createAlert(userId, alertData) {
       .lt('created_at', cutoffTime.toISOString());
 
     if (error) {
-      console.error('[DB] Failed to get expired pending payments:', error);
+      logger.error('[DB] Failed to get expired pending payments:', error);
       return [];
     }
 
@@ -678,7 +745,7 @@ async createAlert(userId, alertData) {
   }
 
   // ==========================================
-  // SUBSCRIPTIONS (recurring payments - stored in payments table)
+  // SUBSCRIPTIONS
   // ==========================================
 
   async createSubscription(subscriptionData) {
@@ -703,11 +770,11 @@ async createAlert(userId, alertData) {
       .single();
 
     if (error) {
-      console.error('[DB] Failed to create subscription:', error);
+      logger.error('[DB] Failed to create subscription:', error);
       return null;
     }
 
-    console.log(`[DB] ✅ Subscription created: ${subscriptionData.provider_subscription_id} (${subscriptionData.provider})`);
+    logger.info(`[DB] ✅ Subscription created: ${subscriptionData.provider_subscription_id} (${subscriptionData.provider})`);
     return data;
   }
 
@@ -723,7 +790,7 @@ async createAlert(userId, alertData) {
       .single();
 
     if (error && error.code !== 'PGRST116') {
-      console.error('[DB] Failed to get active subscription:', error);
+      logger.error('[DB] Failed to get active subscription:', error);
       return null;
     }
 
@@ -740,7 +807,7 @@ async createAlert(userId, alertData) {
       .single();
 
     if (error && error.code !== 'PGRST116') {
-      console.error('[DB] Failed to get subscription by provider:', error);
+      logger.error('[DB] Failed to get subscription by provider:', error);
       return null;
     }
 
@@ -760,11 +827,11 @@ async createAlert(userId, alertData) {
       .single();
 
     if (error) {
-      console.error('[DB] Failed to update subscription:', error);
+      logger.error('[DB] Failed to update subscription:', error);
       return null;
     }
 
-    console.log(`[DB] ✅ Subscription updated: ${subscription_id}`);
+    logger.info(`[DB] ✅ Subscription updated: ${subscription_id}`);
     return data;
   }
 
@@ -781,11 +848,11 @@ async createAlert(userId, alertData) {
       .select();
 
     if (error) {
-      console.error('[DB] Failed to cancel subscription:', error);
+      logger.error('[DB] Failed to cancel subscription:', error);
       return null;
     }
 
-    console.log(`[DB] ✅ Subscription cancelled for user: ${telegram_id}`);
+    logger.info(`[DB] ✅ Subscription cancelled for user: ${telegram_id}`);
     return data && data.length > 0 ? data[0] : null;
   }
 
@@ -798,7 +865,7 @@ async createAlert(userId, alertData) {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('[DB] Failed to get active subscriptions:', error);
+      logger.error('[DB] Failed to get active subscriptions:', error);
       return [];
     }
 
@@ -818,7 +885,7 @@ async createAlert(userId, alertData) {
       .lte('next_billing_date', targetDate.toISOString());
 
     if (error) {
-      console.error('[DB] Failed to get expiring subscriptions:', error);
+      logger.error('[DB] Failed to get expiring subscriptions:', error);
       return [];
     }
 
@@ -826,7 +893,7 @@ async createAlert(userId, alertData) {
   }
 
   // ==========================================
-  // SUPPORT TICKETS METHODS
+  // SUPPORT TICKETS
   // ==========================================
 
   async createSupportTicket(telegram_id, message_type, message) {
