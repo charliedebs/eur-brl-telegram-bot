@@ -155,9 +155,10 @@ function setupEventHandlers(client, engine, adapter, userButtonCache) {
         });
       }
 
-      // Cache buttons for this user if response has buttons
-      if (response.buttons && response.buttons.length > 0) {
-        userButtonCache.set(messageInfo.userId, response.buttons);
+      // Cache buttons for this user if response has buttons (support both 'buttons' and 'keyboard')
+      const buttons = response.buttons || response.keyboard;
+      if (buttons && buttons.length > 0) {
+        userButtonCache.set(messageInfo.userId, buttons);
       }
 
       // Send response

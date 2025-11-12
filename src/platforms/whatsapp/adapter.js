@@ -169,18 +169,21 @@ export class WhatsAppAdapter {
    */
   async sendResponse(chatId, response, options = {}) {
     try {
+      // Support both 'buttons' and 'keyboard' (bot-engine uses 'keyboard')
+      const buttons = response.buttons || response.keyboard || null;
+
       // Handle different response types
       if (response.image) {
         // Send photo with caption
         return await this.sendPhoto(chatId, response.image, {
           caption: response.text,
-          buttons: response.buttons,
+          buttons: buttons,
           ...options
         });
       } else {
         // Send text message with buttons
         return await this.sendMessage(chatId, response.text, {
-          buttons: response.buttons,
+          buttons: buttons,
           ...options
         });
       }
