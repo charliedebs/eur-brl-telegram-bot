@@ -1,164 +1,80 @@
 // src/platforms/whatsapp/index.js
-// WhatsApp platform integration with BotEngine
+// WhatsApp Cloud API platform integration with BotEngine
+// Uses official Meta Cloud API instead of whatsapp-web.js
 
-import pkg from 'whatsapp-web.js';
-const { Client, LocalAuth } = pkg;
-import qrcode from 'qrcode-terminal';
-import QRCode from 'qrcode';
-import { WhatsAppAdapter } from './adapter.js';
+import { WhatsAppCloudAdapter } from './cloud-adapter.js';
 import { BotEngine } from '../../core/bot-engine.js';
 import { logger } from '../../utils/logger.js';
 
-// Global state for QR code (accessible from server.js)
-export let currentQRCode = null;
+// Global state for status
 export let whatsappStatus = 'initializing';
+export let whatsappAdapter = null;
+export let whatsappEngine = null;
 
 /**
- * Initialize WhatsApp bot with BotEngine
+ * Initialize WhatsApp Cloud API bot with BotEngine
+ * No QR code needed - works via webhooks with Cloud API credentials
  */
 export async function createWhatsAppBot() {
-  logger.info('[WHATSAPP] Initializing WhatsApp bot...');
+  logger.info('[WHATSAPP-CLOUD] Initializing WhatsApp Cloud API bot...');
 
-  // Create WhatsApp client with local authentication
-  const client = new Client({
-    authStrategy: new LocalAuth({
-      clientId: 'eur-brl-bot',
-      dataPath: './.wwebjs_auth'
-    }),
-    puppeteer: {
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--disable-gpu'
-      ]
-    }
-  });
+  // Validate required environment variables
+  const required = [
+    'WHATSAPP_ACCESS_TOKEN',
+    'WHATSAPP_PHONE_NUMBER_ID',
+    'WHATSAPP_BUSINESS_ACCOUNT_ID',
+    'WHATSAPP_VERIFY_TOKEN'
+  ];
 
-  // Create adapter and bot engine
-  const adapter = new WhatsAppAdapter(client);
-  const engine = new BotEngine(adapter);
+  const missing = required.filter(varName => !process.env[varName]);
 
-  // Set up event handlers
-  setupEventHandlers(client, engine, adapter);
+  if (missing.length > 0) {
+    const errorMsg = `Missing required WhatsApp environment variables: ${missing.join(', ')}`;
+    logger.error('[WHATSAPP-CLOUD] ' + errorMsg);
+    whatsappStatus = 'error';
+    throw new Error(errorMsg);
+  }
 
-  // Initialize client
-  client.initialize();
+  try {
+    // Create adapter and bot engine
+    whatsappAdapter = new WhatsAppCloudAdapter();
+    whatsappEngine = new BotEngine(whatsappAdapter);
 
-  return { client, engine, adapter };
-}
-
-/**
- * Set up WhatsApp event handlers
- */
-function setupEventHandlers(client, engine, adapter) {
-  // QR Code for authentication
-  client.on('qr', async (qr) => {
-    // Update global status
-    whatsappStatus = 'waiting_qr_scan';
-
-    // Generate QR code as base64 image for web display
-    try {
-      currentQRCode = await QRCode.toDataURL(qr);
-      logger.info('[WHATSAPP] QR Code ready - Visit /admin/whatsapp-qr to scan');
-    } catch (error) {
-      logger.error('[WHATSAPP] Error generating QR code image:', error);
-    }
-
-    // Display ASCII QR in terminal only in development
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('\n📱 WhatsApp QR Code:\n');
-      qrcode.generate(qr, { small: true });
-      console.log('\n🌐 Or visit: /admin/whatsapp-qr in your browser\n');
-    }
-  });
-
-  // Ready
-  client.on('ready', () => {
     whatsappStatus = 'ready';
-    currentQRCode = null; // Clear QR code once authenticated
-    logger.info('[WHATSAPP] WhatsApp bot is ready!');
-    console.log('✅ WhatsApp bot is connected and ready!');
-  });
 
-  // Authenticated
-  client.on('authenticated', () => {
-    whatsappStatus = 'authenticated';
-    currentQRCode = null; // Clear QR code
-    logger.info('[WHATSAPP] WhatsApp authenticated successfully');
-  });
+    logger.info('[WHATSAPP-CLOUD] WhatsApp Cloud API bot initialized successfully');
+    logger.info('[WHATSAPP-CLOUD] Phone Number ID:', process.env.WHATSAPP_PHONE_NUMBER_ID);
+    logger.info('[WHATSAPP-CLOUD] Webhook URL should be: https://your-domain.com/webhook/whatsapp');
+    console.log('✅ WhatsApp Cloud API bot is ready!');
+    console.log('📱 Configure webhook at: https://developers.facebook.com/apps');
 
-  // Authentication failure
-  client.on('auth_failure', (msg) => {
-    logger.error('[WHATSAPP] Authentication failure:', { error: msg });
-    console.error('❌ WhatsApp authentication failed:', msg);
-  });
+    return {
+      adapter: whatsappAdapter,
+      engine: whatsappEngine,
+      status: whatsappStatus
+    };
 
-  // Disconnected
-  client.on('disconnected', (reason) => {
-    logger.warn('[WHATSAPP] WhatsApp disconnected:', { reason });
-    console.log('⚠️  WhatsApp disconnected:', reason);
-  });
-
-  // Handle incoming messages
-  client.on('message', async (msg) => {
-    try {
-      // Ignore group messages and status updates
-      if (msg.from.includes('@g.us') || msg.isStatus) {
-        return;
-      }
-
-      // Ignore own messages
-      if (msg.fromMe) {
-        return;
-      }
-
-      // Delegate all message processing to adapter
-      const response = await adapter.processIncomingMessage(msg, engine);
-
-      // Send response
-      await adapter.sendResponse(msg.from, response);
-
-    } catch (error) {
-      logger.error('[WHATSAPP] Error handling message:', {
-        error: error.message,
-        stack: error.stack
-      });
-
-      try {
-        await client.sendMessage(
-          msg.from,
-          '❌ Erro ao processar mensagem. Tente novamente.'
-        );
-      } catch (sendError) {
-        logger.error('[WHATSAPP] Error sending error message:', {
-          error: sendError.message
-        });
-      }
-    }
-  });
-
-  // Handle message creation (for debugging)
-  client.on('message_create', (msg) => {
-    if (msg.fromMe) {
-      logger.debug('[WHATSAPP] Sent message:', {
-        to: msg.to,
-        text: msg.body?.substring(0, 50)
-      });
-    }
-  });
-
-  // Error handling
-  client.on('error', (error) => {
-    logger.error('[WHATSAPP] Client error:', {
+  } catch (error) {
+    whatsappStatus = 'error';
+    logger.error('[WHATSAPP-CLOUD] Failed to initialize:', {
       error: error.message,
       stack: error.stack
     });
-  });
+    throw error;
+  }
 }
 
-export { WhatsAppAdapter } from './adapter.js';
+/**
+ * Get current WhatsApp status
+ */
+export function getWhatsAppStatus() {
+  return {
+    status: whatsappStatus,
+    adapter: whatsappAdapter,
+    engine: whatsappEngine,
+    phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,
+    isReady: whatsappStatus === 'ready'
+  };
+}
+
+export { WhatsAppCloudAdapter } from './cloud-adapter.js';
