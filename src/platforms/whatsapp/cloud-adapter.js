@@ -9,14 +9,32 @@ export class WhatsAppCloudAdapter {
   constructor() {
     this.platform = 'whatsapp';
 
-    // Initialize WhatsApp Cloud API client
-    this.client = new WhatsApp({
-      token: process.env.WHATSAPP_ACCESS_TOKEN,
-      appSecret: process.env.WHATSAPP_APP_SECRET,
-      phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,
-      businessAccountId: process.env.WHATSAPP_BUSINESS_ACCOUNT_ID,
-      apiVersion: process.env.WHATSAPP_API_VERSION || 'v21.0'
-    });
+    // Map our environment variables to SDK expected names
+    // The SDK reads directly from process.env with specific names
+    if (!process.env.CLOUD_API_ACCESS_TOKEN && process.env.WHATSAPP_ACCESS_TOKEN) {
+      process.env.CLOUD_API_ACCESS_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN;
+    }
+    if (!process.env.M4D_APP_SECRET && process.env.WHATSAPP_APP_SECRET) {
+      process.env.M4D_APP_SECRET = process.env.WHATSAPP_APP_SECRET;
+    }
+    if (!process.env.M4D_APP_ID && process.env.WHATSAPP_APP_ID) {
+      process.env.M4D_APP_ID = process.env.WHATSAPP_APP_ID;
+    }
+    if (!process.env.WA_PHONE_NUMBER_ID && process.env.WHATSAPP_PHONE_NUMBER_ID) {
+      process.env.WA_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
+    }
+    if (!process.env.WA_BUSINESS_ACCOUNT_ID && process.env.WHATSAPP_BUSINESS_ACCOUNT_ID) {
+      process.env.WA_BUSINESS_ACCOUNT_ID = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID;
+    }
+    if (!process.env.CLOUD_API_VERSION && process.env.WHATSAPP_API_VERSION) {
+      process.env.CLOUD_API_VERSION = process.env.WHATSAPP_API_VERSION;
+    }
+    if (!process.env.WEBHOOK_VERIFICATION_TOKEN && process.env.WHATSAPP_VERIFY_TOKEN) {
+      process.env.WEBHOOK_VERIFICATION_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN;
+    }
+
+    // Initialize WhatsApp Cloud API client (SDK reads from env automatically)
+    this.client = new WhatsApp();
 
     // Cache last buttons sent to each user for fallback
     this.userButtonCache = new Map();
@@ -84,24 +102,16 @@ export class WhatsAppCloudAdapter {
   async sendMessage(chatId, text, options = {}) {
     try {
       const formattedText = this.formatText(text);
+      const recipient = parseInt(chatId.replace(/\D/g, '')); // Extract numbers only
 
       // Convert keyboard to buttons if provided
       const buttons = this.convertKeyboard(options.keyboard || options.buttons);
 
-      // Build message payload
-      const message = {
-        messaging_product: 'whatsapp',
-        to: chatId,
-        type: 'text',
-        text: { body: formattedText }
-      };
-
       // Add interactive buttons if available (max 3 reply buttons)
       if (buttons && buttons.length > 0) {
         if (buttons.length <= 3) {
-          // Use reply buttons for 3 or fewer buttons
-          message.type = 'interactive';
-          message.interactive = {
+          // Use reply buttons for 3 or fewer buttons (SDK interactive method)
+          const interactiveBody = {
             type: 'button',
             body: { text: formattedText },
             action: {
@@ -114,11 +124,19 @@ export class WhatsAppCloudAdapter {
               }))
             }
           };
-          delete message.text;
+
+          const result = await this.client.messages.interactive(interactiveBody, recipient);
+
+          logger.info('[WHATSAPP-CLOUD] Interactive message sent:', {
+            chatId,
+            messageId: result?.data?.messages?.[0]?.id,
+            buttonCount: buttons.length
+          });
+
+          return result;
         } else if (buttons.length <= 10) {
           // Use list for 4-10 buttons
-          message.type = 'interactive';
-          message.interactive = {
+          const interactiveBody = {
             type: 'list',
             body: { text: formattedText },
             action: {
@@ -133,29 +151,51 @@ export class WhatsAppCloudAdapter {
               }]
             }
           };
-          delete message.text;
+
+          const result = await this.client.messages.interactive(interactiveBody, recipient);
+
+          logger.info('[WHATSAPP-CLOUD] List message sent:', {
+            chatId,
+            messageId: result?.data?.messages?.[0]?.id,
+            optionCount: buttons.length
+          });
+
+          return result;
         } else {
           // Too many buttons - send as text with numbered menu
-          message.text.body = formattedText + '\n\n' + this.formatButtonsAsText(buttons);
+          const fullText = formattedText + '\n\n' + this.formatButtonsAsText(buttons);
+          const textBody = { body: fullText };
 
           // Cache buttons for number-based selection
           this.userButtonCache.set(chatId, buttons);
+
+          const result = await this.client.messages.text(textBody, recipient);
+
+          logger.info('[WHATSAPP-CLOUD] Text menu sent:', {
+            chatId,
+            messageId: result?.data?.messages?.[0]?.id,
+            buttonCount: buttons.length
+          });
+
+          return result;
         }
       }
 
-      const result = await this.client.messages.send(message);
+      // Simple text message (no buttons)
+      const textBody = { body: formattedText };
+      const result = await this.client.messages.text(textBody, recipient);
 
-      logger.info('[WHATSAPP-CLOUD] Message sent:', {
+      logger.info('[WHATSAPP-CLOUD] Text message sent:', {
         chatId,
-        messageId: result.messages?.[0]?.id,
-        hasButtons: !!buttons?.length
+        messageId: result?.data?.messages?.[0]?.id
       });
 
       return result;
     } catch (error) {
       logger.error('[WHATSAPP-CLOUD] Error sending message:', {
         error: error.message,
-        chatId
+        chatId,
+        stack: error.stack
       });
       throw error;
     }
@@ -167,19 +207,15 @@ export class WhatsAppCloudAdapter {
   async sendPhoto(chatId, imageUrl, options = {}) {
     try {
       const caption = options.caption ? this.formatText(options.caption) : '';
+      const recipient = parseInt(chatId.replace(/\D/g, ''));
       const buttons = this.convertKeyboard(options.keyboard || options.buttons);
 
-      const message = {
-        messaging_product: 'whatsapp',
-        to: chatId,
-        type: 'image',
-        image: {
-          link: imageUrl,
-          caption: caption
-        }
+      const imageBody = {
+        link: imageUrl,
+        caption: caption
       };
 
-      const result = await this.client.messages.send(message);
+      const result = await this.client.messages.image(imageBody, recipient);
 
       // Send buttons separately if provided (WhatsApp doesn't support buttons on media messages)
       if (buttons && buttons.length > 0) {
@@ -190,14 +226,15 @@ export class WhatsAppCloudAdapter {
 
       logger.info('[WHATSAPP-CLOUD] Photo sent:', {
         chatId,
-        messageId: result.messages?.[0]?.id
+        messageId: result?.data?.messages?.[0]?.id
       });
 
       return result;
     } catch (error) {
       logger.error('[WHATSAPP-CLOUD] Error sending photo:', {
         error: error.message,
-        chatId
+        chatId,
+        stack: error.stack
       });
       throw error;
     }
@@ -208,7 +245,12 @@ export class WhatsAppCloudAdapter {
    */
   async markAsRead(messageId) {
     try {
-      await this.client.messages.markAsRead(messageId);
+      // Use status API to mark as read
+      await this.client.messages.status({
+        messaging_product: 'whatsapp',
+        status: 'read',
+        message_id: messageId
+      });
     } catch (error) {
       logger.error('[WHATSAPP-CLOUD] Error marking message as read:', {
         error: error.message,
