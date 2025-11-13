@@ -51,6 +51,36 @@ export function getKeyboardDefinition(msg, type, options = {}) {
       return buttons;
     }
 
+    // WhatsApp optimized main menu (max 3 buttons for reply buttons)
+    case 'main_whatsapp': {
+      const isPremium = options.isPremium || false;
+      return [
+        { text: msg.btn.eurbrl(DEFAULTS.EUR, locale), id: `route:eurbrl:${DEFAULTS.EUR}`, row: 0 },
+        { text: msg.btn.brleur(DEFAULTS.BRL, locale), id: `route:brleur:${DEFAULTS.BRL}`, row: 1 },
+        { text: '📋 Plus...', id: 'action:more_menu', row: 2 }
+      ];
+    }
+
+    // WhatsApp "More" menu (when user clicks "Plus...")
+    case 'more_menu': {
+      const isPremium = options.isPremium || false;
+      const buttons = [];
+
+      if (isPremium) {
+        buttons.push({ text: msg.btn.myAlerts, id: 'alert:list', row: 0 });
+      } else {
+        buttons.push({ text: msg.btn.seePremium, id: 'premium:pricing', row: 0 });
+      }
+
+      buttons.push(
+        { text: msg.btn.about, id: 'action:about', row: 1 },
+        { text: msg.btn.help, id: 'action:help', row: 2 },
+        { text: '🏠 ' + msg.btn.back, id: 'action:back_main', row: 3 }
+      );
+
+      return buttons;
+    }
+
     // About screen
     case 'about':
       return [

@@ -291,9 +291,17 @@ export class WhatsAppCloudAdapter {
     // If it's a bot-engine keyboard structure with type/options/msg
     if (keyboardData.type && keyboardData.msg) {
       try {
+        // WhatsApp optimization: use WhatsApp-specific keyboards for better UX
+        let keyboardType = keyboardData.type;
+
+        // Replace 'main' with WhatsApp-optimized version (max 3 buttons)
+        if (keyboardType === 'main') {
+          keyboardType = 'main_whatsapp';
+        }
+
         const buttons = buildWhatsAppKeyboard(
           keyboardData.msg,
-          keyboardData.type,
+          keyboardType,
           keyboardData.options || {}
         );
         return buttons;

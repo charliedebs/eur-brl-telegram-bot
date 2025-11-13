@@ -345,6 +345,11 @@ export class BotEngine {
     try {
       const intent = await parseUserIntent(text, { language: lang });
 
+      // Greeting - show welcome message with main keyboard
+      if (intent.intent === 'greeting') {
+        return this.handleStart(context);
+      }
+
       if (intent.intent === 'compare' && intent.entities?.amount) {
         const amount = intent.entities.amount;
         const route = intent.entities.route || 'eurbrl';
@@ -649,6 +654,42 @@ export class BotEngine {
           lang,
           faqRoute,
           faqAmount,
+          (txt, opts) => this.formatResponse(txt, opts),
+          (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+        );
+
+      case 'more_menu':
+        // WhatsApp "Plus..." menu
+        const user = await this.db.getUserByPlatform(platform, userId);
+        const isPremium = user?.premium_until && new Date(user.premium_until) > new Date();
+        return this.formatResponse(msg.MORE_MENU || '📋 Plus d\'options', {
+          keyboard: this.buildKeyboard(msg, 'more_menu', { isPremium })
+        });
+
+      case 'help':
+        return this.handleHelp({ userId, user: await this.db.getUserByPlatform(platform, userId), platform, lang });
+
+      case 'about':
+        return this.formatResponse(msg.ABOUT_TEXT || msg.INFO_TEXT, {
+          keyboard: this.buildKeyboard(msg, 'about')
+        });
+
+      case 'convert':
+        // Prompt user to enter amount to convert
+        this.updateSession(userId, platform, {
+          awaitingConvertAmount: true,
+          awaitingConvertRoute: actionParams[0] || 'eurbrl'
+        });
+        return this.formatResponse(msg.ASK_AMOUNT || 'Quel montant souhaitez-vous convertir?');
+
+      case 'continue_onchain':
+        // Show guide for continuing on-chain
+        const [continueRoute, continueAmount] = actionParams;
+        return await this.handlers.guide.handleGuideTransition(
+          userId,
+          lang,
+          continueRoute,
+          parseFloat(continueAmount),
           (txt, opts) => this.formatResponse(txt, opts),
           (msg, type, opts) => this.buildKeyboard(msg, type, opts)
         );
