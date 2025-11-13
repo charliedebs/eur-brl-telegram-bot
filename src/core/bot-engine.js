@@ -738,11 +738,11 @@ export class BotEngine {
 
       case 'faq_more':
         // WhatsApp: Show FAQ more submenu
-        const [faqRoute, faqAmount] = actionParams;
+        const [faqMoreRoute, faqMoreAmount] = actionParams;
         return this.formatResponse('❓ Autres questions:', {
           keyboard: this.buildKeyboard(msg, 'faq_more', {
-            route: faqRoute,
-            amount: parseFloat(faqAmount)
+            route: faqMoreRoute,
+            amount: parseFloat(faqMoreAmount)
           })
         });
 
