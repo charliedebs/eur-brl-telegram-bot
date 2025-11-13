@@ -294,9 +294,31 @@ export class WhatsAppCloudAdapter {
         // WhatsApp optimization: use WhatsApp-specific keyboards for better UX
         let keyboardType = keyboardData.type;
 
-        // Replace 'main' with WhatsApp-optimized version (max 3 buttons)
-        if (keyboardType === 'main') {
-          keyboardType = 'main_whatsapp';
+        // Map Telegram keyboards to WhatsApp-optimized versions (max 3 reply buttons)
+        const whatsappKeyboardMap = {
+          'main': 'main_whatsapp',
+          'comparison': 'comparison_whatsapp',
+          'onchain_intro': 'onchain_intro_whatsapp',
+          'guide_navigation': 'guide_navigation_whatsapp',
+          'faq_menu': 'faq_menu_whatsapp',
+          'step_1_1': 'step_1_1_whatsapp',
+          'step_1_2': 'step_1_2_whatsapp',
+          'step_1_3': 'step_1_3_whatsapp',
+          'step_2_1': 'step_2_1_whatsapp',
+          'step_2_2': 'step_2_2_whatsapp',
+          'step_2_3': 'step_2_3_whatsapp',
+          'step_3_2': 'step_3_2_whatsapp',
+          'step_3_3': 'step_3_3_whatsapp',
+          'step_3_4': 'step_3_4_whatsapp',
+          'more_options': 'more_options_whatsapp',
+          'offchain': 'offchain_whatsapp',
+          'exchanges_eu': 'exchanges_eu_whatsapp',
+          'exchanges_br': 'exchanges_br_whatsapp',
+          'premium_pricing': 'premium_pricing_whatsapp',
+        };
+
+        if (whatsappKeyboardMap[keyboardType]) {
+          keyboardType = whatsappKeyboardMap[keyboardType];
         }
 
         const buttons = buildWhatsAppKeyboard(

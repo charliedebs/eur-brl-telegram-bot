@@ -104,6 +104,23 @@ export function getKeyboardDefinition(msg, type, options = {}) {
         { text: msg.btn.sources, id: 'action:sources', row: 4 },
       ];
 
+    // WhatsApp optimized comparison (3 main actions + "More...")
+    case 'comparison_whatsapp':
+      return [
+        { text: msg.btn.contOn, id: `action:continue_onchain:${route}:${amount}`, row: 0 },
+        { text: msg.btn.stayOff, id: `action:stay_offchain:${route}:${amount}`, row: 1 },
+        { text: '⚙️ Plus...', id: `action:comparison_more:${route}:${amount}`, row: 2 },
+      ];
+
+    // WhatsApp comparison "More" submenu
+    case 'comparison_more':
+      return [
+        { text: msg.btn.calcdetails, id: `action:calc_details:${route}:${amount}`, row: 0 },
+        { text: msg.btn.moreOptions, id: `action:more_options:${route}:${amount}`, row: 1 },
+        { text: msg.btn.sources, id: 'action:sources', row: 2 },
+        { text: '🔙 ' + msg.btn.back, id: `route:${route}:${amount}`, row: 3 },
+      ];
+
     // More options
     case 'more_options':
       return [
@@ -111,6 +128,14 @@ export function getKeyboardDefinition(msg, type, options = {}) {
         { text: msg.btn.change, id: `action:change_amount:${route}`, row: 1 },
         { text: msg.btn.myAlerts, id: 'alert:list', row: 2 },
         { text: msg.btn.back, id: `action:back_comparison:${route}:${amount}`, row: 3 },
+      ];
+
+    // WhatsApp optimized more options
+    case 'more_options_whatsapp':
+      return [
+        { text: msg.btn.swapMode, id: `action:swap_mode:${route}:${amount}`, row: 0 },
+        { text: msg.btn.change, id: `action:change_amount:${route}`, row: 1 },
+        { text: '🔙 ' + msg.btn.back, id: `action:back_comparison:${route}:${amount}`, row: 2 },
       ];
 
     // Sources
@@ -145,6 +170,40 @@ export function getKeyboardDefinition(msg, type, options = {}) {
       return buttons;
     }
 
+    // WhatsApp optimized offchain (max 3 buttons)
+    case 'offchain_whatsapp': {
+      const { providers = [] } = options;
+      const wiseProvider = providers.find(p => p.provider === 'Wise');
+      const remitlyProvider = providers.find(p => p.provider === 'Remitly');
+
+      // If we have both providers, show Wise + Remitly + More
+      if (wiseProvider && remitlyProvider) {
+        const wiseLink = PROVIDER_LINKS['Wise'] || '#';
+        return [
+          { text: msg.btn.openWise, id: `url:${wiseLink}`, url: wiseLink, row: 0 },
+          { text: msg.btn.seeOnchain, id: `action:continue_onchain:${route}:${amount}`, row: 1 },
+          { text: '🔙 ' + msg.btn.back, id: `action:back_comparison:${route}:${amount}`, row: 2 },
+        ];
+      }
+
+      // If only one provider, show provider + onchain + back
+      const buttons = [];
+      let rowIndex = 0;
+
+      if (wiseProvider) {
+        const wiseLink = PROVIDER_LINKS['Wise'] || '#';
+        buttons.push({ text: msg.btn.openWise, id: `url:${wiseLink}`, url: wiseLink, row: rowIndex++ });
+      } else if (remitlyProvider) {
+        const remitlyLink = PROVIDER_LINKS['Remitly'] || '#';
+        buttons.push({ text: msg.btn.openRemitly, id: `url:${remitlyLink}`, url: remitlyLink, row: rowIndex++ });
+      }
+
+      buttons.push({ text: msg.btn.seeOnchain, id: `action:continue_onchain:${route}:${amount}`, row: rowIndex++ });
+      buttons.push({ text: '🔙 ' + msg.btn.back, id: `action:back_comparison:${route}:${amount}`, row: rowIndex++ });
+
+      return buttons;
+    }
+
     // Onchain intro
     case 'onchain_intro': {
       const buttons = [
@@ -167,6 +226,33 @@ export function getKeyboardDefinition(msg, type, options = {}) {
       return buttons;
     }
 
+    // WhatsApp optimized onchain intro
+    case 'onchain_intro_whatsapp': {
+      return [
+        { text: msg.btn.startGuide, id: `action:start_guide:${route}:${amount}`, row: 0 },
+        { text: msg.btn.faqDoubt, id: 'action:faq_menu', row: 1 },
+        { text: '🏦 Exchanges', id: `action:onchain_exchanges:${route}:${amount}`, row: 2 },
+      ];
+    }
+
+    // WhatsApp onchain exchanges submenu
+    case 'onchain_exchanges': {
+      const buttons = [];
+      let rowIndex = 0;
+
+      if (route === 'brleur') {
+        buttons.push({ text: msg.btn.createBR, id: 'action:exchanges_br', row: rowIndex++ });
+        buttons.push({ text: msg.btn.createEU, id: 'action:exchanges_eu', row: rowIndex++ });
+      } else {
+        buttons.push({ text: msg.btn.createEU, id: 'action:exchanges_eu', row: rowIndex++ });
+        buttons.push({ text: msg.btn.createBR, id: 'action:exchanges_br', row: rowIndex++ });
+      }
+
+      buttons.push({ text: '🔙 ' + msg.btn.back, id: `action:onchain_intro:${route}:${amount}`, row: rowIndex++ });
+
+      return buttons;
+    }
+
     // FAQ menu
     case 'faq_menu':
       return [
@@ -177,6 +263,24 @@ export function getKeyboardDefinition(msg, type, options = {}) {
         { text: msg.btn.whyOnchain, id: 'action:faq_why_onchain', row: 4 },
         { text: msg.btn.askQuestion, id: 'action:faq_send_question', row: 5 },
         { text: msg.btn.back, id: `action:onchain_intro:${route}:${amount}`, row: 6 },
+      ];
+
+    // WhatsApp optimized FAQ menu
+    case 'faq_menu_whatsapp':
+      return [
+        { text: msg.btn.whatIsUSDC, id: 'action:what_usdc', row: 0 },
+        { text: msg.btn.whatIsExchange, id: 'action:what_exchange', row: 1 },
+        { text: '❓ Plus...', id: `action:faq_more:${route}:${amount}`, row: 2 },
+      ];
+
+    // WhatsApp FAQ more submenu
+    case 'faq_more':
+      return [
+        { text: msg.btn.minAmount, id: 'action:faq_min_amount', row: 0 },
+        { text: msg.btn.aboutReferrals, id: 'action:about_referrals', row: 1 },
+        { text: msg.btn.whyOnchain, id: 'action:faq_why_onchain', row: 2 },
+        { text: msg.btn.askQuestion, id: 'action:faq_send_question', row: 3 },
+        { text: '🔙 ' + msg.btn.back, id: 'action:faq_menu', row: 4 },
       ];
 
     // FAQ - Why onchain
@@ -239,6 +343,25 @@ export function getKeyboardDefinition(msg, type, options = {}) {
       return buttons;
     }
 
+    // WhatsApp optimized Exchanges EU
+    case 'exchanges_eu_whatsapp': {
+      const mainExchangeButton = { text: msg.btn.openKraken, id: `url:${LINKS.KRAKEN}`, url: LINKS.KRAKEN, row: 0 };
+
+      if (route === 'brleur') {
+        return [
+          mainExchangeButton,
+          { text: msg.btn.startGuide, id: `action:start_guide:${route}:${amount}`, row: 1 },
+          { text: '🔙 ' + msg.btn.back, id: `action:onchain_intro:${route}:${amount}`, row: 2 },
+        ];
+      } else {
+        return [
+          mainExchangeButton,
+          { text: msg.btn.createBR, id: 'action:exchanges_br', row: 1 },
+          { text: '🔙 ' + msg.btn.back, id: `action:onchain_intro:${route}:${amount}`, row: 2 },
+        ];
+      }
+    }
+
     // Exchanges BR
     case 'exchanges_br': {
       const buttons = [
@@ -263,6 +386,25 @@ export function getKeyboardDefinition(msg, type, options = {}) {
       return buttons;
     }
 
+    // WhatsApp optimized Exchanges BR (show top exchange + more options)
+    case 'exchanges_br_whatsapp': {
+      const mainExchangeButton = { text: msg.btn.openBinanceBR, id: `url:${LINKS.BINANCE_BR}`, url: LINKS.BINANCE_BR, row: 0 };
+
+      if (route === 'brleur') {
+        return [
+          mainExchangeButton,
+          { text: msg.btn.createEU, id: 'action:exchanges_eu', row: 1 },
+          { text: '🔙 ' + msg.btn.back, id: `action:onchain_intro:${route}:${amount}`, row: 2 },
+        ];
+      } else {
+        return [
+          mainExchangeButton,
+          { text: msg.btn.startGuide, id: `action:start_guide:${route}:${amount}`, row: 1 },
+          { text: '🔙 ' + msg.btn.back, id: `action:onchain_intro:${route}:${amount}`, row: 2 },
+        ];
+      }
+    }
+
     // Guide transition
     case 'guide_transition':
       return [
@@ -285,6 +427,54 @@ export function getKeyboardDefinition(msg, type, options = {}) {
       ];
     }
 
+    // WhatsApp optimized Step 1.1
+    case 'step_1_1_whatsapp': {
+      const exchangeButton = route === 'brleur'
+        ? { text: msg.btn.openBinanceBR, id: `url:${LINKS.BINANCE_BR}`, url: LINKS.BINANCE_BR, row: 1 }
+        : { text: msg.btn.openKraken, id: `url:${LINKS.KRAKEN}`, url: LINKS.KRAKEN, row: 1 };
+
+      return [
+        { text: msg.btn.step1Done(route), id: `guide:step:1.2:${route}:${amount}`, row: 0 },
+        exchangeButton,
+        { text: '⚙️ Plus...', id: `action:step_more:1.1:${route}:${amount}`, row: 2 },
+      ];
+    }
+
+    // Generic step more submenu (navigation for all steps)
+    case 'step_more': {
+      const [stepNum] = (options.stepId || '1.1').split(':');
+      const prevStepMap = {
+        '1.1': 'action:start_guide',
+        '1.2': 'guide:step:1.1',
+        '1.3': 'guide:step:1.2',
+        '1.4': 'guide:step:1.3',
+        '2.1': 'guide:step:1.4',
+        '2.2': 'guide:step:2.1',
+        '2.3': 'guide:step:2.2',
+        '2.4': 'guide:step:2.3',
+        '3.1': 'guide:step:2.4',
+        '3.2': 'guide:step:3.1',
+        '3.3': 'guide:step:3.2',
+        '3.4': 'guide:step:3.3',
+      };
+
+      const buttons = [];
+
+      // Skip to next section (if not in section 3)
+      if (stepNum.startsWith('1.')) {
+        buttons.push({ text: msg.btn.skipToStep2, id: `guide:step:2.1:${route}:${amount}`, row: 0 });
+      } else if (stepNum.startsWith('2.')) {
+        buttons.push({ text: msg.btn.skipToStep3, id: `guide:step:3.1:${route}:${amount}`, row: 0 });
+      }
+
+      buttons.push(
+        { text: msg.btn.navigation, id: `action:guide_navigation:${route}:${amount}`, row: 1 },
+        { text: '🔙 ' + msg.btn.back, id: `${prevStepMap[stepNum]}:${route}:${amount}`, row: 2 }
+      );
+
+      return buttons;
+    }
+
     // Step 1.2
     case 'step_1_2':
       return [
@@ -292,6 +482,14 @@ export function getKeyboardDefinition(msg, type, options = {}) {
         { text: msg.btn.skipToStep2, id: `guide:step:2.1:${route}:${amount}`, row: 1 },
         { text: msg.btn.navigation, id: `action:guide_navigation:${route}:${amount}`, row: 2 },
         { text: msg.btn.back, id: `guide:step:1.1:${route}:${amount}`, row: 3 },
+      ];
+
+    // WhatsApp optimized Step 1.2
+    case 'step_1_2_whatsapp':
+      return [
+        { text: msg.btn.step1_2Done(route), id: `guide:step:1.3:${route}:${amount}`, row: 0 },
+        { text: msg.btn.skipToStep2, id: `guide:step:2.1:${route}:${amount}`, row: 1 },
+        { text: '⚙️ Plus...', id: `action:step_more:1.2:${route}:${amount}`, row: 2 },
       ];
 
     // Step 1.3
@@ -302,6 +500,14 @@ export function getKeyboardDefinition(msg, type, options = {}) {
         { text: msg.btn.skipToStep2, id: `guide:step:2.1:${route}:${amount}`, row: 2 },
         { text: msg.btn.navigation, id: `action:guide_navigation:${route}:${amount}`, row: 3 },
         { text: msg.btn.back, id: `guide:step:1.2:${route}:${amount}`, row: 4 },
+      ];
+
+    // WhatsApp optimized Step 1.3
+    case 'step_1_3_whatsapp':
+      return [
+        { text: msg.btn.step1_3Done, id: `guide:step:1.4:${route}:${amount}`, row: 0 },
+        { text: msg.btn.marketVsLimit, id: 'action:market_vs_limit', row: 1 },
+        { text: '⚙️ Plus...', id: `action:step_more:1.3:${route}:${amount}`, row: 2 },
       ];
 
     // Step 1.4
@@ -327,6 +533,19 @@ export function getKeyboardDefinition(msg, type, options = {}) {
       ];
     }
 
+    // WhatsApp optimized Step 2.1
+    case 'step_2_1_whatsapp': {
+      const exchangeButton = route === 'brleur'
+        ? { text: msg.btn.openKraken, id: `url:${LINKS.KRAKEN}`, url: LINKS.KRAKEN, row: 1 }
+        : { text: msg.btn.openBinanceBR, id: `url:${LINKS.BINANCE_BR}`, url: LINKS.BINANCE_BR, row: 1 };
+
+      return [
+        { text: msg.btn.step2Done, id: `guide:step:2.2:${route}:${amount}`, row: 0 },
+        exchangeButton,
+        { text: '⚙️ Plus...', id: `action:step_more:2.1:${route}:${amount}`, row: 2 },
+      ];
+    }
+
     // Step 2.2
     case 'step_2_2':
       return [
@@ -336,6 +555,14 @@ export function getKeyboardDefinition(msg, type, options = {}) {
         { text: msg.btn.back, id: `guide:step:2.1:${route}:${amount}`, row: 3 },
       ];
 
+    // WhatsApp optimized Step 2.2
+    case 'step_2_2_whatsapp':
+      return [
+        { text: msg.btn.step2_2Done, id: `guide:step:2.3:${route}:${amount}`, row: 0 },
+        { text: msg.btn.skipToStep3, id: `guide:step:3.1:${route}:${amount}`, row: 1 },
+        { text: '⚙️ Plus...', id: `action:step_more:2.2:${route}:${amount}`, row: 2 },
+      ];
+
     // Step 2.3
     case 'step_2_3':
       return [
@@ -343,6 +570,14 @@ export function getKeyboardDefinition(msg, type, options = {}) {
         { text: msg.btn.skipToStep3, id: `guide:step:3.1:${route}:${amount}`, row: 1 },
         { text: msg.btn.navigation, id: `action:guide_navigation:${route}:${amount}`, row: 2 },
         { text: msg.btn.back, id: `guide:step:2.2:${route}:${amount}`, row: 3 },
+      ];
+
+    // WhatsApp optimized Step 2.3
+    case 'step_2_3_whatsapp':
+      return [
+        { text: msg.btn.step2_3Done, id: `guide:step:2.4:${route}:${amount}`, row: 0 },
+        { text: msg.btn.skipToStep3, id: `guide:step:3.1:${route}:${amount}`, row: 1 },
+        { text: '⚙️ Plus...', id: `action:step_more:2.3:${route}:${amount}`, row: 2 },
       ];
 
     // Step 2.4
@@ -370,6 +605,14 @@ export function getKeyboardDefinition(msg, type, options = {}) {
         { text: msg.btn.back, id: `guide:step:3.1:${route}:${amount}`, row: 3 },
       ];
 
+    // WhatsApp optimized Step 3.2
+    case 'step_3_2_whatsapp':
+      return [
+        { text: msg.btn.step3_2Done, id: `guide:step:3.3:${route}:${amount}`, row: 0 },
+        { text: msg.btn.marketVsLimit, id: 'action:market_vs_limit', row: 1 },
+        { text: '⚙️ Plus...', id: `action:step_more:3.2:${route}:${amount}`, row: 2 },
+      ];
+
     // Step 3.3
     case 'step_3_3':
       return [
@@ -377,6 +620,14 @@ export function getKeyboardDefinition(msg, type, options = {}) {
         { text: msg.btn.whyNotExact, id: 'action:why_not_exact', row: 1 },
         { text: msg.btn.navigation, id: `action:guide_navigation:${route}:${amount}`, row: 2 },
         { text: msg.btn.back, id: `guide:step:3.2:${route}:${amount}`, row: 3 },
+      ];
+
+    // WhatsApp optimized Step 3.3
+    case 'step_3_3_whatsapp':
+      return [
+        { text: msg.btn.step3_3Done(route), id: `guide:step:3.4:${route}:${amount}`, row: 0 },
+        { text: msg.btn.whyNotExact, id: 'action:why_not_exact', row: 1 },
+        { text: '⚙️ Plus...', id: `action:step_more:3.3:${route}:${amount}`, row: 2 },
       ];
 
     // Step 3.4
@@ -387,6 +638,14 @@ export function getKeyboardDefinition(msg, type, options = {}) {
         { text: msg.btn.giveFeedback, id: 'action:feedback', row: 2 },
         { text: msg.btn.navigation, id: `action:guide_navigation:${route}:${amount}`, row: 3 },
         { text: msg.btn.back, id: `guide:step:3.3:${route}:${amount}`, row: 4 },
+      ];
+
+    // WhatsApp optimized Step 3.4
+    case 'step_3_4_whatsapp':
+      return [
+        { text: msg.btn.setAlert, id: 'alerts:start', row: 0 },
+        { text: msg.btn.premium, id: 'premium:open', row: 1 },
+        { text: '⚙️ Plus...', id: `action:step_more:3.4:${route}:${amount}`, row: 2 },
       ];
 
     // Why not exact
@@ -419,6 +678,37 @@ export function getKeyboardDefinition(msg, type, options = {}) {
         { text: msg.btn.goToStep32(route), id: `guide:step:3.2:${route}:${amount}`, row: 12 },
         { text: msg.btn.goToStep33(route), id: `guide:step:3.3:${route}:${amount}`, row: 13 },
         { text: msg.btn.goToStep34, id: `guide:step:3.4:${route}:${amount}`, row: 14 },
+      ];
+
+    // WhatsApp optimized guide navigation (hierarchical)
+    case 'guide_navigation_whatsapp':
+      return [
+        { text: msg.btn.toMainMenu, id: 'action:back_main', row: 0 },
+        { text: msg.btn.backToComparison, id: `action:back_comparison:${route}:${amount}`, row: 1 },
+        { text: '📍 Aller à étape...', id: `action:guide_steps:${route}:${amount}`, row: 2 },
+      ];
+
+    // WhatsApp guide steps submenu (list of all steps)
+    case 'guide_steps':
+      return [
+        { text: '1.1 - ' + msg.btn.goToStep11(route).replace('🔢 ', ''), id: `guide:step:1.1:${route}:${amount}`, row: 0 },
+        { text: '1.2 - ' + msg.btn.goToStep12.replace('🔢 ', ''), id: `guide:step:1.2:${route}:${amount}`, row: 1 },
+        { text: '1.3 - ' + msg.btn.goToStep13.replace('🔢 ', ''), id: `guide:step:1.3:${route}:${amount}`, row: 2 },
+        { text: '1.4 - ' + msg.btn.goToStep14.replace('🔢 ', ''), id: `guide:step:1.4:${route}:${amount}`, row: 3 },
+        { text: '2.1 - ' + msg.btn.goToStep21(route).replace('🔢 ', ''), id: `guide:step:2.1:${route}:${amount}`, row: 4 },
+        { text: '2.2 - ' + msg.btn.goToStep22.replace('🔢 ', ''), id: `guide:step:2.2:${route}:${amount}`, row: 5 },
+        { text: '2.3 - ' + msg.btn.goToStep23.replace('🔢 ', ''), id: `guide:step:2.3:${route}:${amount}`, row: 6 },
+        { text: '2.4 - ' + msg.btn.goToStep24.replace('🔢 ', ''), id: `guide:step:2.4:${route}:${amount}`, row: 7 },
+        { text: '3.1 - ' + msg.btn.goToStep31.replace('🔢 ', ''), id: `guide:step:3.1:${route}:${amount}`, row: 8 },
+        { text: '3.2 - ' + msg.btn.goToStep32(route).replace('🔢 ', ''), id: `guide:step:3.2:${route}:${amount}`, row: 9 },
+      ];
+
+    // WhatsApp guide steps submenu part 2 (remaining steps)
+    case 'guide_steps_2':
+      return [
+        { text: '3.3 - ' + msg.btn.goToStep33(route).replace('🔢 ', ''), id: `guide:step:3.3:${route}:${amount}`, row: 0 },
+        { text: '3.4 - ' + msg.btn.goToStep34.replace('🔢 ', ''), id: `guide:step:3.4:${route}:${amount}`, row: 1 },
+        { text: '🔙 ' + msg.btn.back, id: `action:guide_navigation:${route}:${amount}`, row: 2 },
       ];
 
     // Alerts list
@@ -547,6 +837,25 @@ export function getKeyboardDefinition(msg, type, options = {}) {
         { text: msg.btn.seeOneshot, id: 'premium:oneshot_pricing', row: 5 },
         { text: msg.btn.paymentHelp, id: 'premium:payment_help', row: 6 },
         { text: msg.btn.back, id: 'action:back_main', row: 7 },
+      ];
+
+    // WhatsApp optimized premium pricing
+    case 'premium_pricing_whatsapp':
+      return [
+        { text: msg.btn.subMPMonthly, id: 'premium:sub:mp:monthly', row: 0 },
+        { text: msg.btn.subMPQuarterly, id: 'premium:sub:mp:quarterly', row: 1 },
+        { text: '💳 Plus...', id: 'action:premium_more', row: 2 },
+      ];
+
+    // WhatsApp premium more submenu
+    case 'premium_more':
+      return [
+        { text: msg.btn.premiumDetails, id: 'premium:details', row: 0 },
+        { text: msg.btn.subMPSemiannual, id: 'premium:sub:mp:semiannual', row: 1 },
+        { text: msg.btn.subMPAnnual, id: 'premium:sub:mp:annual', row: 2 },
+        { text: msg.btn.seeOneshot, id: 'premium:oneshot_pricing', row: 3 },
+        { text: msg.btn.paymentHelp, id: 'premium:payment_help', row: 4 },
+        { text: '🔙 ' + msg.btn.back, id: 'premium:pricing', row: 5 },
       ];
 
     // Premium one-shot pricing

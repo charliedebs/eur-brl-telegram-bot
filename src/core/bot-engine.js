@@ -694,6 +694,206 @@ export class BotEngine {
           (msg, type, opts) => this.buildKeyboard(msg, type, opts)
         );
 
+      case 'comparison_more':
+        // WhatsApp: Show comparison "More" submenu
+        const [compRoute, compAmount] = actionParams;
+        return this.formatResponse('⚙️ Options supplémentaires:', {
+          keyboard: this.buildKeyboard(msg, 'comparison_more', {
+            route: compRoute,
+            amount: parseFloat(compAmount)
+          })
+        });
+
+      case 'onchain_intro':
+        // Show onchain intro
+        const [onchainRoute, onchainAmount] = actionParams;
+        return await this.handlers.guide.handleOnchainIntro(
+          userId,
+          lang,
+          onchainRoute,
+          parseFloat(onchainAmount),
+          (txt, opts) => this.formatResponse(txt, opts),
+          (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+        );
+
+      case 'onchain_exchanges':
+        // WhatsApp: Show exchanges submenu
+        const [exchRoute, exchAmount] = actionParams;
+        return this.formatResponse('🏦 Choisissez une plateforme:', {
+          keyboard: this.buildKeyboard(msg, 'onchain_exchanges', {
+            route: exchRoute,
+            amount: parseFloat(exchAmount)
+          })
+        });
+
+      case 'guide_steps':
+        // WhatsApp: Show guide steps menu
+        const [stepsRoute, stepsAmount] = actionParams;
+        return this.formatResponse('📍 Choisissez une étape:', {
+          keyboard: this.buildKeyboard(msg, 'guide_steps', {
+            route: stepsRoute,
+            amount: parseFloat(stepsAmount)
+          })
+        });
+
+      case 'faq_more':
+        // WhatsApp: Show FAQ more submenu
+        const [faqRoute, faqAmount] = actionParams;
+        return this.formatResponse('❓ Autres questions:', {
+          keyboard: this.buildKeyboard(msg, 'faq_more', {
+            route: faqRoute,
+            amount: parseFloat(faqAmount)
+          })
+        });
+
+      case 'step_more':
+        // WhatsApp: Show step navigation submenu
+        const [stepId, stepRoute, stepAmount] = actionParams;
+        return this.formatResponse('⚙️ Navigation:', {
+          keyboard: this.buildKeyboard(msg, 'step_more', {
+            stepId: stepId,
+            route: stepRoute,
+            amount: parseFloat(stepAmount)
+          })
+        });
+
+      case 'premium_more':
+        // WhatsApp: Show premium more submenu
+        return this.formatResponse('💳 Autres options Premium:', {
+          keyboard: this.buildKeyboard(msg, 'premium_more', {})
+        });
+
+      case 'stay_offchain':
+        // Show offchain providers details
+        const [offRoute, offAmount] = actionParams;
+        return await this.handlers.comparison.handleOffchainSelection(
+          userId,
+          lang,
+          offRoute,
+          parseFloat(offAmount),
+          (txt, opts) => this.formatResponse(txt, opts),
+          (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+        );
+
+      case 'calc_details':
+        // Show calculation details
+        const [calcRoute, calcAmount] = actionParams;
+        return await this.handlers.comparison.handleCalcDetails(
+          userId,
+          lang,
+          calcRoute,
+          parseFloat(calcAmount),
+          (txt, opts) => this.formatResponse(txt, opts),
+          (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+        );
+
+      case 'sources':
+        // Show sources information
+        return this.formatResponse(msg.SOURCES_TEXT || 'Sources des données de taux de change...', {
+          keyboard: this.buildKeyboard(msg, 'sources', session.lastRoute ? {
+            route: session.lastRoute,
+            amount: session.lastAmount || 1000
+          } : {})
+        });
+
+      case 'more_options':
+        // Show more options menu
+        const [moreRoute, moreAmount] = actionParams;
+        return this.formatResponse(msg.MORE_OPTIONS_TEXT || 'Plus d\'options:', {
+          keyboard: this.buildKeyboard(msg, 'more_options', {
+            route: moreRoute,
+            amount: parseFloat(moreAmount)
+          })
+        });
+
+      case 'back_comparison':
+        // Go back to comparison
+        const [backRoute, backAmount] = actionParams;
+        return await this.handlers.comparison.showComparison(
+          userId,
+          lang,
+          backRoute,
+          parseFloat(backAmount),
+          session.lastIsTargetMode || false,
+          (txt, opts) => this.formatResponse(txt, opts),
+          (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+        );
+
+      case 'swap_mode':
+        // Swap between source and target mode
+        const [swapRoute, swapAmount] = actionParams;
+        const newIsTargetMode = !session.lastIsTargetMode;
+        this.updateSession(userId, platform, { lastIsTargetMode: newIsTargetMode });
+        return await this.handlers.comparison.showComparison(
+          userId,
+          lang,
+          swapRoute,
+          parseFloat(swapAmount),
+          newIsTargetMode,
+          (txt, opts) => this.formatResponse(txt, opts),
+          (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+        );
+
+      case 'change_amount':
+        // Prompt to change amount
+        const changeRoute = actionParams[0];
+        this.updateSession(userId, platform, {
+          awaitingAmount: changeRoute
+        });
+        return this.formatResponse(msg.ASK_AMOUNT || 'Quel montant?');
+
+      case 'exchanges_eu':
+        // Show EU exchanges
+        return this.formatResponse(msg.EXCHANGES_EU_TEXT || 'Plateformes européennes recommandées:', {
+          keyboard: this.buildKeyboard(msg, 'exchanges_eu', {
+            route: session.lastRoute || 'eurbrl',
+            amount: session.lastAmount || 1000
+          })
+        });
+
+      case 'exchanges_br':
+        // Show BR exchanges
+        return this.formatResponse(msg.EXCHANGES_BR_TEXT || 'Plateformes brésiliennes recommandées:', {
+          keyboard: this.buildKeyboard(msg, 'exchanges_br', {
+            route: session.lastRoute || 'eurbrl',
+            amount: session.lastAmount || 1000
+          })
+        });
+
+      case 'what_usdc':
+      case 'what_exchange':
+      case 'faq_min_amount':
+      case 'about_referrals':
+      case 'faq_why_onchain':
+      case 'faq_send_question':
+        // FAQ actions - delegate to guide handler
+        return await this.handlers.guide.handleFaqAction(
+          userId,
+          lang,
+          actionType,
+          (txt, opts) => this.formatResponse(txt, opts),
+          (msg, type, opts) => this.buildKeyboard(msg, type, opts),
+          (updates) => this.updateSession(userId, platform, updates)
+        );
+
+      case 'market_vs_limit':
+      case 'why_not_exact':
+      case 'back_context':
+        // Contextual help actions
+        return await this.handlers.guide.handleContextualHelp(
+          userId,
+          lang,
+          actionType,
+          session,
+          (txt, opts) => this.formatResponse(txt, opts),
+          (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+        );
+
+      case 'feedback':
+        // Ask for feedback
+        this.updateSession(userId, platform, { awaitingFeedback: true });
+        return this.formatResponse(msg.ASK_FEEDBACK || 'Partagez votre feedback:');
+
       default:
         logger.warn('[BOT-ENGINE] Unknown action type:', { actionType, actionParams });
         return this.formatResponse('❌ Action not implemented yet.');
