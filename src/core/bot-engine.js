@@ -695,9 +695,16 @@ export class BotEngine {
         );
 
       case 'comparison_more':
-        // WhatsApp: Show comparison "More" submenu
+        // WhatsApp: Show comparison "More" submenu with context
         const [compRoute, compAmount] = actionParams;
-        return this.formatResponse('⚙️ Options supplémentaires:', {
+        const routeDisplay = compRoute === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+        const contextMsg = lang === 'fr'
+          ? `📊 ${routeDisplay} ${parseFloat(compAmount).toLocaleString(lang === 'fr' ? 'fr-FR' : lang === 'pt' ? 'pt-BR' : 'en-US')}\n\n⚙️ Options & Détails:`
+          : lang === 'pt'
+          ? `📊 ${routeDisplay} ${parseFloat(compAmount).toLocaleString('pt-BR')}\n\n⚙️ Opções & Detalhes:`
+          : `📊 ${routeDisplay} ${parseFloat(compAmount).toLocaleString('en-US')}\n\n⚙️ Options & Details:`;
+
+        return this.formatResponse(contextMsg, {
           keyboard: this.buildKeyboard(msg, 'comparison_more', {
             route: compRoute,
             amount: parseFloat(compAmount)
@@ -717,9 +724,15 @@ export class BotEngine {
         );
 
       case 'onchain_exchanges':
-        // WhatsApp: Show exchanges submenu
+        // WhatsApp: Show exchanges submenu with context
         const [exchRoute, exchAmount] = actionParams;
-        return this.formatResponse('🏦 Choisissez une plateforme:', {
+        const exchMsg = lang === 'fr'
+          ? '🏦 Choisissez votre plateforme d\'échange:\n\nSélectionnez une exchange pour commencer.'
+          : lang === 'pt'
+          ? '🏦 Escolha sua plataforma de câmbio:\n\nSelecione uma exchange para começar.'
+          : '🏦 Choose your exchange platform:\n\nSelect an exchange to get started.';
+
+        return this.formatResponse(exchMsg, {
           keyboard: this.buildKeyboard(msg, 'onchain_exchanges', {
             route: exchRoute,
             amount: parseFloat(exchAmount)
@@ -737,9 +750,15 @@ export class BotEngine {
         });
 
       case 'faq_more':
-        // WhatsApp: Show FAQ more submenu
+        // WhatsApp: Show FAQ more submenu with context
         const [faqMoreRoute, faqMoreAmount] = actionParams;
-        return this.formatResponse('❓ Autres questions:', {
+        const faqMsg = lang === 'fr'
+          ? '❓ Autres questions fréquentes:\n\nChoisissez une question ou posez la vôtre directement.'
+          : lang === 'pt'
+          ? '❓ Outras perguntas frequentes:\n\nEscolha uma pergunta ou faça a sua diretamente.'
+          : '❓ More frequently asked questions:\n\nChoose a question or ask your own.';
+
+        return this.formatResponse(faqMsg, {
           keyboard: this.buildKeyboard(msg, 'faq_more', {
             route: faqMoreRoute,
             amount: parseFloat(faqMoreAmount)
@@ -747,9 +766,16 @@ export class BotEngine {
         });
 
       case 'step_more':
-        // WhatsApp: Show step navigation submenu
+        // WhatsApp: Show step navigation submenu with step context
         const [stepId, stepRoute, stepAmount] = actionParams;
-        return this.formatResponse('⚙️ Navigation:', {
+        const stepDisplay = stepId || '1.1';
+        const navMsg = lang === 'fr'
+          ? `📍 Navigation - Étape ${stepDisplay}\n\n⚙️ Options:`
+          : lang === 'pt'
+          ? `📍 Navegação - Passo ${stepDisplay}\n\n⚙️ Opções:`
+          : `📍 Navigation - Step ${stepDisplay}\n\n⚙️ Options:`;
+
+        return this.formatResponse(navMsg, {
           keyboard: this.buildKeyboard(msg, 'step_more', {
             stepId: stepId,
             route: stepRoute,
@@ -758,8 +784,14 @@ export class BotEngine {
         });
 
       case 'premium_more':
-        // WhatsApp: Show premium more submenu
-        return this.formatResponse('💳 Autres options Premium:', {
+        // WhatsApp: Show premium more submenu with context
+        const premiumMsg = lang === 'fr'
+          ? '💳 Autres options Premium:\n\nDécouvrez tous nos plans et options de paiement.'
+          : lang === 'pt'
+          ? '💳 Outras opções Premium:\n\nDescubra todos os nossos planos e opções de pagamento.'
+          : '💳 More Premium options:\n\nDiscover all our plans and payment options.';
+
+        return this.formatResponse(premiumMsg, {
           keyboard: this.buildKeyboard(msg, 'premium_more', {})
         });
 
@@ -858,6 +890,18 @@ export class BotEngine {
             route: session.lastRoute || 'eurbrl',
             amount: session.lastAmount || 1000
           })
+        });
+
+      case 'beginner_guide':
+        // Show beginner guide menu (USDC + Exchange combined)
+        const beginnerMsg = lang === 'fr'
+          ? '📚 Guide débutant\n\nChoisissez un sujet pour en savoir plus sur les bases:'
+          : lang === 'pt'
+          ? '📚 Guia para iniciantes\n\nEscolha um tópico para saber mais sobre os conceitos básicos:'
+          : '📚 Beginner\'s Guide\n\nChoose a topic to learn more about the basics:';
+
+        return this.formatResponse(beginnerMsg, {
+          keyboard: this.buildKeyboard(msg, 'beginner_guide')
         });
 
       case 'what_usdc':

@@ -136,13 +136,24 @@ export class WhatsAppCloudAdapter {
           return result;
         } else if (buttons.length <= 10) {
           // Use list for 4-10 buttons
+          // Detect language from formatted text for better section title
+          const detectLang = (text) => {
+            if (text.includes('Opções') || text.includes('Escolha') || text.includes('Outras')) return 'pt';
+            if (text.includes('Options') || text.includes('Choose') || text.includes('More')) return 'en';
+            return 'fr'; // Default to French
+          };
+
+          const lang = detectLang(formattedText);
+          const sectionTitle = lang === 'pt' ? 'Opções' : lang === 'en' ? 'Options' : 'Options';
+          const menuButtonLabel = lang === 'pt' ? '📱 Menu' : lang === 'en' ? '📱 Menu' : '📱 Menu';
+
           const interactiveBody = {
             type: 'list',
             body: { text: formattedText },
             action: {
-              button: '📱 Menu',
+              button: menuButtonLabel,
               sections: [{
-                title: 'Opções',
+                title: sectionTitle,
                 rows: buttons.slice(0, 10).map((btn, idx) => ({
                   id: btn.id,
                   title: btn.text.substring(0, 24), // Max 24 chars

@@ -57,7 +57,7 @@ export function getKeyboardDefinition(msg, type, options = {}) {
       return [
         { text: msg.btn.eurbrl(DEFAULTS.EUR, locale), id: `route:eurbrl:${DEFAULTS.EUR}`, row: 0 },
         { text: msg.btn.brleur(DEFAULTS.BRL, locale), id: `route:brleur:${DEFAULTS.BRL}`, row: 1 },
-        { text: '📋 Plus...', id: 'action:more_menu', row: 2 }
+        { text: '📋 Menu', id: 'action:more_menu', row: 2 }
       ];
     }
 
@@ -104,12 +104,12 @@ export function getKeyboardDefinition(msg, type, options = {}) {
         { text: msg.btn.sources, id: 'action:sources', row: 4 },
       ];
 
-    // WhatsApp optimized comparison (3 main actions + "More...")
+    // WhatsApp optimized comparison (3 main actions + "More Options")
     case 'comparison_whatsapp':
       return [
         { text: msg.btn.contOn, id: `action:continue_onchain:${route}:${amount}`, row: 0 },
         { text: msg.btn.stayOff, id: `action:stay_offchain:${route}:${amount}`, row: 1 },
-        { text: '⚙️ Plus...', id: `action:comparison_more:${route}:${amount}`, row: 2 },
+        { text: msg.btn.moreOptions, id: `action:comparison_more:${route}:${amount}`, row: 2 },
       ];
 
     // WhatsApp comparison "More" submenu
@@ -266,21 +266,36 @@ export function getKeyboardDefinition(msg, type, options = {}) {
       ];
 
     // WhatsApp optimized FAQ menu
-    case 'faq_menu_whatsapp':
+    case 'faq_menu_whatsapp': {
+      const lang = locale.startsWith('pt') ? 'pt' : locale.startsWith('en') ? 'en' : 'fr';
+      const beginnerLabel = lang === 'pt' ? '📚 Guia iniciante' : lang === 'en' ? '📚 Beginner Guide' : '📚 Guide débutant';
+      const moreFaqLabel = lang === 'pt' ? '❓ Outras FAQ' : lang === 'en' ? '❓ More FAQ' : '❓ Autres FAQ';
+
+      return [
+        { text: beginnerLabel, id: 'action:beginner_guide', row: 0 },
+        { text: msg.btn.askQuestion, id: 'action:faq_send_question', row: 1 },
+        { text: moreFaqLabel, id: `action:faq_more:${route}:${amount}`, row: 2 },
+      ];
+    }
+
+    // WhatsApp FAQ more submenu (all FAQs)
+    case 'faq_more':
       return [
         { text: msg.btn.whatIsUSDC, id: 'action:what_usdc', row: 0 },
         { text: msg.btn.whatIsExchange, id: 'action:what_exchange', row: 1 },
-        { text: '❓ Plus...', id: `action:faq_more:${route}:${amount}`, row: 2 },
+        { text: msg.btn.minAmount, id: 'action:faq_min_amount', row: 2 },
+        { text: msg.btn.aboutReferrals, id: 'action:about_referrals', row: 3 },
+        { text: msg.btn.whyOnchain, id: 'action:faq_why_onchain', row: 4 },
+        { text: '🔙 ' + msg.btn.back, id: 'action:faq_menu', row: 5 },
       ];
 
-    // WhatsApp FAQ more submenu
-    case 'faq_more':
+    // Beginner Guide (USDC + Exchange combined)
+    case 'beginner_guide':
       return [
-        { text: msg.btn.minAmount, id: 'action:faq_min_amount', row: 0 },
-        { text: msg.btn.aboutReferrals, id: 'action:about_referrals', row: 1 },
-        { text: msg.btn.whyOnchain, id: 'action:faq_why_onchain', row: 2 },
-        { text: msg.btn.askQuestion, id: 'action:faq_send_question', row: 3 },
-        { text: '🔙 ' + msg.btn.back, id: 'action:faq_menu', row: 4 },
+        { text: msg.btn.whatIsUSDC, id: 'action:what_usdc', row: 0 },
+        { text: msg.btn.whatIsExchange, id: 'action:what_exchange', row: 1 },
+        { text: msg.btn.askQuestion, id: 'action:faq_send_question', row: 2 },
+        { text: '🔙 ' + msg.btn.back, id: 'action:faq_menu', row: 3 },
       ];
 
     // FAQ - Why onchain
