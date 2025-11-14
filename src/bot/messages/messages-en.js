@@ -1612,6 +1612,7 @@ You will receive spontaneous alerts again when there are interesting rate opport
         contOn: '🚀 Convert on-chain',
         stayOff: '🏦 Convert off-chain',
         calcdetails: '🔍 On-chain calculation details',
+        calcdetails_wa: '🔍 On-chain details', // 19 chars (WhatsApp optimized)
         swapMode: '🔄 Swap',
         change: '✏️ Change amount',
         moreOptions: '⚙️ More options',
@@ -1635,7 +1636,9 @@ You will receive spontaneous alerts again when there are interesting rate opport
         whatIsUSDC: '🪙 What is USDC?',
         whatIsExchange: '🏦 What is an exchange?',
         minAmount: '💰 What\'s the minimum amount?',
+        minAmount_wa: '💰 Minimum amount?', // 18 chars (WhatsApp optimized)
         aboutReferrals: '🤝 About referral links',
+        aboutReferrals_wa: '🤝 Referral links', // 17 chars (WhatsApp optimized)
         proofSources: '📊 Proof & sources',
         openKraken: '🔗 Open Kraken',
         openBinanceEU: '🔗 Open Binance (EU)',
@@ -1656,17 +1659,23 @@ You will receive spontaneous alerts again when there are interesting rate opport
         step1_2Done: (route = 'eurbrl') => route === 'brleur'
           ? '✅ I found the BRL/USDC market'
           : '✅ I found the EUR/USDC market',
+        step1_2Done_wa: (route = 'eurbrl') => route === 'brleur'
+          ? '✅ BRL/USDC market' // 18 chars (WhatsApp optimized)
+          : '✅ EUR/USDC market', // 18 chars (WhatsApp optimized)
         step1_3Done: '✅ I bought my USDC',
         marketVsLimit: 'ℹ️ Market vs Limit',
         nextStep2: '👉 Go to step 2 (transfer)',
-        
+        nextStep2_wa: '👉 Step 2: Transfer', // 19 chars (WhatsApp optimized)
+
         // ✅ New skip buttons
         skipToStep2: "I already have USDC (skip)",
         skipToStep3: "⏭️ Skip to step 3",
         
         step2Done: '✅ I have my address → continue',
+        step2Done_wa: '✅ Address ready → next', // 23 chars (WhatsApp optimized)
         step2_2Done: '✅ I entered my amount',
         step2_3Done: '✅ I confirmed the transfer',
+        step2_3Done_wa: '✅ Confirmed', // 11 chars (WhatsApp optimized)
         step3Start: (route = 'eurbrl') => route === 'brleur'
           ? '🇪🇺 Step 3 — Sell USDC & withdraw via bank transfer'
           : '🇧🇷 Step 3 — Sell USDC & withdraw via Pix',
@@ -1676,6 +1685,7 @@ You will receive spontaneous alerts again when there are interesting rate opport
           ? '✅ I initiated my bank transfer'
           : '✅ I initiated my Pix',
         whyNotExact: '🤔 Why not exact balance?',
+        whyNotExact_wa: '🤔 Why estimates?', // 15 chars (WhatsApp optimized)
         setAlert: '⏰ Activate my alert',
         premium: '🚀 Discover Premium',
         giveFeedback: '💬 Give feedback',
@@ -1685,6 +1695,7 @@ You will receive spontaneous alerts again when there are interesting rate opport
         navigation: '📍 Navigation',
         backToComparison: '⚖️ Back to comparison',
         viewOffchain: '🏦 View offchain alternatives',
+        viewOffchain_wa: '🏦 View offchain', // 16 chars (WhatsApp optimized)
         toMainMenu: '🏠 Main menu',
         guideSteps: '📚 Go to a step',
         goToStep11: (route) => route === 'brleur' ? '1.1 🇧🇷 Deposit BRL' : '1.1 🇪🇺 Deposit EUR',
@@ -1710,6 +1721,7 @@ You will receive spontaneous alerts again when there are interesting rate opport
         subPPAnnual: '💳 €12/12 months',
 
         premiumDetails: 'ℹ️ See all features',
+        premiumDetails_wa: 'ℹ️ All features', // 15 chars (WhatsApp optimized)
         createAlert: '➕ Create an alert',
         myAlerts: '🔔 My alerts',
         conservative: '🛡️ Conservative (2%)',
@@ -1742,6 +1754,7 @@ You will receive spontaneous alerts again when there are interesting rate opport
         editMyAlert: '⚙️ Edit my alert',
         deleteMyAlert: '🗑️ Delete this alert',
         pauseSpontaneousAlerts: '⏸️ Pause alerts (1 week)',
+        pauseSpontaneousAlerts_wa: '⏸️ Pause 1 week', // 14 chars (WhatsApp optimized)
         resumeSpontaneousAlerts: '▶️ Resume alerts',
         help: '❓ Help',
         paymentHelp: '💬 Payment support',
@@ -1749,10 +1762,16 @@ You will receive spontaneous alerts again when there are interesting rate opport
 
         // Premium buttons with prices (for keyboards.js)
         plan3months: '📅 3 months - R$ 15.00',
+        plan3months_wa: '📅 3m - R$ 15', // 13 chars (WhatsApp optimized)
         plan6months: '📅 6 months - R$ 28.00 (-7%)',
+        plan6months_wa: '📅 6m - R$ 28 (-7%)', // 19 chars (WhatsApp optimized)
         plan12months: '📅 12 months - R$ 50.00 (-17%)',
+        plan12months_wa: '📅 12m - R$ 50 (-17%)', // 21 chars (WhatsApp optimized)
         renewPlan3months: '🔄 Renew 3 months - R$ 15.00',
+        renewPlan3months_wa: '🔄 3m - R$ 15', // 13 chars (WhatsApp optimized)
         renewPlan6months: '🔄 Renew 6 months - R$ 28.00 (-7%)',
+        renewPlan6months_wa: '🔄 6m - R$ 28 (-7%)', // 19 chars (WhatsApp optimized)
         renewPlan12months: '🔄 Renew 12 months - R$ 50.00 (-17%)',
+        renewPlan12months_wa: '🔄 12m - R$ 50 (-17%)', // 21 chars (WhatsApp optimized)
       },
     };

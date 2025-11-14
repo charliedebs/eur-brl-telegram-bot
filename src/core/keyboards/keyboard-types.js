@@ -5,6 +5,29 @@
 import { DEFAULTS, LINKS, PROVIDER_LINKS } from '../../config/constants.js';
 
 /**
+ * Helper function to get button text with WhatsApp optimization
+ * Checks for _wa suffix variants when platform is WhatsApp
+ *
+ * @param {Object} msg - Localized message object
+ * @param {string} key - Button key (e.g., 'myAlerts', 'eurbrl')
+ * @param {string} platform - Platform identifier ('whatsapp' or 'telegram')
+ * @param  {...any} args - Arguments for function buttons
+ * @returns {string} Button text (optimized for WhatsApp if available)
+ */
+function getButtonText(msg, key, platform, ...args) {
+  // Check for WhatsApp variant
+  const waKey = key + '_wa';
+  if (platform === 'whatsapp' && msg.btn[waKey]) {
+    const btnValue = msg.btn[waKey];
+    return typeof btnValue === 'function' ? btnValue(...args) : btnValue;
+  }
+
+  // Use regular button
+  const btnValue = msg.btn[key];
+  return typeof btnValue === 'function' ? btnValue(...args) : btnValue;
+}
+
+/**
  * Define keyboard structure for a given type
  * Returns array of button definitions: [{ text, id, url?, row? }, ...]
  *
@@ -22,6 +45,7 @@ import { DEFAULTS, LINKS, PROVIDER_LINKS } from '../../config/constants.js';
 export function getKeyboardDefinition(msg, type, options = {}) {
   const { route = 'eurbrl', amount = DEFAULTS.EUR, alerts = [] } = options;
   const locale = options.locale || 'fr-FR';
+  const platform = options.platform || 'telegram'; // Default to telegram for backwards compat
 
   switch (type) {
     // Language selection
@@ -98,7 +122,7 @@ export function getKeyboardDefinition(msg, type, options = {}) {
     case 'comparison':
       return [
         { text: msg.btn.contOn, id: `action:continue_onchain:${route}:${amount}`, row: 0 },
-        { text: msg.btn.calcdetails, id: `action:calc_details:${route}:${amount}`, row: 1 },
+        { text: getButtonText(msg, 'calcdetails', platform), id: `action:calc_details:${route}:${amount}`, row: 1 },
         { text: msg.btn.stayOff, id: `action:stay_offchain:${route}:${amount}`, row: 2 },
         { text: msg.btn.moreOptions, id: `action:more_options:${route}:${amount}`, row: 3 },
         { text: msg.btn.sources, id: 'action:sources', row: 4 },
@@ -119,7 +143,7 @@ export function getKeyboardDefinition(msg, type, options = {}) {
     // WhatsApp comparison "More" submenu - consolidated all options
     case 'comparison_more':
       return [
-        { text: msg.btn.calcdetails, id: `action:calc_details:${route}:${amount}`, row: 0 },
+        { text: getButtonText(msg, 'calcdetails', platform), id: `action:calc_details:${route}:${amount}`, row: 0 },
         { text: msg.btn.sources, id: 'action:sources', row: 1 },
         { text: msg.btn.swapMode, id: `action:swap_mode:${route}:${amount}`, row: 2 },
         { text: msg.btn.change, id: `action:change_amount:${route}`, row: 3 },
@@ -271,8 +295,8 @@ export function getKeyboardDefinition(msg, type, options = {}) {
       return [
         { text: msg.btn.whatIsUSDC, id: 'action:what_usdc', row: 0 },
         { text: msg.btn.whatIsExchange, id: 'action:what_exchange', row: 1 },
-        { text: msg.btn.minAmount, id: 'action:faq_min_amount', row: 2 },
-        { text: msg.btn.aboutReferrals, id: 'action:about_referrals', row: 3 },
+        { text: getButtonText(msg, 'minAmount', platform), id: 'action:faq_min_amount', row: 2 },
+        { text: getButtonText(msg, 'aboutReferrals', platform), id: 'action:about_referrals', row: 3 },
         { text: msg.btn.whyOnchain, id: 'action:faq_why_onchain', row: 4 },
         { text: msg.btn.askQuestion, id: 'action:faq_send_question', row: 5 },
         { text: msg.btn.back, id: `action:onchain_intro:${route}:${amount}`, row: 6 },
@@ -297,8 +321,8 @@ export function getKeyboardDefinition(msg, type, options = {}) {
       return [
         { text: msg.btn.whatIsUSDC, id: 'action:what_usdc', row: 0 },
         { text: msg.btn.whatIsExchange, id: 'action:what_exchange', row: 1 },
-        { text: msg.btn.minAmount, id: 'action:faq_min_amount', row: 2 },
-        { text: msg.btn.aboutReferrals, id: 'action:about_referrals', row: 3 },
+        { text: getButtonText(msg, 'minAmount', platform), id: 'action:faq_min_amount', row: 2 },
+        { text: getButtonText(msg, 'aboutReferrals', platform), id: 'action:about_referrals', row: 3 },
         { text: msg.btn.whyOnchain, id: 'action:faq_why_onchain', row: 4 },
         { text: '🔙 ' + msg.btn.back, id: 'action:faq_menu', row: 5 },
       ];
@@ -554,7 +578,7 @@ export function getKeyboardDefinition(msg, type, options = {}) {
         : { text: msg.btn.openBinanceBR, id: `url:${LINKS.BINANCE_BR}`, url: LINKS.BINANCE_BR, row: 1 };
 
       return [
-        { text: msg.btn.step2Done, id: `guide:step:2.2:${route}:${amount}`, row: 0 },
+        { text: getButtonText(msg, 'step2Done', platform), id: `guide:step:2.2:${route}:${amount}`, row: 0 },
         exchangeButton,
         { text: msg.btn.skipToStep3, id: `guide:step:3.1:${route}:${amount}`, row: 2 },
         { text: msg.btn.navigation, id: `action:guide_navigation:${route}:${amount}`, row: 3 },
@@ -569,7 +593,7 @@ export function getKeyboardDefinition(msg, type, options = {}) {
         : { text: msg.btn.openBinanceBR, id: `url:${LINKS.BINANCE_BR}`, url: LINKS.BINANCE_BR, row: 1 };
 
       return [
-        { text: msg.btn.step2Done, id: `guide:step:2.2:${route}:${amount}`, row: 0 },
+        { text: getButtonText(msg, 'step2Done', platform), id: `guide:step:2.2:${route}:${amount}`, row: 0 },
         exchangeButton,
         { text: '📍 Navigation', id: `action:step_more:2.1:${route}:${amount}`, row: 2 },
       ];
@@ -646,7 +670,7 @@ export function getKeyboardDefinition(msg, type, options = {}) {
     case 'step_3_3':
       return [
         { text: msg.btn.step3_3Done(route), id: `guide:step:3.4:${route}:${amount}`, row: 0 },
-        { text: msg.btn.whyNotExact, id: 'action:why_not_exact', row: 1 },
+        { text: getButtonText(msg, 'whyNotExact', platform), id: 'action:why_not_exact', row: 1 },
         { text: msg.btn.navigation, id: `action:guide_navigation:${route}:${amount}`, row: 2 },
         { text: msg.btn.back, id: `guide:step:3.2:${route}:${amount}`, row: 3 },
       ];
@@ -655,7 +679,7 @@ export function getKeyboardDefinition(msg, type, options = {}) {
     case 'step_3_3_whatsapp':
       return [
         { text: msg.btn.step3_3Done(route), id: `guide:step:3.4:${route}:${amount}`, row: 0 },
-        { text: msg.btn.whyNotExact, id: 'action:why_not_exact', row: 1 },
+        { text: getButtonText(msg, 'whyNotExact', platform), id: 'action:why_not_exact', row: 1 },
         { text: '📍 Navigation', id: `action:step_more:3.3:${route}:${amount}`, row: 2 },
       ];
 
@@ -693,7 +717,7 @@ export function getKeyboardDefinition(msg, type, options = {}) {
     case 'guide_navigation':
       return [
         { text: msg.btn.backToComparison, id: `action:back_comparison:${route}:${amount}`, row: 0 },
-        { text: msg.btn.viewOffchain, id: `action:stay_offchain:${route}:${amount}`, row: 1 },
+        { text: getButtonText(msg, 'viewOffchain', platform), id: `action:stay_offchain:${route}:${amount}`, row: 1 },
         { text: msg.btn.toMainMenu, id: 'action:back_main', row: 2 },
         { text: msg.btn.goToStep11(route), id: `guide:step:1.1:${route}:${amount}`, row: 3 },
         { text: msg.btn.goToStep12, id: `guide:step:1.2:${route}:${amount}`, row: 4 },
@@ -858,7 +882,7 @@ export function getKeyboardDefinition(msg, type, options = {}) {
     // Premium pricing (subscriptions only)
     case 'premium_pricing':
       return [
-        { text: msg.btn.premiumDetails, id: 'premium:details', row: 0 },
+        { text: getButtonText(msg, 'premiumDetails', platform), id: 'premium:details', row: 0 },
         { text: msg.btn.subMPMonthly, id: 'premium:sub:mp:monthly', row: 1 },
         { text: msg.btn.subMPQuarterly, id: 'premium:sub:mp:quarterly', row: 2 },
         { text: msg.btn.subMPSemiannual, id: 'premium:sub:mp:semiannual', row: 3 },
@@ -878,7 +902,7 @@ export function getKeyboardDefinition(msg, type, options = {}) {
     // WhatsApp premium more submenu
     case 'premium_more':
       return [
-        { text: msg.btn.premiumDetails, id: 'premium:details', row: 0 },
+        { text: getButtonText(msg, 'premiumDetails', platform), id: 'premium:details', row: 0 },
         { text: msg.btn.subMPSemiannual, id: 'premium:sub:mp:semiannual', row: 1 },
         { text: msg.btn.subMPAnnual, id: 'premium:sub:mp:annual', row: 2 },
         { text: msg.btn.paymentHelp, id: 'premium:payment_help', row: 3 },
@@ -889,18 +913,18 @@ export function getKeyboardDefinition(msg, type, options = {}) {
     case 'premium_details':
       return [
         { text: msg.btn.backToPricing, id: 'premium:pricing', row: 0 },
-        { text: msg.btn.plan3months, id: 'premium:subscribe:quarterly', row: 1 },
-        { text: msg.btn.plan6months, id: 'premium:subscribe:semiannual', row: 2 },
-        { text: msg.btn.plan12months, id: 'premium:subscribe:annual', row: 3 },
+        { text: getButtonText(msg, 'plan3months', platform), id: 'premium:subscribe:quarterly', row: 1 },
+        { text: getButtonText(msg, 'plan6months', platform), id: 'premium:subscribe:semiannual', row: 2 },
+        { text: getButtonText(msg, 'plan12months', platform), id: 'premium:subscribe:annual', row: 3 },
         { text: msg.btn.back, id: 'premium:pricing', row: 4 },
       ];
 
     // Premium pricing for renew
     case 'premium_pricing_renew':
       return [
-        { text: msg.btn.renewPlan3months, id: 'premium:subscribe:quarterly', row: 0 },
-        { text: msg.btn.renewPlan6months, id: 'premium:subscribe:semiannual', row: 1 },
-        { text: msg.btn.renewPlan12months, id: 'premium:subscribe:annual', row: 2 },
+        { text: getButtonText(msg, 'renewPlan3months', platform), id: 'premium:subscribe:quarterly', row: 0 },
+        { text: getButtonText(msg, 'renewPlan6months', platform), id: 'premium:subscribe:semiannual', row: 1 },
+        { text: getButtonText(msg, 'renewPlan12months', platform), id: 'premium:subscribe:annual', row: 2 },
         { text: msg.btn.createAlert, id: 'alert:choose_pair', row: 3 },
         { text: msg.btn.paymentHelp, id: 'premium:payment_help', row: 4 },
         { text: msg.btn.back, id: 'action:back_main', row: 5 },

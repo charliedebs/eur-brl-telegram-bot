@@ -1625,6 +1625,7 @@ btn: {
   contOn: '🚀 Convertir on-chain',
   stayOff: '🏦 Convertir off-chain',
   calcdetails: '🔍 Détails du calcul on-chain',
+  calcdetails_wa: '🔍 Détails on-chain', // 19 chars (WhatsApp optimized)
   swapMode: '🔄 Inverser',
   change: '✏️ Changer montant',
   moreOptions: '⚙️ Plus d\'options',
@@ -1648,7 +1649,9 @@ btn: {
   whatIsUSDC: '🪙 Qu\'est-ce que l\'USDC ?',
   whatIsExchange: '🏦 Qu\'est-ce qu\'un exchange ?',
   minAmount: '💰 C\'est quoi le montant minimum ?',
+  minAmount_wa: '💰 Montant minimum?', // 18 chars (WhatsApp optimized)
   aboutReferrals: '🤝 À propos des liens de parrainage',
+  aboutReferrals_wa: '🤝 Liens parrainage', // 19 chars (WhatsApp optimized)
   proofSources: '📊 Preuves & sources',
   openKraken: '🔗 Ouvrir Kraken',
   openBinanceEU: '🔗 Ouvrir Binance (UE)',
@@ -1669,17 +1672,23 @@ btn: {
   step1_2Done: (route = 'eurbrl') => route === 'brleur'
     ? '✅ J\'ai trouvé le marché BRL/USDC'
     : '✅ J\'ai trouvé le marché EUR/USDC',
+  step1_2Done_wa: (route = 'eurbrl') => route === 'brleur'
+    ? '✅ Marché BRL/USDC' // 19 chars (WhatsApp optimized)
+    : '✅ Marché EUR/USDC', // 19 chars (WhatsApp optimized)
   step1_3Done: '✅ J\'ai acheté mes USDC',
   marketVsLimit: 'ℹ️ Market vs Limit',
   nextStep2: '👉 Passer à l\'étape 2 (transfert)',
-  
+  nextStep2_wa: '👉 Étape 2: Transfert', // 21 chars (WhatsApp optimized)
+
   // ✅ Nouveau bouton skip (Écran 14)
   skipToStep2: "J'ai déjà des USDC (skip)",
   skipToStep3: "⏭️ Passer à l'étape 3",
   
   step2Done: '✅ J\'ai mon adresse → continuer',
+  step2Done_wa: '✅ Adresse → continuer', // 22 chars (WhatsApp optimized)
   step2_2Done: '✅ J\'ai saisi mon montant',
   step2_3Done: '✅ J\'ai confirmé le transfert',
+  step2_3Done_wa: '✅ Confirmé', // 11 chars (WhatsApp optimized)
   step3Start: (route = 'eurbrl') => route === 'brleur'
     ? '🇪🇺 Étape 3 — Vendre USDC & retirer par virement'
     : '🇧🇷 Étape 3 — Vendre USDC & retirer en Pix',
@@ -1689,6 +1698,7 @@ btn: {
     ? '✅ J\'ai lancé mon virement'
     : '✅ J\'ai lancé mon Pix',
   whyNotExact: '🤔 Pourquoi pas le solde exact ?',
+  whyNotExact_wa: '🤔 Pourquoi estimé?', // 18 chars (WhatsApp optimized)
   setAlert: '⏰ Activer mon alerte',
   premium: '🚀 Découvrir Premium',
   giveFeedback: '💬 Donner une suggestion',
@@ -1698,6 +1708,7 @@ btn: {
   navigation: '📍 Navigation',
   backToComparison: '⚖️ Retour à la comparaison',
   viewOffchain: '🏦 Voir alternatives offchain',
+  viewOffchain_wa: '🏦 Voir offchain', // 16 chars (WhatsApp optimized)
   toMainMenu: '🏠 Menu principal',
   guideSteps: '📚 Aller à une étape',
   goToStep11: (route) => route === 'brleur' ? '1.1 🇧🇷 Déposer BRL' : '1.1 🇪🇺 Déposer EUR',
@@ -1723,6 +1734,7 @@ btn: {
   subPPAnnual: '💳 €12/12 mois',
 
   premiumDetails: 'ℹ️ Voir toutes les fonctionnalités',
+  premiumDetails_wa: 'ℹ️ Fonctionnalités', // 18 chars (WhatsApp optimized)
   createAlert: '➕ Créer une alerte',
   myAlerts: '🔔 Mes alertes',
   conservative: '🛡️ Conservateur (2%)',
@@ -1755,6 +1767,7 @@ btn: {
   editMyAlert: '⚙️ Modifier mon alerte',
   deleteMyAlert: '🗑️ Supprimer cette alerte',
   pauseSpontaneousAlerts: '⏸️ Mettre en pause (1 semaine)',
+  pauseSpontaneousAlerts_wa: '⏸️ Pause 1 semaine', // 16 chars (WhatsApp optimized)
   resumeSpontaneousAlerts: '▶️ Réactiver les alertes',
   help: '❓ Aide',
   paymentHelp: '💬 Aide pour le paiement',
@@ -1763,10 +1776,16 @@ btn: {
 
   // Boutons Premium avec prix (pour keyboards.js)
   plan3months: '📅 3 mois - R$ 15,00',
+  plan3months_wa: '📅 3m - R$ 15', // 13 chars (WhatsApp optimized)
   plan6months: '📅 6 mois - R$ 28,00 (-7%)',
+  plan6months_wa: '📅 6m - R$ 28 (-7%)', // 19 chars (WhatsApp optimized)
   plan12months: '📅 12 mois - R$ 50,00 (-17%)',
+  plan12months_wa: '📅 12m - R$ 50 (-17%)', // 21 chars (WhatsApp optimized)
   renewPlan3months: '🔄 Prolonger 3 mois - R$ 15,00',
+  renewPlan3months_wa: '🔄 3m - R$ 15', // 13 chars (WhatsApp optimized)
   renewPlan6months: '🔄 Prolonger 6 mois - R$ 28,00 (-7%)',
+  renewPlan6months_wa: '🔄 6m - R$ 28 (-7%)', // 19 chars (WhatsApp optimized)
   renewPlan12months: '🔄 Prolonger 12 mois - R$ 50,00 (-17%)',
+  renewPlan12months_wa: '🔄 12m - R$ 50 (-17%)', // 21 chars (WhatsApp optimized - was 37 chars!)
 }
 };

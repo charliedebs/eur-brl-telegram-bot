@@ -931,7 +931,7 @@ export class BotEngine {
       case 'stay_offchain':
         // Show offchain providers details
         const [offRoute, offAmount] = actionParams;
-        return await this.handlers.comparison.handleOffchainSelection(
+        return await this.handlers.guide.handleStayOffchain(
           userId,
           lang,
           offRoute,

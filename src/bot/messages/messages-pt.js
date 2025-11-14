@@ -1613,6 +1613,7 @@ Você voltará a receber alertas espontâneos quando houver oportunidades intere
         contOn: '🚀 Converter on-chain',
         stayOff: '🏦 Converter off-chain',
         calcdetails: '🔍 Detalhes do cálculo on-chain',
+        calcdetails_wa: '🔍 Detalhes on-chain', // 20 chars (WhatsApp optimized)
         swapMode: '🔄 Inverter',
         change: '✏️ Alterar valor',
         moreOptions: '⚙️ Mais opções',
@@ -1636,7 +1637,9 @@ Você voltará a receber alertas espontâneos quando houver oportunidades intere
         whatIsUSDC: '🪙 O que é USDC?',
         whatIsExchange: '🏦 O que é um exchange?',
         minAmount: '💰 Qual o valor mínimo?',
+        minAmount_wa: '💰 Valor mínimo?', // 16 chars (WhatsApp optimized)
         aboutReferrals: '🤝 Sobre os links de indicação',
+        aboutReferrals_wa: '🤝 Links de indicação', // 21 chars (WhatsApp optimized)
         proofSources: '📊 Provas & fontes',
         openKraken: '🔗 Abrir Kraken',
         openBinanceEU: '🔗 Abrir Binance (UE)',
@@ -1657,17 +1660,23 @@ Você voltará a receber alertas espontâneos quando houver oportunidades intere
         step1_2Done: (route = 'eurbrl') => route === 'brleur'
           ? '✅ Encontrei o mercado BRL/USDC'
           : '✅ Encontrei o mercado EUR/USDC',
+        step1_2Done_wa: (route = 'eurbrl') => route === 'brleur'
+          ? '✅ Mercado BRL/USDC' // 20 chars (WhatsApp optimized)
+          : '✅ Mercado EUR/USDC', // 20 chars (WhatsApp optimized)
         step1_3Done: '✅ Comprei meus USDC',
         marketVsLimit: 'ℹ️ Market vs Limit',
         nextStep2: '👉 Ir para etapa 2 (transferência)',
-        
+        nextStep2_wa: '👉 2: Transferência', // 19 chars (WhatsApp optimized)
+
         // ✅ Novos botões skip
         skipToStep2: "Já tenho USDC (pular)",
         skipToStep3: "⏭️ Pular para etapa 3",
         
         step2Done: '✅ Tenho meu endereço → continuar',
+        step2Done_wa: '✅ Endereço → continuar', // 23 chars (WhatsApp optimized)
         step2_2Done: '✅ Inseri meu valor',
         step2_3Done: '✅ Confirmei a transferência',
+        step2_3Done_wa: '✅ Confirmei', // 11 chars (WhatsApp optimized)
         step3Start: (route = 'eurbrl') => route === 'brleur'
           ? '🇪🇺 Etapa 3 — Vender USDC & sacar por transferência'
           : '🇧🇷 Etapa 3 — Vender USDC & sacar via Pix',
@@ -1677,6 +1686,7 @@ Você voltará a receber alertas espontâneos quando houver oportunidades intere
           ? '✅ Iniciei minha transferência'
           : '✅ Iniciei meu Pix',
         whyNotExact: '🤔 Por que não o saldo exato?',
+        whyNotExact_wa: '🤔 Por que estimativa?', // 21 chars (WhatsApp optimized)
         setAlert: '⏰ Ativar meu alerta',
         premium: '🚀 Descobrir Premium',
         giveFeedback: '💬 Dar uma sugestão',
@@ -1686,6 +1696,7 @@ Você voltará a receber alertas espontâneos quando houver oportunidades intere
         navigation: '📍 Navegação',
         backToComparison: '⚖️ Voltar à comparação',
         viewOffchain: '🏦 Ver alternativas offchain',
+        viewOffchain_wa: '🏦 Ver offchain', // 14 chars (WhatsApp optimized)
         toMainMenu: '🏠 Menu principal',
         guideSteps: '📚 Ir para uma etapa',
         goToStep11: (route) => route === 'brleur' ? '1.1 🇧🇷 Depositar BRL' : '1.1 🇪🇺 Depositar EUR',
@@ -1711,6 +1722,7 @@ Você voltará a receber alertas espontâneos quando houver oportunidades intere
         subPPAnnual: '💳 €12/12 meses',
 
         premiumDetails: 'ℹ️ Ver todas as funcionalidades',
+        premiumDetails_wa: 'ℹ️ Funcionalidades', // 20 chars (WhatsApp optimized)
         createAlert: '➕ Criar um alerta',
         myAlerts: '🔔 Meus alertas',
         conservative: '🛡️ Conservador (2%)',
@@ -1743,6 +1755,7 @@ Você voltará a receber alertas espontâneos quando houver oportunidades intere
         editMyAlert: '⚙️ Editar meu alerta',
         deleteMyAlert: '🗑️ Apagar este alerta',
         pauseSpontaneousAlerts: '⏸️ Pausar alertas (1 semana)',
+        pauseSpontaneousAlerts_wa: '⏸️ Pausar 1 semana', // 16 chars (WhatsApp optimized)
         resumeSpontaneousAlerts: '▶️ Reativar alertas',
         help: '❓ Ajuda',
         paymentHelp: '💬 Ajuda com pagamento',
@@ -1750,10 +1763,16 @@ Você voltará a receber alertas espontâneos quando houver oportunidades intere
 
         // Botões Premium com preços (para keyboards.js)
         plan3months: '📅 3 meses - R$ 15,00',
+        plan3months_wa: '📅 3m - R$ 15', // 13 chars (WhatsApp optimized)
         plan6months: '📅 6 meses - R$ 28,00 (-7%)',
+        plan6months_wa: '📅 6m - R$ 28 (-7%)', // 19 chars (WhatsApp optimized)
         plan12months: '📅 12 meses - R$ 50,00 (-17%)',
+        plan12months_wa: '📅 12m - R$ 50 (-17%)', // 21 chars (WhatsApp optimized)
         renewPlan3months: '🔄 Renovar 3 meses - R$ 15,00',
+        renewPlan3months_wa: '🔄 3m - R$ 15', // 14 chars (WhatsApp optimized)
         renewPlan6months: '🔄 Renovar 6 meses - R$ 28,00 (-7%)',
+        renewPlan6months_wa: '🔄 6m - R$ 28 (-7%)', // 19 chars (WhatsApp optimized)
         renewPlan12months: '🔄 Renovar 12 meses - R$ 50,00 (-17%)',
+        renewPlan12months_wa: '🔄 12m - R$ 50 (-17%)', // 21 chars (WhatsApp optimized)
       },
     };
