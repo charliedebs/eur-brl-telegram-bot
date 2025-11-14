@@ -104,21 +104,34 @@ export function getKeyboardDefinition(msg, type, options = {}) {
         { text: msg.btn.sources, id: 'action:sources', row: 4 },
       ];
 
-    // WhatsApp optimized comparison (3 main actions + "More Options")
-    case 'comparison_whatsapp':
+    // WhatsApp optimized comparison (3 main actions: Alert, Convert, More Options)
+    case 'comparison_whatsapp': {
+      const lang = locale.startsWith('pt') ? 'pt' : locale.startsWith('en') ? 'en' : 'fr';
+      const convertLabel = lang === 'pt' ? '💱 Converter' : lang === 'en' ? '💱 Convert' : '💱 Convertir';
+
       return [
-        { text: msg.btn.contOn, id: `action:continue_onchain:${route}:${amount}`, row: 0 },
-        { text: msg.btn.stayOff, id: `action:stay_offchain:${route}:${amount}`, row: 1 },
+        { text: msg.btn.setAlert, id: `alert:quick_create:${route}:${amount}`, row: 0 },
+        { text: convertLabel, id: `action:convert_choice:${route}:${amount}`, row: 1 },
         { text: msg.btn.moreOptions, id: `action:comparison_more:${route}:${amount}`, row: 2 },
       ];
+    }
 
-    // WhatsApp comparison "More" submenu
+    // WhatsApp comparison "More" submenu - consolidated all options
     case 'comparison_more':
       return [
         { text: msg.btn.calcdetails, id: `action:calc_details:${route}:${amount}`, row: 0 },
-        { text: msg.btn.moreOptions, id: `action:more_options:${route}:${amount}`, row: 1 },
-        { text: msg.btn.sources, id: 'action:sources', row: 2 },
-        { text: '🔙 ' + msg.btn.back, id: `route:${route}:${amount}`, row: 3 },
+        { text: msg.btn.sources, id: 'action:sources', row: 1 },
+        { text: msg.btn.swapMode, id: `action:swap_mode:${route}:${amount}`, row: 2 },
+        { text: msg.btn.change, id: `action:change_amount:${route}`, row: 3 },
+        { text: '🔙 ' + msg.btn.back, id: `route:${route}:${amount}`, row: 4 },
+      ];
+
+    // WhatsApp conversion choice (on-chain vs off-chain)
+    case 'convert_choice':
+      return [
+        { text: msg.btn.contOn, id: `action:continue_onchain:${route}:${amount}`, row: 0 },
+        { text: msg.btn.stayOff, id: `action:stay_offchain:${route}:${amount}`, row: 1 },
+        { text: '🔙 ' + msg.btn.back, id: `route:${route}:${amount}`, row: 2 },
       ];
 
     // More options
@@ -451,7 +464,7 @@ export function getKeyboardDefinition(msg, type, options = {}) {
       return [
         { text: msg.btn.step1Done(route), id: `guide:step:1.2:${route}:${amount}`, row: 0 },
         exchangeButton,
-        { text: '⚙️ Plus...', id: `action:step_more:1.1:${route}:${amount}`, row: 2 },
+        { text: '📍 Navigation', id: `action:step_more:1.1:${route}:${amount}`, row: 2 },
       ];
     }
 
@@ -504,7 +517,7 @@ export function getKeyboardDefinition(msg, type, options = {}) {
       return [
         { text: msg.btn.step1_2Done(route), id: `guide:step:1.3:${route}:${amount}`, row: 0 },
         { text: msg.btn.skipToStep2, id: `guide:step:2.1:${route}:${amount}`, row: 1 },
-        { text: '⚙️ Plus...', id: `action:step_more:1.2:${route}:${amount}`, row: 2 },
+        { text: '📍 Navigation', id: `action:step_more:1.2:${route}:${amount}`, row: 2 },
       ];
 
     // Step 1.3
@@ -522,7 +535,7 @@ export function getKeyboardDefinition(msg, type, options = {}) {
       return [
         { text: msg.btn.step1_3Done, id: `guide:step:1.4:${route}:${amount}`, row: 0 },
         { text: msg.btn.marketVsLimit, id: 'action:market_vs_limit', row: 1 },
-        { text: '⚙️ Plus...', id: `action:step_more:1.3:${route}:${amount}`, row: 2 },
+        { text: '📍 Navigation', id: `action:step_more:1.3:${route}:${amount}`, row: 2 },
       ];
 
     // Step 1.4
@@ -557,7 +570,7 @@ export function getKeyboardDefinition(msg, type, options = {}) {
       return [
         { text: msg.btn.step2Done, id: `guide:step:2.2:${route}:${amount}`, row: 0 },
         exchangeButton,
-        { text: '⚙️ Plus...', id: `action:step_more:2.1:${route}:${amount}`, row: 2 },
+        { text: '📍 Navigation', id: `action:step_more:2.1:${route}:${amount}`, row: 2 },
       ];
     }
 
@@ -575,7 +588,7 @@ export function getKeyboardDefinition(msg, type, options = {}) {
       return [
         { text: msg.btn.step2_2Done, id: `guide:step:2.3:${route}:${amount}`, row: 0 },
         { text: msg.btn.skipToStep3, id: `guide:step:3.1:${route}:${amount}`, row: 1 },
-        { text: '⚙️ Plus...', id: `action:step_more:2.2:${route}:${amount}`, row: 2 },
+        { text: '📍 Navigation', id: `action:step_more:2.2:${route}:${amount}`, row: 2 },
       ];
 
     // Step 2.3
@@ -592,7 +605,7 @@ export function getKeyboardDefinition(msg, type, options = {}) {
       return [
         { text: msg.btn.step2_3Done, id: `guide:step:2.4:${route}:${amount}`, row: 0 },
         { text: msg.btn.skipToStep3, id: `guide:step:3.1:${route}:${amount}`, row: 1 },
-        { text: '⚙️ Plus...', id: `action:step_more:2.3:${route}:${amount}`, row: 2 },
+        { text: '📍 Navigation', id: `action:step_more:2.3:${route}:${amount}`, row: 2 },
       ];
 
     // Step 2.4
@@ -625,7 +638,7 @@ export function getKeyboardDefinition(msg, type, options = {}) {
       return [
         { text: msg.btn.step3_2Done, id: `guide:step:3.3:${route}:${amount}`, row: 0 },
         { text: msg.btn.marketVsLimit, id: 'action:market_vs_limit', row: 1 },
-        { text: '⚙️ Plus...', id: `action:step_more:3.2:${route}:${amount}`, row: 2 },
+        { text: '📍 Navigation', id: `action:step_more:3.2:${route}:${amount}`, row: 2 },
       ];
 
     // Step 3.3
@@ -642,7 +655,7 @@ export function getKeyboardDefinition(msg, type, options = {}) {
       return [
         { text: msg.btn.step3_3Done(route), id: `guide:step:3.4:${route}:${amount}`, row: 0 },
         { text: msg.btn.whyNotExact, id: 'action:why_not_exact', row: 1 },
-        { text: '⚙️ Plus...', id: `action:step_more:3.3:${route}:${amount}`, row: 2 },
+        { text: '📍 Navigation', id: `action:step_more:3.3:${route}:${amount}`, row: 2 },
       ];
 
     // Step 3.4
@@ -660,7 +673,7 @@ export function getKeyboardDefinition(msg, type, options = {}) {
       return [
         { text: msg.btn.setAlert, id: 'alerts:start', row: 0 },
         { text: msg.btn.premium, id: 'premium:open', row: 1 },
-        { text: '⚙️ Plus...', id: `action:step_more:3.4:${route}:${amount}`, row: 2 },
+        { text: '📍 Navigation', id: `action:step_more:3.4:${route}:${amount}`, row: 2 },
       ];
 
     // Why not exact

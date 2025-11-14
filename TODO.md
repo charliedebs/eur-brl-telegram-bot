@@ -21,6 +21,45 @@
 
 ---
 
+## 💳 Premium Features
+
+### Remove One-Off Premium Option
+**Priority:** Medium
+**Status:** Pending
+**Platforms:** Both WhatsApp and Telegram
+
+**Description:** Remove the one-off (one-time purchase) premium option from the bot. Users should only be able to subscribe with recurring subscriptions (monthly, quarterly, semiannual, annual).
+
+**Files to modify:**
+1. `src/core/keyboards/keyboard-types.js`
+   - Remove `premium_oneshot_pricing` keyboard
+   - Remove `premium_oneshot_renew` keyboard
+   - Remove `premium_oneshot_pricing_renew` keyboard
+   - Update `premium_pricing` keyboard to remove one-shot option
+   - Update `premium_pricing_whatsapp` keyboard
+
+2. `src/core/handlers/premium-handler.js`
+   - Remove handlers for one-shot payment processing
+   - Remove handlers for one-shot renewal
+
+3. `src/bot/messages/messages-*.js` (all languages: fr, pt, en)
+   - Remove one-shot button labels (oneshot3m, oneshot6m, oneshot12m)
+   - Remove one-shot messaging
+   - Update premium pricing messages
+
+4. Database (if applicable)
+   - Check if there are any one-off premium references
+   - May need migration for existing one-off users
+
+**Testing required:**
+- Test premium pricing flow on both platforms
+- Ensure existing one-off users are not affected (grandfathered)
+- Test renewal flows
+
+**Estimation:** 2 hours
+
+---
+
 ## 🚀 En Cours
 
 _Aucune tâche en cours_
@@ -43,7 +82,12 @@ _Aucune tâche en cours_
 - [x] Integration WhatsApp dans server.js
 - [x] Documentation WhatsApp complète (docs/WHATSAPP_INTEGRATION.md)
 - [x] Guide de démarrage rapide (WHATSAPP_QUICKSTART.md)
+- [x] Phase 1: WhatsApp UX improvements (context preservation, streamlined navigation)
+- [x] Phase 2: Comparison screen reorganization (Alert, Convert, More Options)
+- [x] Phase 2: Numbered FAQ menu system for WhatsApp
+- [x] Phase 2: Step navigation coherence improvements
+- [x] Phase 2: Consolidated all options in single More Options menu
 
 ---
 
-**Last Updated:** 12 novembre 2025, 19:40 UTC
+**Last Updated:** 14 novembre 2025, 16:30 UTC

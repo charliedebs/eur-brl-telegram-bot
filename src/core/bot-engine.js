@@ -169,6 +169,40 @@ export class BotEngine {
       );
     }
 
+    // Awaiting FAQ numbered choice (WhatsApp numbered menu)
+    if (session.awaitingFaqChoice) {
+      const choice = parseInt(text);
+
+      // Map numbers to FAQ actions
+      const faqActions = [
+        'action:what_usdc',           // 1
+        'action:what_exchange',        // 2
+        'action:faq_min_amount',       // 3
+        'action:about_referrals',      // 4
+        'action:faq_why_onchain'       // 5
+      ];
+
+      if (choice >= 1 && choice <= 5) {
+        // Valid numbered choice - clear session and trigger action
+        this.updateSession(context.userId, context.platform, { awaitingFaqChoice: false });
+
+        return this.handleCallback({
+          userId: context.userId,
+          callbackData: faqActions[choice - 1],
+          platform: context.platform
+        });
+      }
+
+      // Not a valid number, treat as custom FAQ question
+      this.updateSession(context.userId, context.platform, { awaitingFaqChoice: false });
+      return await this.handlers.guide.processFaqQuestionText(
+        context.userId,
+        lang,
+        text,
+        (txt) => this.formatResponse(txt)
+      );
+    }
+
     // Awaiting FAQ question
     if (session.awaitingFaqQuestion) {
       this.updateSession(context.userId, context.platform, { awaitingFaqQuestion: false });
@@ -562,8 +596,20 @@ export class BotEngine {
 
         // === Alerts ===
         case 'alert':
-          // Delegate to alert handler
-          // Implementation depends on specific alert actions
+          // Handle alert actions
+          if (params[0] === 'quick_create') {
+            // Quick create alert from comparison screen
+            const [_, quickRoute, quickAmount] = params;
+            return await this.handlers.alert.handleAlertTypeChoice(
+              userId,
+              lang,
+              quickRoute,
+              (txt, opts) => this.formatResponse(txt, opts),
+              () => {}, // answerFn
+              (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+            );
+          }
+          // Other alert actions handled elsewhere
           break;
 
         // === Premium ===
@@ -649,6 +695,28 @@ export class BotEngine {
       case 'faq_menu':
         const faqRoute = actionParams[0] || session.lastRoute || 'eurbrl';
         const faqAmount = actionParams[1] ? parseFloat(actionParams[1]) : session.lastAmount || 1000;
+
+        // For WhatsApp, use numbered FAQ menu
+        if (platform === 'whatsapp') {
+          this.updateSession(userId, platform, {
+            awaitingFaqChoice: true,
+            lastRoute: faqRoute,
+            lastAmount: faqAmount
+          });
+
+          const faqMenuText = lang === 'fr'
+            ? `🤔 UN DOUTE ?\n\nRépondez avec le numéro ou posez votre question:\n\n<b>📚 Guide débutant</b>\n1️⃣ Qu'est-ce que l'USDC ?\n2️⃣ Qu'est-ce qu'un exchange ?\n\n<b>💰 Coûts & Limites</b>\n3️⃣ Montant minimum\n4️⃣ À propos des parrainages\n5️⃣ Pourquoi l'on-chain est avantageux\n\n💬 Tapez simplement votre question pour plus d'aide`
+            : lang === 'pt'
+            ? `🤔 DÚVIDAS ?\n\nResponda com o número ou faça sua pergunta:\n\n<b>📚 Guia iniciante</b>\n1️⃣ O que é USDC?\n2️⃣ O que é uma exchange?\n\n<b>💰 Custos & Limites</b>\n3️⃣ Valor mínimo\n4️⃣ Sobre indicações\n5️⃣ Por que on-chain é vantajoso\n\n💬 Digite sua pergunta para mais ajuda`
+            : `🤔 QUESTIONS?\n\nReply with the number or ask your question:\n\n<b>📚 Beginner's Guide</b>\n1️⃣ What is USDC?\n2️⃣ What is an exchange?\n\n<b>💰 Costs & Limits</b>\n3️⃣ Minimum amount\n4️⃣ About referrals\n5️⃣ Why on-chain is better\n\n💬 Type your question for more help`;
+
+          return this.formatResponse(faqMenuText, {
+            parse_mode: 'HTML',
+            keyboard: this.buildKeyboard(msg, 'faq_menu_whatsapp', { route: faqRoute, amount: faqAmount })
+          });
+        }
+
+        // For Telegram, use regular FAQ menu
         return await this.handlers.guide.handleFaqMenu(
           userId,
           lang,
@@ -693,6 +761,23 @@ export class BotEngine {
           (txt, opts) => this.formatResponse(txt, opts),
           (msg, type, opts) => this.buildKeyboard(msg, type, opts)
         );
+
+      case 'convert_choice':
+        // WhatsApp: Show conversion choice (on-chain vs off-chain) with context
+        const [convRoute, convAmount] = actionParams;
+        const convRouteDisplay = convRoute === 'eurbrl' ? 'EUR → BRL' : 'BRL → EUR';
+        const convMsg = lang === 'fr'
+          ? `📊 ${convRouteDisplay} ${parseFloat(convAmount).toLocaleString('fr-FR')}\n\n💱 Choisissez votre méthode de conversion:`
+          : lang === 'pt'
+          ? `📊 ${convRouteDisplay} ${parseFloat(convAmount).toLocaleString('pt-BR')}\n\n💱 Escolha seu método de conversão:`
+          : `📊 ${convRouteDisplay} ${parseFloat(convAmount).toLocaleString('en-US')}\n\n💱 Choose your conversion method:`;
+
+        return this.formatResponse(convMsg, {
+          keyboard: this.buildKeyboard(msg, 'convert_choice', {
+            route: convRoute,
+            amount: parseFloat(convAmount)
+          })
+        });
 
       case 'comparison_more':
         // WhatsApp: Show comparison "More" submenu with context
