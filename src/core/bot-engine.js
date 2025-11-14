@@ -1,69 +1,146 @@
-// src/core/bot-engine.js
-// Platform-agnostic bot engine - works for Telegram, WhatsApp, and any future platform
+/**
+ * Platform-Agnostic Bot Engine
+ *
+ * Works for Telegram, WhatsApp, and any future platform
+ * Delegates business logic to specialized handlers
+ */
 
 import { logger } from '../utils/logger.js';
 import { DatabaseService } from '../services/database.js';
-import * as RatesService from '../services/rates.js';
-import * as PaymentService from '../services/payments/index.js';
-import { parseUserIntent } from './nlu.js';
+import { AlertsService } from '../services/alerts.js';
 import { messages } from '../bot/messages/messages-loader.js';
+import { parseUserIntent } from './nlu.js';
+
+// Import handlers
+import { ComparisonHandler } from './handlers/comparison-handler.js';
+import { GuideHandler } from './handlers/guide-handler.js';
+import { AlertHandler } from './handlers/alert-handler.js';
+import { PremiumHandler } from './handlers/premium-handler.js';
 
 export class BotEngine {
   constructor(adapter) {
     this.adapter = adapter;
     this.db = new DatabaseService();
-    this.services = {
-      rates: RatesService,
-      payments: PaymentService,
-      database: this.db,
-      nlu: { parse: parseUserIntent }
+    this.alerts = new AlertsService(this.db);
+
+    // Initialize handlers
+    this.handlers = {
+      comparison: new ComparisonHandler(this.db, messages),
+      guide: new GuideHandler(this.db, messages),
+      alert: new AlertHandler(this.db, messages),
+      premium: new PremiumHandler(this.db, messages)
     };
+
+    // Session storage (in-memory for now, can be moved to Redis)
+    this.sessions = new Map();
+  }
+
+  /**
+   * Get or create session for user
+   */
+  getSession(userId, platform) {
+    const sessionKey = `${platform}:${userId}`;
+    if (!this.sessions.has(sessionKey)) {
+      this.sessions.set(sessionKey, {
+        userId,
+        platform,
+        messageHistory: [],
+        lastRoute: null,
+        lastAmount: null,
+        lastIsTargetMode: false,
+        awaitingAmount: null,
+        awaitingConvertAmount: false,
+        awaitingConvertRoute: null,
+        awaitingFaqQuestion: false,
+        awaitingAlertName: null,
+        awaitingCustomPercent: null,
+        awaitingAbsoluteThreshold: null,
+        awaitingPaymentHelp: false,
+        alertDraft: null
+      });
+    }
+    return this.sessions.get(sessionKey);
+  }
+
+  /**
+   * Update session data
+   */
+  updateSession(userId, platform, updates) {
+    const session = this.getSession(userId, platform);
+    Object.assign(session, updates);
   }
 
   /**
    * Process incoming message
    */
-  async processMessage({ userId, text, platform, username, messageId }) {
+  async processMessage({ userId, text, platform, username, chatType = 'private' }) {
     try {
-      logger.info('[BOT-ENGINE] Processing message:', { userId, platform, text: text.substring(0, 50) });
+      logger.info('[BOT-ENGINE] Processing message:', {
+        userId,
+        platform,
+        text: text.substring(0, 50)
+      });
 
-      // Get or create user
-      let user = await this.db.getUser(userId);
+      // Get or create user (use platform-aware method)
+      let user = await this.db.getUserByPlatform(platform, userId);
       if (!user) {
-        user = await this.db.createUser(userId, 'pt'); // Default Portuguese
+        // Detect language from first message or default to Portuguese
+        const detectedLang = this.detectLanguage(text) || 'pt';
+        user = await this.db.createUserByPlatform(platform, userId, detectedLang);
+
+        // Check if user creation failed
+        if (!user) {
+          logger.error('[BOT-ENGINE] Failed to create user - database schema issue?', {
+            userId,
+            platform,
+            hint: 'If using WhatsApp, ensure telegram_id column is nullable in Supabase'
+          });
+
+          // Return error message
+          return {
+            text: '❌ Erro de configuração. Contate o administrador.\n\nError: Database configuration issue. Please contact admin.',
+            error: true
+          };
+        }
+
+        logger.info('[BOT-ENGINE] New user created:', { userId, platform, lang: detectedLang });
       }
 
-      // Get user's message translations
-      const msg = messages[user.language || 'pt'];
-
-      // Check if user is premium
-      const isPremium = await this.db.isPremium(userId);
+      // Get session
+      const session = this.getSession(userId, platform);
+      const lang = user?.language || 'pt';
 
       // Create context for handlers
       const context = {
         userId,
         user,
-        isPremium,
+        session,
         platform,
+        chatType,
         text,
-        msg,
-        services: this.services,
-        adapter: this.adapter
+        lang,
+        db: this.db,
+        alerts: this.alerts,
+        handlers: this.handlers
       };
 
-      // Process the message
-      const response = await this.routeMessage(context);
+      // Check for session-based text input (waiting for specific input)
+      const sessionResponse = await this.handleSessionInput(context);
+      if (sessionResponse) {
+        return sessionResponse;
+      }
 
-      return response;
+      // Route message to appropriate handler
+      return await this.routeMessage(context);
 
     } catch (error) {
       logger.error('[BOT-ENGINE] Error processing message:', {
         error: error.message,
+        stack: error.stack,
         userId,
         platform
       });
 
-      // Return error response
       return {
         text: '❌ Erro ao processar mensagem / Error processing message',
         error: true
@@ -72,511 +149,754 @@ export class BotEngine {
   }
 
   /**
+   * Handle session-based text input
+   * (e.g., waiting for amount, waiting for custom percentage, etc.)
+   */
+  async handleSessionInput(context) {
+    const { session, text, lang } = context;
+
+    // Awaiting amount for comparison
+    if (session.awaitingAmount || session.awaitingConvertAmount) {
+      const route = session.awaitingAmount;
+      return await this.handlers.comparison.handleTextAmount(
+        context.userId,
+        lang,
+        text,
+        route,
+        (txt, opts) => this.formatResponse(txt, opts),
+        (updates) => this.updateSession(context.userId, context.platform, updates),
+        (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+      );
+    }
+
+    // Awaiting FAQ question
+    if (session.awaitingFaqQuestion) {
+      this.updateSession(context.userId, context.platform, { awaitingFaqQuestion: false });
+      return await this.handlers.guide.processFaqQuestionText(
+        context.userId,
+        lang,
+        text,
+        (txt) => this.formatResponse(txt)
+      );
+    }
+
+    // Awaiting alert name
+    if (session.awaitingAlertName) {
+      const alertId = session.awaitingAlertName.alertId;
+      this.updateSession(context.userId, context.platform, { awaitingAlertName: null });
+      return await this.handlers.alert.handleAlertRenameText(
+        context.userId,
+        lang,
+        alertId,
+        text,
+        (txt) => this.formatResponse(txt)
+      );
+    }
+
+    // Awaiting custom percentage for alert
+    if (session.awaitingCustomPercent) {
+      const { pair, refType } = session.awaitingCustomPercent;
+      const percent = parseFloat(text.replace(',', '.'));
+
+      if (isNaN(percent) || percent < 1 || percent > 10) {
+        return this.formatResponse('❌ Pourcentage invalide. Entre 1 et 10.');
+      }
+
+      this.updateSession(context.userId, context.platform, { awaitingCustomPercent: null });
+
+      // Continue with alert creation
+      const alertData = {
+        pair,
+        threshold_type: 'relative',
+        threshold_value: percent,
+        reference_type: refType
+      };
+
+      const msg = this.handlers.alert.getMsg(lang);
+      return this.formatResponse(msg.ALERT_CHOOSE_COOLDOWN, {
+        keyboard: this.buildKeyboard(msg, 'alert_choose_cooldown_v2', { alertData })
+      });
+    }
+
+    // Awaiting absolute threshold for alert
+    if (session.awaitingAbsoluteThreshold) {
+      const { pair } = session.awaitingAbsoluteThreshold;
+      const threshold = parseFloat(text.replace(',', '.'));
+
+      if (isNaN(threshold) || threshold <= 0) {
+        return this.formatResponse('❌ Valeur invalide.');
+      }
+
+      this.updateSession(context.userId, context.platform, { awaitingAbsoluteThreshold: null });
+
+      // Continue with alert creation
+      const alertData = {
+        pair,
+        threshold_type: 'absolute',
+        threshold_value: threshold,
+        reference_type: null
+      };
+
+      const msg = this.handlers.alert.getMsg(lang);
+      return this.formatResponse(msg.ALERT_CHOOSE_COOLDOWN, {
+        keyboard: this.buildKeyboard(msg, 'alert_choose_cooldown_v2', { alertData })
+      });
+    }
+
+    // Awaiting payment help message
+    if (session.awaitingPaymentHelp) {
+      this.updateSession(context.userId, context.platform, { awaitingPaymentHelp: false });
+      return await this.handlers.premium.processPaymentHelpText(
+        context.userId,
+        lang,
+        text,
+        (txt) => this.formatResponse(txt)
+      );
+    }
+
+    return null; // No session-based input waiting
+  }
+
+  /**
    * Route message to appropriate handler
    */
   async routeMessage(context) {
-    const { text, msg } = context;
+    const { text, lang, chatType } = context;
     const lowerText = text.toLowerCase().trim();
 
-    // Command routing
-    if (lowerText.startsWith('/start') || lowerText === 'start' || lowerText.includes('começar')) {
+    // === COMMANDS ===
+
+    // /start
+    if (lowerText.startsWith('/start') || lowerText === 'start') {
       return this.handleStart(context);
     }
 
-    if (lowerText.startsWith('/help') || lowerText.includes('ajuda') || lowerText.includes('help')) {
+    // /help
+    if (lowerText.startsWith('/help') || lowerText.includes('ajuda') || lowerText.includes('aide')) {
       return this.handleHelp(context);
     }
 
-    if (lowerText.startsWith('/comparar') || lowerText.startsWith('/compare')) {
-      return this.handleCompare(context);
+    // /rate [amount]
+    if (lowerText.startsWith('/rate') || lowerText.startsWith('/taxa')) {
+      const args = text.split(' ').slice(1).join(' ').trim();
+      return await this.handlers.comparison.handleRateCommand(
+        context.userId,
+        lang,
+        args,
+        (txt, opts) => this.formatResponse(txt, opts),
+        (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+      );
     }
 
+    // /convert [amount] [currency?]
+    if (lowerText.startsWith('/convert') || lowerText.startsWith('/converter')) {
+      const args = text.split(' ').slice(1).join(' ').trim();
+      return await this.handlers.comparison.handleConvertCommand(
+        context.userId,
+        lang,
+        args,
+        (txt, opts) => this.formatResponse(txt, opts),
+        (msg, type, opts) => this.buildKeyboard(msg, type, opts),
+        (updates) => this.updateSession(context.userId, context.platform, updates)
+      );
+    }
+
+    // /alert [params]
+    if (lowerText.startsWith('/alert') || lowerText.startsWith('/alerta') || lowerText.startsWith('/alerte')) {
+      const args = text.split(' ').slice(1).join(' ').trim();
+      return await this.handlers.alert.handleAlertCommand(
+        context.userId,
+        lang,
+        args,
+        chatType,
+        (txt, opts) => this.formatResponse(txt, opts),
+        (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+      );
+    }
+
+    // /alerts (list)
+    if (lowerText.startsWith('/alerts') || lowerText.startsWith('/alertas') || lowerText.startsWith('/alertes')) {
+      return await this.handlers.alert.handleAlertList(
+        context.userId,
+        lang,
+        (txt, opts) => this.formatResponse(txt, opts),
+        () => {}, // answerFn (not needed for messages)
+        (txt, opts) => this.formatResponse(txt, opts),
+        (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+      );
+    }
+
+    // /premium
     if (lowerText.startsWith('/premium')) {
-      return this.handlePremium(context);
+      return await this.handlers.premium.handlePremiumCommand(
+        context.userId,
+        lang,
+        (txt, opts) => this.formatResponse(txt, opts),
+        (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+      );
     }
 
-    if (lowerText.startsWith('/checkpayment')) {
-      return this.handleCheckPayment(context);
-    }
-
+    // /lang or /language
     if (lowerText.startsWith('/lang') || lowerText.startsWith('/language') || lowerText.startsWith('/idioma')) {
-      return this.handleLanguage(context);
+      return this.handleLanguageSelection(context);
     }
 
     // NLU for natural language
-    const intent = await this.services.nlu.parse(text, {
-      language: context.user.language
-    });
+    try {
+      const intent = await parseUserIntent(text, { language: lang });
 
-    if (intent.intent === 'compare' && intent.entities.amount && intent.entities.route) {
-      context.nluIntent = intent;
-      return this.handleCompare(context);
-    }
+      // Greeting - show welcome message with main keyboard
+      if (intent.intent === 'greeting') {
+        return this.handleStart(context);
+      }
 
-    if (intent.intent === 'premium_status') {
-      context.nluIntent = intent;
-      return this.handleCheckPayment(context);
+      if (intent.intent === 'compare' && intent.entities?.amount) {
+        const amount = intent.entities.amount;
+        const route = intent.entities.route || 'eurbrl';
+
+        this.updateSession(context.userId, context.platform, {
+          lastRoute: route,
+          lastAmount: amount
+        });
+
+        return await this.handlers.comparison.showComparison(
+          context.userId,
+          lang,
+          route,
+          amount,
+          false,
+          (txt, opts) => this.formatResponse(txt, opts),
+          (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+        );
+      }
+
+      if (intent.intent === 'premium' || intent.intent === 'premium_status') {
+        return await this.handlers.premium.handlePremiumCommand(
+          context.userId,
+          lang,
+          (txt, opts) => this.formatResponse(txt, opts),
+          (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+        );
+      }
+    } catch (error) {
+      logger.error('[BOT-ENGINE] NLU error:', { error: error.message });
     }
 
     // Default response
-    return {
-      text: msg.UNKNOWN_COMMAND || 'Comando não reconhecido. Use /help para ver os comandos disponíveis.',
-      buttons: [
-        { id: 'help', text: msg.btn?.help || '❓ Ajuda' },
-        { id: 'compare', text: msg.btn?.compare || '💱 Comparar' }
-      ]
-    };
+    const msg = messages[lang];
+    return this.formatResponse(msg.UNKNOWN_COMMAND || 'Comando não reconhecido. Use /help para ver os comandos disponíveis.', {
+      keyboard: this.buildKeyboard(msg, 'main')
+    });
   }
 
   /**
    * Handle /start command
    */
-  async handleStart(context) {
-    const { msg } = context;
+  handleStart(context) {
+    const { lang } = context;
+    const msg = messages[lang];
 
-    return {
-      text: msg.WELCOME || `👋 Bem-vindo ao Bot EUR/BRL!
-
-💱 Compare taxas de câmbio em tempo real
-🏦 Encontre as melhores rotas de transferência
-💎 Recursos Premium disponíveis
-
-Use /help para ver todos os comandos.`,
-      buttons: [
-        { id: 'compare:1000', text: '€1000 → R$' },
-        { id: 'compare:5000', text: 'R$5000 → €' },
-        { id: 'premium', text: '💎 Premium' },
-        { id: 'help', text: '❓ Ajuda' }
-      ]
-    };
+    return this.formatResponse(msg.INTRO_TEXT || msg.WELCOME, {
+      keyboard: this.buildKeyboard(msg, 'lang_select')
+    });
   }
 
   /**
    * Handle /help command
    */
-  async handleHelp(context) {
-    const { msg } = context;
+  handleHelp(context) {
+    const { lang } = context;
+    const msg = messages[lang];
 
-    return {
-      text: msg.HELP || `📖 *Comandos Disponíveis:*
-
-💱 */comparar [valor]* - Comparar taxas
-💎 */premium* - Ver planos Premium
-📊 */checkpayment* - Ver status Premium
-❓ */help* - Mostrar esta ajuda
-
-Você também pode enviar mensagens naturais como:
-"Quanto fica 1000 euros em reais?"
-"Quero converter 5000 reais para euros"`,
-      buttons: [
-        { id: 'compare', text: '💱 Comparar' },
-        { id: 'premium', text: '💎 Premium' }
-      ]
-    };
+    return this.formatResponse(msg.ABOUT_TEXT || msg.HELP, {
+      keyboard: this.buildKeyboard(msg, 'main')
+    });
   }
 
   /**
-   * Handle compare command
+   * Handle language selection
    */
-  async handleCompare(context) {
-    const { text, msg, nluIntent } = context;
+  handleLanguageSelection(context) {
+    const text = {
+      pt: '🌐 <b>Escolha o idioma</b>\nChoose your language\nChoisis ta langue',
+      fr: '🌐 <b>Choisis ta langue</b>\nEscolha o idioma\nChoose your language',
+      en: '🌐 <b>Choose your language</b>\nEscolha o idioma\nChoisis ta langue'
+    };
 
-    // Extract amount and route from text or NLU
-    let amount = 1000;
-    let route = 'eurbrl';
+    const msg = messages.en; // Use English as neutral
+    return this.formatResponse(text[context.lang] || text.en, {
+      keyboard: this.buildKeyboard(msg, 'lang_select')
+    });
+  }
 
-    if (nluIntent) {
-      amount = nluIntent.entities.amount || 1000;
-      route = nluIntent.entities.route || 'eurbrl';
-    } else {
-      // Simple parsing from command
-      const match = text.match(/\d+/);
-      if (match) {
-        amount = parseFloat(match[0]);
-      }
-      if (text.includes('brl') && text.includes('eur')) {
-        route = 'brleur';
-      }
+  /**
+   * Detect language from text (simple heuristic)
+   */
+  detectLanguage(text) {
+    const lower = text.toLowerCase();
+
+    // French indicators
+    if (lower.match(/bonjour|merci|salut|combien|je veux|comment/)) {
+      return 'fr';
     }
 
-    // Get rates
-    const rates = await this.services.rates.getRates();
-    if (!rates) {
-      return {
-        text: '❌ Erro ao buscar taxas. Tente novamente.',
-        error: true
-      };
+    // English indicators
+    if (lower.match(/hello|thank|please|how much|i want|convert/)) {
+      return 'en';
     }
 
-    // Calculate
-    const result = this.services.rates.calculateOnChain(route, amount, rates);
-    const locale = this.services.rates.getLocale(context.user.language);
+    // Portuguese indicators (default)
+    if (lower.match(/olá|obrigad|quanto|quero|como|converter/)) {
+      return 'pt';
+    }
 
-    // Format response
-    const fromCurrency = route === 'eurbrl' ? 'EUR' : 'BRL';
-    const toCurrency = route === 'eurbrl' ? 'BRL' : 'EUR';
-    const fromSymbol = route === 'eurbrl' ? '€' : 'R$';
-    const toSymbol = route === 'eurbrl' ? 'R$' : '€';
+    return 'pt'; // Default
+  }
 
-    const text = `💱 *Comparação de Taxas*
-
-📥 Você envia: ${fromSymbol} ${this.services.rates.formatAmount(result.in, 2, locale)}
-📤 Você recebe: ${toSymbol} ${this.services.rates.formatAmount(result.out, 2, locale)}
-
-📊 Taxa efetiva: ${this.services.rates.formatRate(result.rate, locale)}
-📈 Taxa de mercado: ${this.services.rates.formatRate(rates.cross, locale)}
-
-⚡ Via stablecoin (USDC)
-🔄 Cálculo em tempo real`;
-
+  /**
+   * Format response for platform adapter
+   */
+  formatResponse(text, options = {}) {
     return {
       text,
-      buttons: [
-        { id: `compare:${route}:500`, text: `${fromSymbol}500` },
-        { id: `compare:${route}:1000`, text: `${fromSymbol}1000` },
-        { id: `compare:${route}:5000`, text: `${fromSymbol}5000` },
-        { id: `compare:${route === 'eurbrl' ? 'brleur' : 'eurbrl'}:${amount}`, text: '🔄 Inverter' },
-        { id: 'premium', text: '💎 Premium' }
-      ]
+      parse_mode: options.parse_mode || 'HTML',
+      keyboard: options.keyboard || null,
+      image: options.image || null,
+      error: options.error || false
     };
   }
 
   /**
-   * Handle /premium command
+   * Build keyboard (platform-agnostic)
+   * The adapter will convert this to platform-specific format
    */
-  async handlePremium(context) {
-    const { msg, isPremium } = context;
+  buildKeyboard(msg, type, options = {}) {
+    // This should return a generic keyboard structure
+    // The platform adapter will convert it to Telegram inline keyboard or WhatsApp menu
+    return {
+      type,
+      options,
+      msg
+    };
+  }
 
-    if (isPremium) {
-      const premiumDetails = await this.services.payments.getPremiumDetails(context.userId);
+  /**
+   * Handle button/callback click
+   * This is called by platform adapters when user clicks a button
+   */
+  async handleCallback({ userId, callbackData, platform }) {
+    try {
+      logger.info('[BOT-ENGINE] Handling callback:', {
+        userId,
+        platform,
+        callbackData
+      });
 
-      return {
-        text: `✅ *Você é Premium!*
+      // Get user
+      const user = await this.db.getUserByPlatform(platform, userId);
+      if (!user) {
+        logger.warn('[BOT-ENGINE] User not found for callback:', { userId, platform });
+        return this.formatResponse('❌ User not found. Use /start to begin.');
+      }
 
-⏰ Expira em: ${premiumDetails.expires_at.toLocaleDateString()}
-📅 Dias restantes: ${premiumDetails.days_remaining}
+      const session = this.getSession(userId, platform);
+      const lang = user.language || 'pt';
+      const msg = messages[lang];
 
-🎯 Seus benefícios:
-✅ Alertas personalizados
-✅ Consultas ilimitadas
-✅ Suporte prioritário`,
-        buttons: [
-          { id: 'alerts', text: '🔔 Configurar Alertas' },
-          { id: 'help', text: '❓ Ajuda' }
-        ]
-      };
+      // Parse callback data
+      const [action, ...params] = callbackData.split(':');
+
+      // Route to appropriate handler
+      switch (action) {
+        // === Language Selection ===
+        case 'lang':
+          const newLang = params[0];
+          await this.db.updateUserByPlatform(platform, userId, { language: newLang });
+
+          // Restore context if available
+          if (session.lastRoute && session.lastAmount) {
+            return await this.handlers.comparison.showComparison(
+              userId,
+              newLang,
+              session.lastRoute,
+              session.lastAmount,
+              session.lastIsTargetMode || false,
+              (txt, opts) => this.formatResponse(txt, opts),
+              (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+            );
+          } else {
+            const newMsg = messages[newLang];
+            return this.formatResponse(newMsg.promptAmt, {
+              keyboard: this.buildKeyboard(newMsg, 'main')
+            });
+          }
+
+        // === Route Selection ===
+        case 'route':
+          const [route, amount] = params;
+          return await this.handlers.comparison.handleRouteSelection(
+            userId,
+            lang,
+            route,
+            parseFloat(amount),
+            (txt, opts) => this.formatResponse(txt, opts),
+            (updates) => this.updateSession(userId, platform, updates),
+            (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+          );
+
+        // === Guide ===
+        case 'guide':
+          if (params[0] === 'step') {
+            const [_, step, guideRoute, guideAmount] = params;
+            return await this.handlers.guide.handleGuideStep(
+              userId,
+              lang,
+              step,
+              guideRoute,
+              parseFloat(guideAmount),
+              (txt, opts) => this.formatResponse(txt, opts),
+              (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+            );
+          }
+          break;
+
+        // === Alerts ===
+        case 'alert':
+          // Delegate to alert handler
+          // Implementation depends on specific alert actions
+          break;
+
+        // === Premium ===
+        case 'premium':
+          if (params[0] === 'pricing') {
+            return await this.handlers.premium.handlePremiumPricing(
+              userId,
+              lang,
+              (txt, opts) => this.formatResponse(txt, opts),
+              () => {}, // answerFn
+              (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+            );
+          }
+          break;
+
+        // === Actions ===
+        case 'action':
+          return await this.handleAction(userId, lang, platform, params, session, msg);
+
+        default:
+          logger.warn('[BOT-ENGINE] Unknown callback action:', { action, params });
+          return this.formatResponse('❌ Action not recognized.');
+      }
+
+    } catch (error) {
+      logger.error('[BOT-ENGINE] Error handling callback:', {
+        error: error.message,
+        stack: error.stack,
+        userId,
+        callbackData
+      });
+
+      return this.formatResponse('❌ Error processing action.');
     }
-
-    // Show pricing
-    const plans = this.services.payments.getPremiumPlans();
-
-    return {
-      text: `💎 *Planos Premium*
-
-🟢 *Mensal* - R$ 29,90 / $5.99
-📅 30 dias de acesso
-
-🔵 *Trimestral* - R$ 79,90 / $15.99
-📅 90 dias • Economize 11%
-
-🟣 *Anual* - R$ 299,90 / $59.99
-📅 365 dias • Economize 17%
-
-🎯 *Benefícios Premium:*
-✅ Alertas personalizados
-✅ Consultas ilimitadas
-✅ Suporte prioritário
-✅ Análises avançadas`,
-      buttons: [
-        { id: 'subscribe:monthly', text: '🟢 Mensal' },
-        { id: 'subscribe:quarterly', text: '🔵 Trimestral' },
-        { id: 'subscribe:annual', text: '🟣 Anual' }
-      ]
-    };
   }
 
   /**
-   * Handle language command
-   */
-  async handleLanguage(context) {
-    return {
-      text: `🌐 *Choose your language / Escolha o idioma*
-
-Select your preferred language for the bot.`,
-      buttons: [
-        { id: 'lang:pt', text: '🇧🇷 Português' },
-        { id: 'lang:en', text: '🇺🇸 English' },
-        { id: 'lang:fr', text: '🇫🇷 Français' }
-      ]
-    };
-  }
-
-  /**
-   * Handle /checkpayment command
-   */
-  async handleCheckPayment(context) {
-    const premiumInfo = await this.services.payments.getPremiumDetails(context.userId);
-
-    if (premiumInfo) {
-      return {
-        text: `✅ *Você é Premium!*
-
-⏰ Expira em: ${premiumInfo.expires_at.toLocaleDateString()}
-📅 Dias restantes: ${premiumInfo.days_remaining}`,
-        buttons: [
-          { id: 'premium', text: '💎 Ver Planos' }
-        ]
-      };
-    }
-
-    return {
-      text: '❌ Você não tem uma assinatura Premium ativa.\n\nUse /premium para assinar.',
-      buttons: [
-        { id: 'premium', text: '💎 Ver Planos' }
-      ]
-    };
-  }
-
-  /**
-   * Handle button click
+   * Alias for handleCallback - for backwards compatibility
+   * Platform adapters may call either handleButtonClick or handleCallback
    */
   async handleButtonClick({ userId, buttonId, platform }) {
-    try {
-      logger.info('[BOT-ENGINE] Button clicked:', { userId, buttonId, platform });
-
-      // Get user context
-      let user = await this.db.getUser(userId);
-      const msg = messages[user?.language || 'pt'];
-      const isPremium = await this.db.isPremium(userId);
-
-      const context = {
-        userId,
-        user,
-        isPremium,
-        platform,
-        msg,
-        services: this.services,
-        adapter: this.adapter
-      };
-
-      // Route button action
-      if (buttonId === 'help') {
-        return this.handleHelp(context);
-      }
-
-      if (buttonId === 'premium') {
-        return this.handlePremium(context);
-      }
-
-      if (buttonId === 'compare') {
-        return this.handleCompare(context);
-      }
-
-      if (buttonId.startsWith('compare:')) {
-        const parts = buttonId.split(':');
-        const route = parts[1] || 'eurbrl';
-        const amount = parseFloat(parts[2]) || 1000;
-
-        context.text = `/comparar ${amount} ${route}`;
-        return this.handleCompare(context);
-      }
-
-      if (buttonId.startsWith('subscribe:')) {
-        const plan = buttonId.split(':')[1];
-        return this.handleSubscription(context, plan);
-      }
-
-      if (buttonId.startsWith('lang:')) {
-        const language = buttonId.split(':')[1];
-        await this.db.updateUser(userId, { language });
-        context.user.language = language;
-
-        return {
-          text: language === 'pt' ? '✅ Idioma alterado para Português!' :
-                language === 'en' ? '✅ Language changed to English!' :
-                language === 'fr' ? '✅ Langue changée en Français!' :
-                '✅ Language updated!',
-          buttons: [
-            { id: 'help', text: '❓ Ajuda' }
-          ]
-        };
-      }
-
-      if (buttonId.startsWith('payment:')) {
-        const parts = buttonId.split(':');
-        const plan = parts[1];
-        const method = parts[2];
-        return this.handlePaymentMethod(context, plan, method);
-      }
-
-      // Default response
-      return {
-        text: 'Ação não reconhecida.',
-        buttons: [
-          { id: 'help', text: '❓ Ajuda' }
-        ]
-      };
-
-    } catch (error) {
-      logger.error('[BOT-ENGINE] Error handling button:', {
-        error: error.message,
-        userId,
-        buttonId
-      });
-
-      return {
-        text: '❌ Erro ao processar ação.',
-        error: true
-      };
-    }
+    return this.handleCallback({
+      userId,
+      callbackData: buttonId,
+      platform
+    });
   }
 
   /**
-   * Handle subscription flow
+   * Handle generic actions
    */
-  async handleSubscription(context, plan) {
-    const { msg } = context;
-    const plans = this.services.payments.getPremiumPlans();
-    const planInfo = plans[plan];
+  async handleAction(userId, lang, platform, params, session, msg) {
+    const [actionType, ...actionParams] = params;
 
-    if (!planInfo) {
-      return {
-        text: '❌ Plano inválido.',
-        buttons: [{ id: 'premium', text: '💎 Ver Planos' }]
-      };
-    }
+    switch (actionType) {
+      case 'back_main':
+        return this.formatResponse(msg.promptAmt, {
+          keyboard: this.buildKeyboard(msg, 'main')
+        });
 
-    const methods = this.services.payments.getAvailablePaymentMethods();
+      case 'start_guide':
+        const [route, amount] = actionParams;
+        return await this.handlers.guide.handleGuideTransition(
+          userId,
+          lang,
+          route,
+          parseFloat(amount),
+          (txt, opts) => this.formatResponse(txt, opts),
+          (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+        );
 
-    const text = `💳 *Escolha o método de pagamento*
+      case 'guide_navigation':
+        const [navRoute, navAmount] = actionParams;
+        return await this.handlers.guide.handleGuideNavigation(
+          userId,
+          lang,
+          navRoute,
+          parseFloat(navAmount),
+          (txt, opts) => this.formatResponse(txt, opts),
+          (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+        );
 
-📦 Plano: ${planInfo.name.pt}
-⏱ Duração: ${planInfo.duration} dias
-💰 Preço: R$ ${planInfo.prices.BRL} / $${planInfo.prices.USD}
+      case 'faq_menu':
+        const faqRoute = actionParams[0] || session.lastRoute || 'eurbrl';
+        const faqAmount = actionParams[1] ? parseFloat(actionParams[1]) : session.lastAmount || 1000;
+        return await this.handlers.guide.handleFaqMenu(
+          userId,
+          lang,
+          faqRoute,
+          faqAmount,
+          (txt, opts) => this.formatResponse(txt, opts),
+          (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+        );
 
-Selecione abaixo:`;
+      case 'more_menu':
+        // WhatsApp "Plus..." menu
+        const user = await this.db.getUserByPlatform(platform, userId);
+        const isPremium = user?.premium_until && new Date(user.premium_until) > new Date();
+        return this.formatResponse(msg.MORE_MENU || '📋 Plus d\'options', {
+          keyboard: this.buildKeyboard(msg, 'more_menu', { isPremium })
+        });
 
-    const buttons = methods.map(method => ({
-      id: `payment:${plan}:${method.id}`,
-      text: `${method.icon} ${method.name}`
-    }));
-    buttons.push({ id: 'premium', text: '◀️ Voltar' });
+      case 'help':
+        return this.handleHelp({ userId, user: await this.db.getUserByPlatform(platform, userId), platform, lang });
 
-    return {
-      text,
-      buttons
-    };
-  }
+      case 'about':
+        return this.formatResponse(msg.ABOUT_TEXT || msg.INFO_TEXT, {
+          keyboard: this.buildKeyboard(msg, 'about')
+        });
 
-  /**
-   * Handle payment method selection
-   */
-  async handlePaymentMethod(context, plan, method) {
-    const { userId } = context;
-    const plans = this.services.payments.getPremiumPlans();
-    const planInfo = plans[plan];
+      case 'convert':
+        // Prompt user to enter amount to convert
+        this.updateSession(userId, platform, {
+          awaitingConvertAmount: true,
+          awaitingConvertRoute: actionParams[0] || 'eurbrl'
+        });
+        return this.formatResponse(msg.ASK_AMOUNT || 'Quel montant souhaitez-vous convertir?');
 
-    if (!planInfo) {
-      return {
-        text: '❌ Plano inválido.',
-        buttons: [{ id: 'premium', text: '💎 Ver Planos' }]
-      };
-    }
+      case 'continue_onchain':
+        // Show guide for continuing on-chain
+        const [continueRoute, continueAmount] = actionParams;
+        return await this.handlers.guide.handleGuideTransition(
+          userId,
+          lang,
+          continueRoute,
+          parseFloat(continueAmount),
+          (txt, opts) => this.formatResponse(txt, opts),
+          (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+        );
 
-    try {
-      // Initiate payment through payment service
-      const paymentData = await this.services.payments.initiatePayment({
-        telegram_id: userId,
-        plan,
-        method,
-        email: `whatsapp_${userId}@user.app` // Generic email for WhatsApp users
-      });
+      case 'comparison_more':
+        // WhatsApp: Show comparison "More" submenu
+        const [compRoute, compAmount] = actionParams;
+        return this.formatResponse('⚙️ Options supplémentaires:', {
+          keyboard: this.buildKeyboard(msg, 'comparison_more', {
+            route: compRoute,
+            amount: parseFloat(compAmount)
+          })
+        });
 
-      if (method === 'pix_manual') {
-        // Return QR code for manual Pix
-        return {
-          text: `🏦 *Pagamento via Pix Manual*
+      case 'onchain_intro':
+        // Show onchain intro
+        const [onchainRoute, onchainAmount] = actionParams;
+        return await this.handlers.guide.handleOnchainIntro(
+          userId,
+          lang,
+          onchainRoute,
+          parseFloat(onchainAmount),
+          (txt, opts) => this.formatResponse(txt, opts),
+          (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+        );
 
-📦 Plano: ${planInfo.name.pt}
-💰 Valor: R$ ${planInfo.prices.BRL}
+      case 'onchain_exchanges':
+        // WhatsApp: Show exchanges submenu
+        const [exchRoute, exchAmount] = actionParams;
+        return this.formatResponse('🏦 Choisissez une plateforme:', {
+          keyboard: this.buildKeyboard(msg, 'onchain_exchanges', {
+            route: exchRoute,
+            amount: parseFloat(exchAmount)
+          })
+        });
 
-🔑 *Chave Pix:*
-${paymentData.pix_key}
+      case 'guide_steps':
+        // WhatsApp: Show guide steps menu
+        const [stepsRoute, stepsAmount] = actionParams;
+        return this.formatResponse('📍 Choisissez une étape:', {
+          keyboard: this.buildKeyboard(msg, 'guide_steps', {
+            route: stepsRoute,
+            amount: parseFloat(stepsAmount)
+          })
+        });
 
-📱 *Instruções:*
-1. Abra seu app bancário
-2. Escaneie o QR code abaixo OU
-3. Copie a chave Pix acima
-4. Faça o pagamento de R$ ${planInfo.prices.BRL}
-5. Envie o comprovante para confirmação
+      case 'faq_more':
+        // WhatsApp: Show FAQ more submenu
+        const [faqMoreRoute, faqMoreAmount] = actionParams;
+        return this.formatResponse('❓ Autres questions:', {
+          keyboard: this.buildKeyboard(msg, 'faq_more', {
+            route: faqMoreRoute,
+            amount: parseFloat(faqMoreAmount)
+          })
+        });
 
-⏱️ Seu Premium será ativado em até 1 hora após confirmação.`,
-          image: paymentData.qr_code_data_url,
-          buttons: [
-            { id: 'checkpayment', text: '✅ Verificar Pagamento' },
-            { id: 'premium', text: '◀️ Voltar' }
-          ]
-        };
-      } else if (method === 'mercadopago') {
-        // Return Mercado Pago payment link
-        return {
-          text: `💳 *Pagamento via Mercado Pago*
+      case 'step_more':
+        // WhatsApp: Show step navigation submenu
+        const [stepId, stepRoute, stepAmount] = actionParams;
+        return this.formatResponse('⚙️ Navigation:', {
+          keyboard: this.buildKeyboard(msg, 'step_more', {
+            stepId: stepId,
+            route: stepRoute,
+            amount: parseFloat(stepAmount)
+          })
+        });
 
-📦 Plano: ${planInfo.name.pt}
-💰 Valor: R$ ${planInfo.prices.BRL}
+      case 'premium_more':
+        // WhatsApp: Show premium more submenu
+        return this.formatResponse('💳 Autres options Premium:', {
+          keyboard: this.buildKeyboard(msg, 'premium_more', {})
+        });
 
-🔐 *Métodos aceitos:*
-✅ Pix (instantâneo)
-✅ Cartão de crédito
-✅ Cartão de débito
+      case 'stay_offchain':
+        // Show offchain providers details
+        const [offRoute, offAmount] = actionParams;
+        return await this.handlers.comparison.handleOffchainSelection(
+          userId,
+          lang,
+          offRoute,
+          parseFloat(offAmount),
+          (txt, opts) => this.formatResponse(txt, opts),
+          (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+        );
 
-Clique no botão abaixo para pagar:`,
-          buttons: [
-            { id: 'pay', text: '💳 Pagar agora', url: paymentData.init_point },
-            { id: 'checkpayment', text: '✅ Verificar Pagamento' },
-            { id: 'premium', text: '◀️ Voltar' }
-          ]
-        };
-      } else if (method === 'paypal') {
-        // Return PayPal payment link
-        return {
-          text: `💳 *Payment via PayPal*
+      case 'calc_details':
+        // Show calculation details
+        const [calcRoute, calcAmount] = actionParams;
+        return await this.handlers.comparison.handleCalcDetails(
+          userId,
+          lang,
+          calcRoute,
+          parseFloat(calcAmount),
+          (txt, opts) => this.formatResponse(txt, opts),
+          (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+        );
 
-📦 Plan: ${planInfo.name.en || planInfo.name.pt}
-💰 Price: $${planInfo.prices.USD}
+      case 'sources':
+        // Show sources information
+        return this.formatResponse(msg.SOURCES_TEXT || 'Sources des données de taux de change...', {
+          keyboard: this.buildKeyboard(msg, 'sources', session.lastRoute ? {
+            route: session.lastRoute,
+            amount: session.lastAmount || 1000
+          } : {})
+        });
 
-🔐 *Accepted:*
-✅ Credit cards
-✅ Debit cards
-✅ PayPal balance
+      case 'more_options':
+        // Show more options menu
+        const [moreRoute, moreAmount] = actionParams;
+        return this.formatResponse(msg.MORE_OPTIONS_TEXT || 'Plus d\'options:', {
+          keyboard: this.buildKeyboard(msg, 'more_options', {
+            route: moreRoute,
+            amount: parseFloat(moreAmount)
+          })
+        });
 
-Click below to pay:`,
-          buttons: [
-            { id: 'pay', text: '💳 Pay now', url: paymentData.approval_url },
-            { id: 'checkpayment', text: '✅ Check Payment' },
-            { id: 'premium', text: '◀️ Back' }
-          ]
-        };
-      }
+      case 'back_comparison':
+        // Go back to comparison
+        const [backRoute, backAmount] = actionParams;
+        return await this.handlers.comparison.showComparison(
+          userId,
+          lang,
+          backRoute,
+          parseFloat(backAmount),
+          session.lastIsTargetMode || false,
+          (txt, opts) => this.formatResponse(txt, opts),
+          (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+        );
 
-      return {
-        text: '❌ Método de pagamento não disponível.',
-        buttons: [{ id: 'premium', text: '◀️ Voltar' }]
-      };
+      case 'swap_mode':
+        // Swap between source and target mode
+        const [swapRoute, swapAmount] = actionParams;
+        const newIsTargetMode = !session.lastIsTargetMode;
+        this.updateSession(userId, platform, { lastIsTargetMode: newIsTargetMode });
+        return await this.handlers.comparison.showComparison(
+          userId,
+          lang,
+          swapRoute,
+          parseFloat(swapAmount),
+          newIsTargetMode,
+          (txt, opts) => this.formatResponse(txt, opts),
+          (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+        );
 
-    } catch (error) {
-      logger.error('[BOT-ENGINE] Error initiating payment:', {
-        error: error.message,
-        userId,
-        plan,
-        method
-      });
+      case 'change_amount':
+        // Prompt to change amount
+        const changeRoute = actionParams[0];
+        this.updateSession(userId, platform, {
+          awaitingAmount: changeRoute
+        });
+        return this.formatResponse(msg.ASK_AMOUNT || 'Quel montant?');
 
-      return {
-        text: '❌ Erro ao processar pagamento. Tente novamente mais tarde.',
-        error: true,
-        buttons: [{ id: 'premium', text: '◀️ Voltar' }]
-      };
+      case 'exchanges_eu':
+        // Show EU exchanges
+        return this.formatResponse(msg.EXCHANGES_EU_TEXT || 'Plateformes européennes recommandées:', {
+          keyboard: this.buildKeyboard(msg, 'exchanges_eu', {
+            route: session.lastRoute || 'eurbrl',
+            amount: session.lastAmount || 1000
+          })
+        });
+
+      case 'exchanges_br':
+        // Show BR exchanges
+        return this.formatResponse(msg.EXCHANGES_BR_TEXT || 'Plateformes brésiliennes recommandées:', {
+          keyboard: this.buildKeyboard(msg, 'exchanges_br', {
+            route: session.lastRoute || 'eurbrl',
+            amount: session.lastAmount || 1000
+          })
+        });
+
+      case 'what_usdc':
+      case 'what_exchange':
+      case 'faq_min_amount':
+      case 'about_referrals':
+      case 'faq_why_onchain':
+      case 'faq_send_question':
+        // FAQ actions - delegate to guide handler
+        return await this.handlers.guide.handleFaqAction(
+          userId,
+          lang,
+          actionType,
+          (txt, opts) => this.formatResponse(txt, opts),
+          (msg, type, opts) => this.buildKeyboard(msg, type, opts),
+          (updates) => this.updateSession(userId, platform, updates)
+        );
+
+      case 'market_vs_limit':
+      case 'why_not_exact':
+      case 'back_context':
+        // Contextual help actions
+        return await this.handlers.guide.handleContextualHelp(
+          userId,
+          lang,
+          actionType,
+          session,
+          (txt, opts) => this.formatResponse(txt, opts),
+          (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+        );
+
+      case 'feedback':
+        // Ask for feedback
+        this.updateSession(userId, platform, { awaitingFeedback: true });
+        return this.formatResponse(msg.ASK_FEEDBACK || 'Partagez votre feedback:');
+
+      default:
+        logger.warn('[BOT-ENGINE] Unknown action type:', { actionType, actionParams });
+        return this.formatResponse('❌ Action not implemented yet.');
     }
   }
 }

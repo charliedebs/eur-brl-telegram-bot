@@ -3,6 +3,7 @@
 
 import { Markup } from 'telegraf';
 import { logger } from '../../utils/logger.js';
+import { buildKeyboards } from './keyboards.js';
 
 export class TelegramAdapter {
   constructor(bot) {
@@ -20,8 +21,13 @@ export class TelegramAdapter {
         ...options.telegramOptions
       };
 
-      // Add keyboard if buttons provided
-      if (options.buttons && options.buttons.length > 0) {
+      // Add keyboard if buttons or keyboard provided
+      if (options.keyboard) {
+        const keyboard = this.convertKeyboard(options.keyboard);
+        if (keyboard) {
+          Object.assign(telegramOptions, keyboard);
+        }
+      } else if (options.buttons && options.buttons.length > 0) {
         telegramOptions.reply_markup = this.formatButtons(options.buttons);
       }
 
@@ -46,8 +52,13 @@ export class TelegramAdapter {
         ...options.telegramOptions
       };
 
-      // Add keyboard if buttons provided
-      if (options.buttons && options.buttons.length > 0) {
+      // Add keyboard if buttons or keyboard provided
+      if (options.keyboard) {
+        const keyboard = this.convertKeyboard(options.keyboard);
+        if (keyboard) {
+          Object.assign(telegramOptions, keyboard);
+        }
+      } else if (options.buttons && options.buttons.length > 0) {
         telegramOptions.reply_markup = this.formatButtons(options.buttons);
       }
 
@@ -73,8 +84,13 @@ export class TelegramAdapter {
         ...options.telegramOptions
       };
 
-      // Add keyboard if buttons provided
-      if (options.buttons && options.buttons.length > 0) {
+      // Add keyboard if buttons or keyboard provided
+      if (options.keyboard) {
+        const keyboard = this.convertKeyboard(options.keyboard);
+        if (keyboard) {
+          Object.assign(telegramOptions, keyboard);
+        }
+      } else if (options.buttons && options.buttons.length > 0) {
         telegramOptions.reply_markup = this.formatButtons(options.buttons);
       }
 
@@ -108,6 +124,111 @@ export class TelegramAdapter {
       });
       throw error;
     }
+  }
+
+  /**
+   * Process incoming text message
+   * Main entry point for text messages - harmonized with WhatsApp architecture
+   *
+   * @param {Object} ctx - Telegraf context
+   * @param {Object} engine - BotEngine instance
+   * @returns {Object} Response from BotEngine
+   */
+  async processIncomingMessage(ctx, engine) {
+    // Send typing indicator
+    await this.sendTyping(ctx.chat.id);
+
+    // Extract message info
+    const messageInfo = this.extractMessageInfo(ctx);
+
+    logger.info('[TELEGRAM] Processing message:', {
+      userId: messageInfo.userId,
+      text: messageInfo.text.substring(0, 50)
+    });
+
+    // Process message through BotEngine
+    const response = await engine.processMessage({
+      userId: messageInfo.userId,
+      text: messageInfo.text,
+      platform: 'telegram',
+      username: messageInfo.username,
+      messageId: messageInfo.messageId
+    });
+
+    return response;
+  }
+
+  /**
+   * Process button click (callback query)
+   * Main entry point for button clicks - Telegram-specific with message editing
+   *
+   * @param {Object} ctx - Telegraf context (callback_query)
+   * @param {Object} engine - BotEngine instance
+   * @returns {Object} { response, editInfo } - Response + info for message editing
+   */
+  async processButtonClick(ctx, engine) {
+    // Answer callback query first (removes loading state on button)
+    await ctx.answerCbQuery();
+
+    // Extract user info and button ID
+    const userInfo = this.extractUserInfo(ctx);
+    const buttonId = ctx.callbackQuery.data;
+
+    logger.info('[TELEGRAM] Processing button click:', {
+      userId: userInfo.userId,
+      buttonId
+    });
+
+    // Process button click through BotEngine
+    const response = await engine.handleButtonClick({
+      userId: userInfo.userId,
+      buttonId,
+      platform: 'telegram'
+    });
+
+    // Return response with edit info for Telegram-specific message editing
+    return {
+      response,
+      editInfo: {
+        shouldEdit: !!ctx.callbackQuery.message, // Only edit if message exists
+        chatId: ctx.callbackQuery.message?.chat.id || ctx.chat?.id,
+        messageId: ctx.callbackQuery.message?.message_id
+      }
+    };
+  }
+
+  /**
+   * Convert bot-engine keyboard structure to Telegram inline keyboard
+   *
+   * Input from bot-engine: { type: 'main', options: {...}, msg: {...} }
+   * Output: Telegraf keyboard object
+   */
+  convertKeyboard(keyboardData) {
+    if (!keyboardData) {
+      return undefined;
+    }
+
+    // If already a Telegraf keyboard object, return as is
+    if (keyboardData.reply_markup || keyboardData.inline_keyboard) {
+      return keyboardData;
+    }
+
+    // If it's a bot-engine keyboard structure with type/options/msg
+    if (keyboardData.type && keyboardData.msg) {
+      const keyboard = buildKeyboards(
+        keyboardData.msg,
+        keyboardData.type,
+        keyboardData.options || {}
+      );
+      return keyboard;
+    }
+
+    // If it's already an array of buttons, format them
+    if (Array.isArray(keyboardData)) {
+      return this.formatButtons(keyboardData);
+    }
+
+    return undefined;
   }
 
   /**
@@ -185,12 +306,14 @@ export class TelegramAdapter {
         // Send photo with caption
         return await this.sendPhoto(chatId, response.image, {
           caption: this.formatText(response.text),
+          keyboard: response.keyboard,
           buttons: response.buttons,
           ...options
         });
       } else {
         // Send text message
         return await this.sendMessage(chatId, this.formatText(response.text), {
+          keyboard: response.keyboard,
           buttons: response.buttons,
           ...options
         });

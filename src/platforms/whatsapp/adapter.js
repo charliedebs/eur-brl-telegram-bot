@@ -2,11 +2,75 @@
 // WhatsApp-specific adapter for BotEngine
 
 import { logger } from '../../utils/logger.js';
+import { buildWhatsAppKeyboard } from './keyboards.js';
 
 export class WhatsAppAdapter {
   constructor(client) {
     this.client = client;
     this.platform = 'whatsapp';
+    // Cache last buttons sent to each user for number-based selection
+    this.userButtonCache = new Map();
+  }
+
+  /**
+   * Process incoming message and route to BotEngine
+   * This is the main entry point for all WhatsApp messages
+   * Handles both regular text and number-based button selections
+   *
+   * @param {Object} msg - WhatsApp message object
+   * @param {Object} engine - BotEngine instance
+   * @returns {Object} Response from BotEngine
+   */
+  async processIncomingMessage(msg, engine) {
+    const messageInfo = this.extractMessageInfo(msg);
+
+    // Show typing indicator
+    await this.sendTyping(msg.from);
+
+    logger.info('[WHATSAPP] Processing message:', {
+      userId: messageInfo.userId,
+      text: messageInfo.text.substring(0, 50)
+    });
+
+    // Check if user's message is a button selection (number)
+    const lastButtons = this.userButtonCache.get(messageInfo.userId);
+    const buttonId = this.parseButtonSelection(messageInfo.text, lastButtons);
+
+    let response;
+
+    if (buttonId) {
+      // User selected a button by number
+      logger.info('[WHATSAPP] Button selected:', {
+        userId: messageInfo.userId,
+        buttonId
+      });
+
+      response = await engine.handleButtonClick({
+        userId: messageInfo.userId,
+        buttonId,
+        platform: 'whatsapp'
+      });
+    } else {
+      // Regular message processing
+      response = await engine.processMessage({
+        userId: messageInfo.userId,
+        text: messageInfo.text,
+        platform: 'whatsapp',
+        username: messageInfo.username,
+        messageId: messageInfo.messageId
+      });
+    }
+
+    // Cache buttons from response for next interaction
+    const keyboardData = response.buttons || response.keyboard;
+    if (keyboardData) {
+      const buttons = this.convertKeyboard(keyboardData);
+      if (buttons && Array.isArray(buttons) && buttons.length > 0) {
+        this.userButtonCache.set(messageInfo.userId, buttons);
+      }
+    }
+
+    return response;
   }
 
   /**
@@ -17,11 +81,14 @@ export class WhatsAppAdapter {
       // Format text for WhatsApp (markdown)
       const formattedText = this.formatText(text);
 
+      // Convert keyboard if needed
+      let buttons = this.convertKeyboard(options.keyboard || options.buttons);
+
       // WhatsApp doesn't support inline buttons like Telegram
       // Add buttons as text menu if provided
       let finalText = formattedText;
-      if (options.buttons && options.buttons.length > 0) {
-        finalText += '\n\n' + this.formatButtonsAsText(options.buttons);
+      if (buttons && buttons.length > 0) {
+        finalText += '\n\n' + this.formatButtonsAsText(buttons);
       }
 
       return await this.client.sendMessage(chatId, finalText);
@@ -56,10 +123,13 @@ export class WhatsAppAdapter {
         media = await MessageMedia.fromUrl(photo);
       }
 
+      // Convert keyboard if needed
+      let buttons = this.convertKeyboard(options.keyboard || options.buttons);
+
       // Format caption with buttons as text
       let caption = options.caption ? this.formatText(options.caption) : '';
-      if (options.buttons && options.buttons.length > 0) {
-        caption += '\n\n' + this.formatButtonsAsText(options.buttons);
+      if (buttons && buttons.length > 0) {
+        caption += '\n\n' + this.formatButtonsAsText(buttons);
       }
 
       return await this.client.sendMessage(chatId, media, { caption });
@@ -98,6 +168,41 @@ export class WhatsAppAdapter {
   }
 
   /**
+   * Convert bot-engine keyboard structure to WhatsApp button array
+   * Same as Telegram adapter but returns simple button array
+   */
+  convertKeyboard(keyboardData) {
+    if (!keyboardData) {
+      return null;
+    }
+
+    // If already an array of buttons, return as is
+    if (Array.isArray(keyboardData)) {
+      return keyboardData;
+    }
+
+    // If it's a bot-engine keyboard structure with type/options/msg
+    if (keyboardData.type && keyboardData.msg) {
+      try {
+        const buttons = buildWhatsAppKeyboard(
+          keyboardData.msg,
+          keyboardData.type,
+          keyboardData.options || {}
+        );
+        return buttons;
+      } catch (error) {
+        logger.error('[WHATSAPP-ADAPTER] Failed to convert keyboard:', {
+          error: error.message,
+          type: keyboardData.type
+        });
+        return null;
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * Format buttons as numbered text menu
    */
   formatButtonsAsText(buttons) {
@@ -126,8 +231,16 @@ export class WhatsAppAdapter {
    * Format text for WhatsApp (markdown)
    */
   formatText(text) {
+    // Handle undefined/null text
+    if (!text) {
+      return '';
+    }
+
+    // Ensure text is a string
+    const textStr = String(text);
+
     // Convert HTML/Markdown to WhatsApp format
-    return text
+    return textStr
       .replace(/<b>(.*?)<\/b>/g, '*$1*')         // <b> → *bold*
       .replace(/<i>(.*?)<\/i>/g, '_$1_')         // <i> → _italic_
       .replace(/<code>(.*?)<\/code>/g, '```$1```') // <code> → ```code```
@@ -174,12 +287,14 @@ export class WhatsAppAdapter {
         // Send photo with caption
         return await this.sendPhoto(chatId, response.image, {
           caption: response.text,
+          keyboard: response.keyboard,
           buttons: response.buttons,
           ...options
         });
       } else {
         // Send text message with buttons
         return await this.sendMessage(chatId, response.text, {
+          keyboard: response.keyboard,
           buttons: response.buttons,
           ...options
         });

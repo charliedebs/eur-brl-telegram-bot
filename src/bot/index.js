@@ -1,6 +1,6 @@
 import { Telegraf, Markup, session } from 'telegraf';
 import rateLimit from 'telegraf-ratelimit';
-import { buildKeyboards } from './keyboards.js';
+import { buildKeyboards } from '../platforms/telegram/keyboards.js';
 import { updateNLUFeedback } from '../services/nlu-logger.js';
 import { getRates, calculateOnChain, getLocale, formatAmount, formatRate, calculateOnChainReverse } from '../services/rates.js';
 import { getWiseComparison, getWiseComparisonReverse } from '../services/wise.js';

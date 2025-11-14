@@ -100,11 +100,13 @@ app.get('/health', async (req, res) => {
     checks.status = 'degraded';
   }
 
-  // Check WhatsApp if enabled
+  // Check WhatsApp Cloud API if enabled
   if (whatsappClient) {
     try {
-      const state = await whatsappClient.getState();
-      checks.services.whatsapp = state === 'CONNECTED' ? 'ok' : state;
+      // For Cloud API, check if adapter is initialized
+      const { getWhatsAppStatus } = await import('./platforms/whatsapp/index.js');
+      const status = getWhatsAppStatus();
+      checks.services.whatsapp = status.isReady ? 'ok' : status.status;
     } catch (error) {
       logger.error('[HEALTH] WhatsApp check failed:', { error: error.message });
       checks.services.whatsapp = 'error';
@@ -127,6 +129,76 @@ app.get('/health', async (req, res) => {
 app.post('/webhook/telegram', (req, res) => {
   bot.handleUpdate(req.body);
   res.sendStatus(200);
+});
+
+// WhatsApp Cloud API webhook verification (GET)
+app.get('/webhook/whatsapp', (req, res) => {
+  // Meta sends verification request on webhook setup
+  const mode = req.query['hub.mode'];
+  const token = req.query['hub.verify_token'];
+  const challenge = req.query['hub.challenge'];
+
+  logger.info('[WEBHOOK] WhatsApp verification request:', { mode, token: token ? '***' : 'none' });
+
+  // Import WhatsAppCloudAdapter for verification
+  import('./platforms/whatsapp/cloud-adapter.js').then(({ WhatsAppCloudAdapter }) => {
+    const result = WhatsAppCloudAdapter.verifyWebhook(mode, token, challenge);
+
+    if (result) {
+      res.status(200).send(result);
+    } else {
+      res.sendStatus(403);
+    }
+  }).catch(error => {
+    logger.error('[WEBHOOK] WhatsApp verification error:', { error: error.message });
+    res.sendStatus(500);
+  });
+});
+
+// WhatsApp Cloud API webhook for incoming messages (POST)
+app.post('/webhook/whatsapp', async (req, res) => {
+  try {
+    logger.info('[WEBHOOK] WhatsApp message received');
+
+    // Acknowledge receipt immediately
+    res.sendStatus(200);
+
+    // Import and process message
+    const { WhatsAppCloudAdapter } = await import('./platforms/whatsapp/cloud-adapter.js');
+    const { BotEngine } = await import('./core/bot-engine.js');
+
+    // Parse webhook data
+    const messageData = WhatsAppCloudAdapter.parseWebhook(req.body);
+
+    if (!messageData) {
+      logger.debug('[WEBHOOK] WhatsApp webhook event skipped (not a message)');
+      return;
+    }
+
+    // Check if WhatsApp adapter exists, otherwise create it
+    if (!whatsappBot) {
+      const adapter = new WhatsAppCloudAdapter();
+      whatsappBot = new BotEngine(adapter);
+      logger.info('[WEBHOOK] WhatsApp adapter initialized for incoming message');
+    }
+
+    // Get adapter from bot engine
+    const adapter = whatsappBot.adapter;
+
+    // Process message through adapter
+    const response = await adapter.processIncomingMessage(messageData, whatsappBot);
+
+    // Send response
+    await adapter.sendResponse(messageData.from, response);
+
+    logger.info('[WEBHOOK] WhatsApp message processed successfully');
+
+  } catch (error) {
+    logger.error('[WEBHOOK] WhatsApp message processing error:', {
+      error: error.message,
+      stack: error.stack
+    });
+  }
 });
 
 // ==========================================
@@ -188,6 +260,262 @@ app.get('/admin/debug', async (req, res) => {
     }
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// WhatsApp Cloud API Status endpoint (replaces QR code - no longer needed)
+app.get('/admin/whatsapp-qr', async (req, res) => {
+  try {
+    // Simple password check via query param or header
+    const password = req.query.password || req.headers['x-admin-password'];
+
+    if (password !== ADMIN_PASSWORD) {
+      return res.status(401).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Admin Login</title>
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+              min-height: 100vh;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              margin: 0;
+            }
+            .login-box {
+              background: white;
+              padding: 40px;
+              border-radius: 20px;
+              box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+              text-align: center;
+              max-width: 400px;
+            }
+            h1 { color: #333; margin-bottom: 10px; }
+            input {
+              width: 100%;
+              padding: 15px;
+              margin: 20px 0;
+              border: 2px solid #e0e0e0;
+              border-radius: 10px;
+              font-size: 16px;
+            }
+            button {
+              width: 100%;
+              padding: 15px;
+              background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+              color: white;
+              border: none;
+              border-radius: 10px;
+              font-size: 16px;
+              font-weight: 600;
+              cursor: pointer;
+            }
+            button:hover { opacity: 0.9; }
+          </style>
+        </head>
+        <body>
+          <div class="login-box">
+            <h1>🔐 WhatsApp Status</h1>
+            <p style="color: #666; margin-bottom: 20px;">Enter admin password</p>
+            <form method="GET">
+              <input type="password" name="password" placeholder="Password" required autofocus>
+              <button type="submit">🔓 View Status</button>
+            </form>
+          </div>
+        </body>
+        </html>
+      `);
+    }
+
+    // Check if WhatsApp is enabled
+    if (!whatsappClient) {
+      return res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>WhatsApp Not Enabled</title>
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+              min-height: 100vh;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              margin: 0;
+              padding: 20px;
+            }
+            .info-box {
+              background: white;
+              padding: 40px;
+              border-radius: 20px;
+              box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+              max-width: 600px;
+            }
+            h1 { color: #333; margin-bottom: 20px; }
+            code {
+              background: #f5f5f5;
+              padding: 2px 6px;
+              border-radius: 4px;
+              font-family: monospace;
+            }
+            a {
+              color: #128C7E;
+              text-decoration: none;
+              font-weight: 600;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="info-box">
+            <h1>⚠️ WhatsApp Not Enabled</h1>
+            <p>WhatsApp Cloud API is not enabled. To enable it:</p>
+            <ol>
+              <li>Add WhatsApp Cloud API credentials to environment variables</li>
+              <li>Set <code>WHATSAPP_ENABLED=true</code></li>
+              <li>Restart the server</li>
+            </ol>
+            <p style="margin-top: 30px; color: #666; font-size: 14px;">
+              <a href="/admin">← Back to Admin Dashboard</a>
+            </p>
+          </div>
+        </body>
+        </html>
+      `);
+    }
+
+    // Import WhatsApp state
+    const { getWhatsAppStatus } = await import('./platforms/whatsapp/index.js');
+    const status = getWhatsAppStatus();
+
+    // Display Cloud API status (no QR code needed!)
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>WhatsApp Cloud API Status</title>
+        <style>
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 20px;
+          }
+          .status-box {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 600px;
+          }
+          .checkmark {
+            font-size: 80px;
+            color: #25D366;
+            margin-bottom: 20px;
+          }
+          h1 { color: #333; margin-bottom: 10px; }
+          p { color: #666; margin: 10px 0; }
+          .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 10px;
+            margin: 30px 0;
+            text-align: left;
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 10px;
+          }
+          .info-label {
+            font-weight: 600;
+            color: #128C7E;
+          }
+          .info-value {
+            color: #666;
+            font-family: monospace;
+            font-size: 14px;
+          }
+          .note {
+            background: #E8F5E9;
+            border-left: 4px solid #25D366;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #666;
+            text-align: left;
+          }
+          a {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 15px 30px;
+            background: #128C7E;
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 600;
+          }
+          a:hover { opacity: 0.9; }
+        </style>
+      </head>
+      <body>
+        <div class="status-box">
+          <div class="checkmark">✅</div>
+          <h1>WhatsApp Cloud API</h1>
+          <p>Official Meta Cloud API - No QR Code Needed!</p>
+
+          <div class="info-grid">
+            <div class="info-label">Status:</div>
+            <div class="info-value">${status.status}</div>
+
+            <div class="info-label">Phone ID:</div>
+            <div class="info-value">${status.phoneNumberId || 'Not configured'}</div>
+
+            <div class="info-label">Webhook:</div>
+            <div class="info-value">${(process.env.TELEGRAM_WEBHOOK_DOMAIN || 'http://localhost:' + PORT) + '/webhook/whatsapp'}</div>
+          </div>
+
+          <div class="note">
+            <strong>✨ Cloud API Benefits:</strong><br>
+            • No QR code scanning required<br>
+            • Real interactive buttons (up to 3 reply buttons)<br>
+            • List messages (up to 10 options)<br>
+            • Professional, reliable, hosted by Meta<br>
+            • Free for conversations within 24h window
+          </div>
+
+          <a href="/admin">← Back to Admin Dashboard</a>
+        </div>
+      </body>
+      </html>
+    `);
+
+  } catch (error) {
+    logger.error('[ADMIN] WhatsApp status error:', { error: error.message });
+    res.status(500).send(`
+      <!DOCTYPE html>
+      <html>
+      <head><title>Error</title></head>
+      <body>
+        <h1>Error Loading WhatsApp Status</h1>
+        <p>Error: ${error.message}</p>
+        <p><a href="/admin">← Back to Admin</a></p>
+      </body>
+      </html>
+    `);
   }
 });
 
@@ -781,17 +1109,18 @@ const server = app.listen(PORT, async () => {
     bot.launch();
   }
 
-  // Start WhatsApp bot if enabled
+  // Start WhatsApp Cloud API bot if enabled
   if (process.env.WHATSAPP_ENABLED === 'true') {
     try {
-      logger.info('[WHATSAPP] Starting WhatsApp bot...');
+      logger.info('[WHATSAPP-CLOUD] Starting WhatsApp Cloud API bot...');
       const { createWhatsAppBot } = await import('./platforms/whatsapp/index.js');
       const whatsapp = await createWhatsAppBot();
-      whatsappClient = whatsapp.client;
+      whatsappClient = whatsapp.adapter; // Cloud API uses adapter instead of client
       whatsappBot = whatsapp.engine;
-      logger.info('✅ WhatsApp bot initialized');
+      logger.info('✅ WhatsApp Cloud API bot initialized');
+      logger.info('📱 Webhook URL: ' + (WEBHOOK_DOMAIN || 'http://localhost:' + PORT) + '/webhook/whatsapp');
     } catch (error) {
-      logger.error('[WHATSAPP] Failed to start WhatsApp bot:', {
+      logger.error('[WHATSAPP-CLOUD] Failed to start WhatsApp bot:', {
         error: error.message,
         stack: error.stack
       });
@@ -831,11 +1160,11 @@ async function gracefulShutdown(signal) {
     logger.error('❌ Error stopping Telegram bot:', { error: error.message });
   }
 
-  // Stop WhatsApp bot if running
+  // Stop WhatsApp Cloud API bot if running
   if (whatsappClient) {
     try {
-      await whatsappClient.destroy();
-      logger.info('✅ WhatsApp bot stopped');
+      // Cloud API doesn't need explicit shutdown (no persistent connection)
+      logger.info('✅ WhatsApp Cloud API bot stopped');
     } catch (error) {
       logger.error('❌ Error stopping WhatsApp bot:', { error: error.message });
     }
