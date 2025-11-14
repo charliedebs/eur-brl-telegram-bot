@@ -101,7 +101,12 @@ export class WhatsAppCloudAdapter {
    */
   async sendMessage(chatId, text, options = {}) {
     try {
-      const formattedText = this.formatText(text);
+      // Format text and ensure it's not empty (WhatsApp API requirement)
+      let formattedText = this.formatText(text);
+      if (!formattedText || formattedText.trim().length === 0) {
+        formattedText = '📱 Menu'; // Fallback text if empty
+      }
+
       const recipient = parseInt(chatId.replace(/\D/g, '')); // Extract numbers only
 
       // Convert keyboard to buttons if provided

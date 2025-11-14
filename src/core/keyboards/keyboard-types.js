@@ -288,6 +288,7 @@ export function getKeyboardDefinition(msg, type, options = {}) {
         { text: beginnerLabel, id: 'action:beginner_guide', row: 0 },
         { text: msg.btn.askQuestion, id: 'action:faq_send_question', row: 1 },
         { text: moreFaqLabel, id: `action:faq_more:${route}:${amount}`, row: 2 },
+        { text: '🔙 ' + msg.btn.back, id: `action:onchain_intro:${route}:${amount}`, row: 3 },
       ];
     }
 

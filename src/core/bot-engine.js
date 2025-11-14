@@ -165,7 +165,7 @@ export class BotEngine {
         route,
         (txt, opts) => this.formatResponse(txt, opts),
         (updates) => this.updateSession(context.userId, context.platform, updates),
-        (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+        (msg, type, opts) => this.buildKeyboard(msg, type, { ...opts, platform })
       );
     }
 
@@ -191,9 +191,19 @@ export class BotEngine {
           callbackData: faqActions[choice - 1],
           platform: context.platform
         });
+      } else if (!isNaN(choice)) {
+        // Invalid number (e.g., 0, 6, 99) - provide helpful feedback
+        const errorMsg = lang === 'fr'
+          ? '❌ Choisissez un numéro entre 1 et 5, ou posez votre question directement.'
+          : lang === 'pt'
+          ? '❌ Escolha um número entre 1 e 5, ou faça sua pergunta diretamente.'
+          : '❌ Choose a number between 1 and 5, or ask your question directly.';
+
+        return this.formatResponse(errorMsg);
+        // Keep awaitingFaqChoice true so user can try again
       }
 
-      // Not a valid number, treat as custom FAQ question
+      // Not a number - treat as custom FAQ question
       this.updateSession(context.userId, context.platform, { awaitingFaqChoice: false });
       return await this.handlers.guide.processFaqQuestionText(
         context.userId,
@@ -318,7 +328,7 @@ export class BotEngine {
         lang,
         args,
         (txt, opts) => this.formatResponse(txt, opts),
-        (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+        (msg, type, opts) => this.buildKeyboard(msg, type, { ...opts, platform })
       );
     }
 
@@ -330,7 +340,7 @@ export class BotEngine {
         lang,
         args,
         (txt, opts) => this.formatResponse(txt, opts),
-        (msg, type, opts) => this.buildKeyboard(msg, type, opts),
+        (msg, type, opts) => this.buildKeyboard(msg, type, { ...opts, platform }),
         (updates) => this.updateSession(context.userId, context.platform, updates)
       );
     }
@@ -344,7 +354,7 @@ export class BotEngine {
         args,
         chatType,
         (txt, opts) => this.formatResponse(txt, opts),
-        (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+        (msg, type, opts) => this.buildKeyboard(msg, type, { ...opts, platform })
       );
     }
 
@@ -356,7 +366,7 @@ export class BotEngine {
         (txt, opts) => this.formatResponse(txt, opts),
         () => {}, // answerFn (not needed for messages)
         (txt, opts) => this.formatResponse(txt, opts),
-        (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+        (msg, type, opts) => this.buildKeyboard(msg, type, { ...opts, platform })
       );
     }
 
@@ -366,7 +376,7 @@ export class BotEngine {
         context.userId,
         lang,
         (txt, opts) => this.formatResponse(txt, opts),
-        (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+        (msg, type, opts) => this.buildKeyboard(msg, type, { ...opts, platform })
       );
     }
 
@@ -400,7 +410,7 @@ export class BotEngine {
           amount,
           false,
           (txt, opts) => this.formatResponse(txt, opts),
-          (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+          (msg, type, opts) => this.buildKeyboard(msg, type, { ...opts, platform })
         );
       }
 
@@ -409,7 +419,7 @@ export class BotEngine {
           context.userId,
           lang,
           (txt, opts) => this.formatResponse(txt, opts),
-          (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+          (msg, type, opts) => this.buildKeyboard(msg, type, { ...opts, platform })
         );
       }
     } catch (error) {
@@ -419,7 +429,7 @@ export class BotEngine {
     // Default response
     const msg = messages[lang];
     return this.formatResponse(msg.UNKNOWN_COMMAND || 'Comando não reconhecido. Use /help para ver os comandos disponíveis.', {
-      keyboard: this.buildKeyboard(msg, 'main')
+      keyboard: this.buildKeyboard(msg, 'main', { platform })
     });
   }
 
@@ -427,11 +437,11 @@ export class BotEngine {
    * Handle /start command
    */
   handleStart(context) {
-    const { lang } = context;
+    const { lang, platform } = context;
     const msg = messages[lang];
 
     return this.formatResponse(msg.INTRO_TEXT || msg.WELCOME, {
-      keyboard: this.buildKeyboard(msg, 'lang_select')
+      keyboard: this.buildKeyboard(msg, 'lang_select', { platform })
     });
   }
 
@@ -439,11 +449,11 @@ export class BotEngine {
    * Handle /help command
    */
   handleHelp(context) {
-    const { lang } = context;
+    const { lang, platform } = context;
     const msg = messages[lang];
 
     return this.formatResponse(msg.ABOUT_TEXT || msg.HELP, {
-      keyboard: this.buildKeyboard(msg, 'main')
+      keyboard: this.buildKeyboard(msg, 'main', { platform })
     });
   }
 
@@ -459,7 +469,7 @@ export class BotEngine {
 
     const msg = messages.en; // Use English as neutral
     return this.formatResponse(text[context.lang] || text.en, {
-      keyboard: this.buildKeyboard(msg, 'lang_select')
+      keyboard: this.buildKeyboard(msg, 'lang_select', { platform: context.platform })
     });
   }
 
@@ -503,12 +513,31 @@ export class BotEngine {
   /**
    * Build keyboard (platform-agnostic)
    * The adapter will convert this to platform-specific format
+   *
+   * Auto-detects WhatsApp-optimized keyboard variants when platform is 'whatsapp'
    */
   buildKeyboard(msg, type, options = {}) {
+    // Auto-detect WhatsApp optimized keyboard variant
+    // These keyboards have WhatsApp-specific button layouts (max 3 buttons)
+    const whatsappKeyboards = [
+      'main', 'comparison', 'onchain_intro', 'faq_menu',
+      'premium_pricing', 'exchanges_eu', 'exchanges_br'
+    ];
+
+    let finalType = type;
+
+    // If platform is WhatsApp and a WhatsApp variant exists, use it
+    if (options.platform === 'whatsapp' && whatsappKeyboards.includes(type)) {
+      const whatsappVariant = type + '_whatsapp';
+      // Check if WhatsApp variant exists by trying to get its definition
+      // The keyboard-types.js file will handle the actual keyboard existence
+      finalType = whatsappVariant;
+    }
+
     // This should return a generic keyboard structure
     // The platform adapter will convert it to Telegram inline keyboard or WhatsApp menu
     return {
-      type,
+      type: finalType,
       options,
       msg
     };
@@ -537,6 +566,16 @@ export class BotEngine {
       const lang = user.language || 'pt';
       const msg = messages[lang];
 
+      // Clear all session awaiting flags when user clicks any button
+      // This prevents state confusion when user navigates away during input flows
+      this.updateSession(userId, platform, {
+        awaitingFaqChoice: false,
+        awaitingFaqQuestion: false,
+        awaitingPaymentHelp: false,
+        awaitingAmount: null,
+        awaitingConvertAmount: false
+      });
+
       // Parse callback data
       const [action, ...params] = callbackData.split(':');
 
@@ -556,12 +595,12 @@ export class BotEngine {
               session.lastAmount,
               session.lastIsTargetMode || false,
               (txt, opts) => this.formatResponse(txt, opts),
-              (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+              (msg, type, opts) => this.buildKeyboard(msg, type, { ...opts, platform })
             );
           } else {
             const newMsg = messages[newLang];
             return this.formatResponse(newMsg.promptAmt, {
-              keyboard: this.buildKeyboard(newMsg, 'main')
+              keyboard: this.buildKeyboard(newMsg, 'main', { platform })
             });
           }
 
@@ -575,7 +614,7 @@ export class BotEngine {
             parseFloat(amount),
             (txt, opts) => this.formatResponse(txt, opts),
             (updates) => this.updateSession(userId, platform, updates),
-            (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+            (msg, type, opts) => this.buildKeyboard(msg, type, { ...opts, platform })
           );
 
         // === Guide ===
@@ -589,7 +628,7 @@ export class BotEngine {
               guideRoute,
               parseFloat(guideAmount),
               (txt, opts) => this.formatResponse(txt, opts),
-              (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+              (msg, type, opts) => this.buildKeyboard(msg, type, { ...opts, platform })
             );
           }
           break;
@@ -606,7 +645,7 @@ export class BotEngine {
               quickRoute,
               (txt, opts) => this.formatResponse(txt, opts),
               () => {}, // answerFn
-              (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+              (msg, type, opts) => this.buildKeyboard(msg, type, { ...opts, platform })
             );
           }
           // Other alert actions handled elsewhere
@@ -620,7 +659,16 @@ export class BotEngine {
               lang,
               (txt, opts) => this.formatResponse(txt, opts),
               () => {}, // answerFn
-              (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+              (msg, type, opts) => this.buildKeyboard(msg, type, { ...opts, platform })
+            );
+          }
+          if (params[0] === 'details') {
+            return await this.handlers.premium.handlePremiumDetails(
+              userId,
+              lang,
+              (txt, opts) => this.formatResponse(txt, opts),
+              () => {}, // answerFn
+              (msg, type, opts) => this.buildKeyboard(msg, type, { ...opts, platform })
             );
           }
           break;
@@ -667,7 +715,7 @@ export class BotEngine {
     switch (actionType) {
       case 'back_main':
         return this.formatResponse(msg.promptAmt, {
-          keyboard: this.buildKeyboard(msg, 'main')
+          keyboard: this.buildKeyboard(msg, 'main', { platform })
         });
 
       case 'start_guide':
@@ -678,7 +726,7 @@ export class BotEngine {
           route,
           parseFloat(amount),
           (txt, opts) => this.formatResponse(txt, opts),
-          (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+          (msg, type, opts) => this.buildKeyboard(msg, type, { ...opts, platform })
         );
 
       case 'guide_navigation':
@@ -689,7 +737,7 @@ export class BotEngine {
           navRoute,
           parseFloat(navAmount),
           (txt, opts) => this.formatResponse(txt, opts),
-          (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+          (msg, type, opts) => this.buildKeyboard(msg, type, { ...opts, platform })
         );
 
       case 'faq_menu':
@@ -712,7 +760,7 @@ export class BotEngine {
 
           return this.formatResponse(faqMenuText, {
             parse_mode: 'HTML',
-            keyboard: this.buildKeyboard(msg, 'faq_menu_whatsapp', { route: faqRoute, amount: faqAmount })
+            keyboard: this.buildKeyboard(msg, 'faq_menu_whatsapp', { route: faqRoute, amount: faqAmount, platform })
           });
         }
 
@@ -723,7 +771,7 @@ export class BotEngine {
           faqRoute,
           faqAmount,
           (txt, opts) => this.formatResponse(txt, opts),
-          (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+          (msg, type, opts) => this.buildKeyboard(msg, type, { ...opts, platform })
         );
 
       case 'more_menu':
@@ -759,7 +807,7 @@ export class BotEngine {
           continueRoute,
           parseFloat(continueAmount),
           (txt, opts) => this.formatResponse(txt, opts),
-          (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+          (msg, type, opts) => this.buildKeyboard(msg, type, { ...opts, platform })
         );
 
       case 'convert_choice':
@@ -773,7 +821,7 @@ export class BotEngine {
           : `📊 ${convRouteDisplay} ${parseFloat(convAmount).toLocaleString('en-US')}\n\n💱 Choose your conversion method:`;
 
         return this.formatResponse(convMsg, {
-          keyboard: this.buildKeyboard(msg, 'convert_choice', {
+          keyboard: this.buildKeyboard(msg, 'convert_choice', { platform, 
             route: convRoute,
             amount: parseFloat(convAmount)
           })
@@ -790,7 +838,7 @@ export class BotEngine {
           : `📊 ${routeDisplay} ${parseFloat(compAmount).toLocaleString('en-US')}\n\n⚙️ Options & Details:`;
 
         return this.formatResponse(contextMsg, {
-          keyboard: this.buildKeyboard(msg, 'comparison_more', {
+          keyboard: this.buildKeyboard(msg, 'comparison_more', { platform, 
             route: compRoute,
             amount: parseFloat(compAmount)
           })
@@ -805,7 +853,7 @@ export class BotEngine {
           onchainRoute,
           parseFloat(onchainAmount),
           (txt, opts) => this.formatResponse(txt, opts),
-          (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+          (msg, type, opts) => this.buildKeyboard(msg, type, { ...opts, platform })
         );
 
       case 'onchain_exchanges':
@@ -818,7 +866,7 @@ export class BotEngine {
           : '🏦 Choose your exchange platform:\n\nSelect an exchange to get started.';
 
         return this.formatResponse(exchMsg, {
-          keyboard: this.buildKeyboard(msg, 'onchain_exchanges', {
+          keyboard: this.buildKeyboard(msg, 'onchain_exchanges', { platform, 
             route: exchRoute,
             amount: parseFloat(exchAmount)
           })
@@ -828,7 +876,7 @@ export class BotEngine {
         // WhatsApp: Show guide steps menu
         const [stepsRoute, stepsAmount] = actionParams;
         return this.formatResponse('📍 Choisissez une étape:', {
-          keyboard: this.buildKeyboard(msg, 'guide_steps', {
+          keyboard: this.buildKeyboard(msg, 'guide_steps', { platform, 
             route: stepsRoute,
             amount: parseFloat(stepsAmount)
           })
@@ -844,7 +892,7 @@ export class BotEngine {
           : '❓ More frequently asked questions:\n\nChoose a question or ask your own.';
 
         return this.formatResponse(faqMsg, {
-          keyboard: this.buildKeyboard(msg, 'faq_more', {
+          keyboard: this.buildKeyboard(msg, 'faq_more', { platform, 
             route: faqMoreRoute,
             amount: parseFloat(faqMoreAmount)
           })
@@ -861,7 +909,7 @@ export class BotEngine {
           : `📍 Navigation - Step ${stepDisplay}\n\n⚙️ Options:`;
 
         return this.formatResponse(navMsg, {
-          keyboard: this.buildKeyboard(msg, 'step_more', {
+          keyboard: this.buildKeyboard(msg, 'step_more', { platform, 
             stepId: stepId,
             route: stepRoute,
             amount: parseFloat(stepAmount)
@@ -877,7 +925,7 @@ export class BotEngine {
           : '💳 More Premium options:\n\nDiscover all our plans and payment options.';
 
         return this.formatResponse(premiumMsg, {
-          keyboard: this.buildKeyboard(msg, 'premium_more', {})
+          keyboard: this.buildKeyboard(msg, 'premium_more', { platform, })
         });
 
       case 'stay_offchain':
@@ -889,7 +937,7 @@ export class BotEngine {
           offRoute,
           parseFloat(offAmount),
           (txt, opts) => this.formatResponse(txt, opts),
-          (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+          (msg, type, opts) => this.buildKeyboard(msg, type, { ...opts, platform })
         );
 
       case 'calc_details':
@@ -901,7 +949,7 @@ export class BotEngine {
           calcRoute,
           parseFloat(calcAmount),
           (txt, opts) => this.formatResponse(txt, opts),
-          (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+          (msg, type, opts) => this.buildKeyboard(msg, type, { ...opts, platform })
         );
 
       case 'sources':
@@ -917,7 +965,7 @@ export class BotEngine {
         // Show more options menu
         const [moreRoute, moreAmount] = actionParams;
         return this.formatResponse(msg.MORE_OPTIONS_TEXT || 'Plus d\'options:', {
-          keyboard: this.buildKeyboard(msg, 'more_options', {
+          keyboard: this.buildKeyboard(msg, 'more_options', { platform, 
             route: moreRoute,
             amount: parseFloat(moreAmount)
           })
@@ -933,7 +981,7 @@ export class BotEngine {
           parseFloat(backAmount),
           session.lastIsTargetMode || false,
           (txt, opts) => this.formatResponse(txt, opts),
-          (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+          (msg, type, opts) => this.buildKeyboard(msg, type, { ...opts, platform })
         );
 
       case 'swap_mode':
@@ -948,7 +996,7 @@ export class BotEngine {
           parseFloat(swapAmount),
           newIsTargetMode,
           (txt, opts) => this.formatResponse(txt, opts),
-          (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+          (msg, type, opts) => this.buildKeyboard(msg, type, { ...opts, platform })
         );
 
       case 'change_amount':
@@ -962,7 +1010,7 @@ export class BotEngine {
       case 'exchanges_eu':
         // Show EU exchanges
         return this.formatResponse(msg.EXCHANGES_EU_TEXT || 'Plateformes européennes recommandées:', {
-          keyboard: this.buildKeyboard(msg, 'exchanges_eu', {
+          keyboard: this.buildKeyboard(msg, 'exchanges_eu', { platform, 
             route: session.lastRoute || 'eurbrl',
             amount: session.lastAmount || 1000
           })
@@ -971,7 +1019,7 @@ export class BotEngine {
       case 'exchanges_br':
         // Show BR exchanges
         return this.formatResponse(msg.EXCHANGES_BR_TEXT || 'Plateformes brésiliennes recommandées:', {
-          keyboard: this.buildKeyboard(msg, 'exchanges_br', {
+          keyboard: this.buildKeyboard(msg, 'exchanges_br', { platform, 
             route: session.lastRoute || 'eurbrl',
             amount: session.lastAmount || 1000
           })
@@ -1001,7 +1049,7 @@ export class BotEngine {
           lang,
           actionType,
           (txt, opts) => this.formatResponse(txt, opts),
-          (msg, type, opts) => this.buildKeyboard(msg, type, opts),
+          (msg, type, opts) => this.buildKeyboard(msg, type, { ...opts, platform }),
           (updates) => this.updateSession(userId, platform, updates)
         );
 
@@ -1015,7 +1063,7 @@ export class BotEngine {
           actionType,
           session,
           (txt, opts) => this.formatResponse(txt, opts),
-          (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+          (msg, type, opts) => this.buildKeyboard(msg, type, { ...opts, platform })
         );
 
       case 'feedback':
