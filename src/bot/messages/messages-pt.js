@@ -890,31 +890,6 @@ Você pode cancelar quando quiser, direto no app do Mercado Pago.
 
 ❓ Problemas com o pagamento? Use o botão "Ajuda" abaixo.`,
 
-  PREMIUM_ONESHOT_PRICING: `💎 ASSINAR PREMIUM
-
-✨ Com Premium:
-• 🔔 Alertas personalizados ilimitados
-• 📢 Alertas espontâneos regulares
-• 🎯 Multi-pares (EUR→BRL + BRL→EUR)
-• 📊 Análises mais avançadas
-• ⚡ Acesso prioritário às novas funcionalidades
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-💰 <b>PAGAMENTO ÚNICO (sem assinatura)</b>
-Pague uma vez, use pelo período escolhido, sem renovação automática.
-
-💳 <b>Planos disponíveis:</b>
-• R$ 18 - 3 meses
-• R$ 32 - 6 meses
-• R$ 60 - 12 meses
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-<i>⚖️ Serviço digital de acesso imediato. Sem reembolsos após ativação. Ao pagar, você concorda com os termos de uso.</i>
-
-❓ Problemas com o pagamento? Use o botão "Ajuda" abaixo.`,
-    
       PREMIUM_DETAILS: `💎 FUNCIONALIDADES PREMIUM
     
     🔔 ALERTAS PERSONALIZADOS ILIMITADOS
@@ -1706,10 +1681,6 @@ Você voltará a receber alertas espontâneos quando houver oportunidades intere
         premium: '🚀 Descobrir Premium',
         giveFeedback: '💬 Dar uma sugestão',
         seePremium: '💎 Ver Premium',
-        seeOneshot: '💰 Ou pagamento único (sem renovação automática) →',
-        backToSubscriptions: '⬅️ Voltar às assinaturas',
-        addMoreTime: '💰 Adicionar mais tempo (pagamento único)',
-        switchToSubscription: '🔄 Passar para assinatura recorrente',
 
         // Navigation menu
         navigation: '📍 Navegação',
@@ -1738,14 +1709,6 @@ Você voltará a receber alertas espontâneos quando houver oportunidades intere
         subPPQuarterly: '💳 €4/3 meses',
         subPPSemiannual: '💳 €7/6 meses',
         subPPAnnual: '💳 €12/12 meses',
-
-        // One-shot plans
-        oneshot3m: '💰 R$ 18 - 3 meses',
-        oneshot6m: '💰 R$ 32 - 6 meses',
-        oneshot12m: '💰 R$ 60 - 12 meses',
-        oneshotPP3m: '💰 $4.50 - 3 meses',
-        oneshotPP6m: '💰 $8 - 6 meses',
-        oneshotPP12m: '💰 $15 - 12 meses',
 
         premiumDetails: 'ℹ️ Ver todas as funcionalidades',
         createAlert: '➕ Criar um alerta',

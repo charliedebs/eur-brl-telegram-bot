@@ -894,32 +894,6 @@ Tu peux annuler quand tu veux, directement dans l'app Mercado Pago.
 
 ❓ Problème avec le paiement ? Utilise le bouton "Aide" ci-dessous.`,
 
-  PREMIUM_ONESHOT_PRICING: `💎 PASSER À PREMIUM
-
-✨ Avec Premium :
-• 🔔 Alertes personnalisées illimitées
-• 📢 Alertes spontanées régulières
-• 🎯 Multi-paires (EUR→BRL + BRL→EUR)
-• 📊 Analyses plus poussées
-• 🌍 Multi-devises à venir
-• ⚡ Accès prioritaire aux nouvelles fonctionnalités
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-💰 <b>PAIEMENT UNIQUE (sans abonnement)</b>
-Payez une fois, utilisez pour la période choisie, sans renouvellement automatique.
-
-💳 <b>Plans disponibles :</b>
-• R$ 18 - 3 mois
-• R$ 32 - 6 mois
-• R$ 60 - 12 mois
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-<i>⚖️ Service numérique à accès immédiat. Aucun remboursement après activation. En payant, tu acceptes les conditions d'utilisation.</i>
-
-❓ Problème avec le paiement ? Utilise le bouton "Aide" ci-dessous.`,
-  
     PREMIUM_DETAILS: `💎 FONCTIONNALITÉS PREMIUM
   
   🔔 ALERTES PERSONNALISÉES ILLIMITÉES
@@ -1719,10 +1693,6 @@ btn: {
   premium: '🚀 Découvrir Premium',
   giveFeedback: '💬 Donner une suggestion',
   seePremium: '💎 Voir Premium',
-  seeOneshot: '💰 Ou paiement unique (sans renouvellement auto) →',
-  backToSubscriptions: '⬅️ Retour aux abonnements',
-  addMoreTime: '💰 Ajouter plus de temps (paiement unique)',
-  switchToSubscription: '🔄 Passer en abonnement récurrent',
 
   // Navigation menu
   navigation: '📍 Navigation',
@@ -1751,14 +1721,6 @@ btn: {
   subPPQuarterly: '💳 €4/3 mois',
   subPPSemiannual: '💳 €7/6 mois',
   subPPAnnual: '💳 €12/12 mois',
-
-  // One-shot plans
-  oneshot3m: '💰 R$ 18 - 3 mois',
-  oneshot6m: '💰 R$ 32 - 6 mois',
-  oneshot12m: '💰 R$ 60 - 12 mois',
-  oneshotPP3m: '💰 $4.50 - 3 mois',
-  oneshotPP6m: '💰 $8 - 6 mois',
-  oneshotPP12m: '💰 $15 - 12 mois',
 
   premiumDetails: 'ℹ️ Voir toutes les fonctionnalités',
   createAlert: '➕ Créer une alerte',

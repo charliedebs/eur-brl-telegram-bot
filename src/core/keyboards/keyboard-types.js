@@ -854,7 +854,7 @@ export function getKeyboardDefinition(msg, type, options = {}) {
       ];
     }
 
-    // Premium pricing (subscriptions)
+    // Premium pricing (subscriptions only)
     case 'premium_pricing':
       return [
         { text: msg.btn.premiumDetails, id: 'premium:details', row: 0 },
@@ -862,9 +862,8 @@ export function getKeyboardDefinition(msg, type, options = {}) {
         { text: msg.btn.subMPQuarterly, id: 'premium:sub:mp:quarterly', row: 2 },
         { text: msg.btn.subMPSemiannual, id: 'premium:sub:mp:semiannual', row: 3 },
         { text: msg.btn.subMPAnnual, id: 'premium:sub:mp:annual', row: 4 },
-        { text: msg.btn.seeOneshot, id: 'premium:oneshot_pricing', row: 5 },
-        { text: msg.btn.paymentHelp, id: 'premium:payment_help', row: 6 },
-        { text: msg.btn.back, id: 'action:back_main', row: 7 },
+        { text: msg.btn.paymentHelp, id: 'premium:payment_help', row: 5 },
+        { text: msg.btn.back, id: 'action:back_main', row: 6 },
       ];
 
     // WhatsApp optimized premium pricing
@@ -881,19 +880,8 @@ export function getKeyboardDefinition(msg, type, options = {}) {
         { text: msg.btn.premiumDetails, id: 'premium:details', row: 0 },
         { text: msg.btn.subMPSemiannual, id: 'premium:sub:mp:semiannual', row: 1 },
         { text: msg.btn.subMPAnnual, id: 'premium:sub:mp:annual', row: 2 },
-        { text: msg.btn.seeOneshot, id: 'premium:oneshot_pricing', row: 3 },
-        { text: msg.btn.paymentHelp, id: 'premium:payment_help', row: 4 },
-        { text: '🔙 ' + msg.btn.back, id: 'premium:pricing', row: 5 },
-      ];
-
-    // Premium one-shot pricing
-    case 'premium_oneshot_pricing':
-      return [
-        { text: msg.btn.oneshot3m, id: 'premium:oneshot:mp:3months', row: 0 },
-        { text: msg.btn.oneshot6m, id: 'premium:oneshot:mp:6months', row: 1 },
-        { text: msg.btn.oneshot12m, id: 'premium:oneshot:mp:12months', row: 2 },
         { text: msg.btn.paymentHelp, id: 'premium:payment_help', row: 3 },
-        { text: msg.btn.backToSubscriptions, id: 'premium:pricing', row: 4 },
+        { text: '🔙 ' + msg.btn.back, id: 'premium:pricing', row: 4 },
       ];
 
     // Premium details
@@ -923,26 +911,6 @@ export function getKeyboardDefinition(msg, type, options = {}) {
         { text: msg.btn.createAlert, id: 'alert:choose_pair', row: 0 },
         { text: msg.btn.paymentHelp, id: 'premium:payment_help', row: 1 },
         { text: msg.btn.back, id: 'action:back_main', row: 2 },
-      ];
-
-    // Premium one-shot renew
-    case 'premium_oneshot_renew':
-      return [
-        { text: msg.btn.addMoreTime, id: 'premium:renew_oneshot', row: 0 },
-        { text: msg.btn.switchToSubscription, id: 'premium:renew_subscription', row: 1 },
-        { text: msg.btn.createAlert, id: 'alert:choose_pair', row: 2 },
-        { text: msg.btn.paymentHelp, id: 'premium:payment_help', row: 3 },
-        { text: msg.btn.back, id: 'action:back_main', row: 4 },
-      ];
-
-    // Premium one-shot pricing renew
-    case 'premium_oneshot_pricing_renew':
-      return [
-        { text: msg.btn.oneshot3m, id: 'premium:oneshot:mp:3months:renew', row: 0 },
-        { text: msg.btn.oneshot6m, id: 'premium:oneshot:mp:6months:renew', row: 1 },
-        { text: msg.btn.oneshot12m, id: 'premium:oneshot:mp:12months:renew', row: 2 },
-        { text: msg.btn.paymentHelp, id: 'premium:payment_help', row: 3 },
-        { text: msg.btn.back, id: 'premium:back_to_renew', row: 4 },
       ];
 
     // Premium subscription pricing renew

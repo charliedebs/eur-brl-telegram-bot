@@ -223,7 +223,7 @@ bot.command('premium', async (ctx) => {
               `Choose below to add more time or switch to recurring subscription:`
         };
 
-        keyboardType = 'premium_oneshot_renew';
+        keyboardType = 'premium_pricing_renew';
       }
 
       const kb = buildKeyboards(msg, keyboardType, { lang });
@@ -1168,7 +1168,7 @@ bot.action('premium:pricing', async (ctx) => {
           en: `✅ <b>You are Premium!</b>\n\n⏰ Expires: ${expiryDate}\n📅 Days remaining: ${premiumInfo.days_remaining}\n\n💎 <b>ACTIVE FEATURES</b>\n✨ Unlimited custom alerts\n✨ Regular spontaneous alerts\n\n💰 <b>RENEW YOUR ACCESS</b>\n\nChoose below to add more time or switch to recurring subscription:`
         };
 
-        keyboardType = 'premium_oneshot_renew';
+        keyboardType = 'premium_pricing_renew';
       }
 
       const kb = buildKeyboards(msg, keyboardType, { lang });
@@ -1196,24 +1196,8 @@ bot.action('premium:details', async (ctx) => {
   await ctx.answerCbQuery();
 });
 
-// One-shot pricing screen
-bot.action('premium:oneshot_pricing', async (ctx) => {
-  const msg = getMsg(ctx);
-  const kb = buildKeyboards(msg, 'premium_oneshot_pricing');
-  await ctx.editMessageText(msg.PREMIUM_ONESHOT_PRICING, { parse_mode: 'HTML', ...kb });
-  await ctx.answerCbQuery();
-});
-
 // No-op handler for label buttons (buttons that are just labels, not clickable)
 bot.action('noop', async (ctx) => {
-  await ctx.answerCbQuery();
-});
-
-// NEW: Premium users renewing - show one-shot pricing
-bot.action('premium:renew_oneshot', async (ctx) => {
-  const msg = getMsg(ctx);
-  const kb = buildKeyboards(msg, 'premium_oneshot_pricing_renew');
-  await ctx.editMessageText(msg.PREMIUM_ONESHOT_PRICING, { parse_mode: 'HTML', ...kb });
   await ctx.answerCbQuery();
 });
 
@@ -1254,7 +1238,7 @@ bot.action('premium:back_to_renew', async (ctx) => {
       en: `✅ <b>You are Premium!</b>\n\n⏰ Expires: ${expiryDate}\n📅 Days remaining: ${premiumInfo.days_remaining}\n\n💎 <b>ACTIVE FEATURES</b>\n✨ Unlimited custom alerts\n✨ Regular spontaneous alerts\n\n💰 <b>RENEW YOUR ACCESS</b>\n\nChoose below to add more time or switch to recurring subscription:`
     };
 
-    const kb = buildKeyboards(msg, 'premium_oneshot_renew', { lang });
+    const kb = buildKeyboards(msg, 'premium_pricing_renew', { lang });
     await ctx.editMessageText(premiumMessage[lang] || premiumMessage.pt, { parse_mode: 'HTML', ...kb });
     await ctx.answerCbQuery();
   } catch (error) {
@@ -1473,156 +1457,6 @@ bot.action(/^premium:sub:pp:(.+)$/, async (ctx) => {
       pt: '❌ Erro ao gerar link de pagamento',
       fr: '❌ Erreur lors de la génération du lien de paiement',
       en: '❌ Error generating payment link'
-    };
-    await ctx.reply(errorMsg[lang] || errorMsg.en);
-  }
-});
-
-// Mercado Pago One-shot payment handler
-bot.action(/^premium:oneshot:mp:(.+?)(?::renew)?$/, async (ctx) => {
-  const match = ctx.match[0];
-  const duration = ctx.match[1]; // '3months', '6months', '12months'
-  const isRenew = match.includes(':renew');
-  const telegram_id = ctx.from.id;
-  const email = ctx.from.username ? `${ctx.from.username}@telegram.user` : null;
-
-  // Map duration to plan name
-  const planMap = {
-    '3months': 'quarterly',
-    '6months': 'semiannual',
-    '12months': 'annual'
-  };
-  const plan = planMap[duration];
-
-  await ctx.answerCbQuery('Gerando pagamento... / Generating payment...');
-
-  try {
-    const { initiatePayment } = await import('../services/payments/index.js');
-
-    const paymentData = await initiatePayment({
-      telegram_id,
-      plan,
-      method: 'mercadopago',
-      email
-    });
-
-    const lang = ctx.state.lang || 'pt';
-    const mercadopago = await import('../services/payments/mercadopago.js');
-    const planInfo = mercadopago.PREMIUM_PLANS[duration];
-
-    const extendNote = isRenew ? {
-      pt: `\n💡 <i>Seu tempo premium atual será estendido.</i>\n`,
-      fr: `\n💡 <i>Votre temps premium actuel sera prolongé.</i>\n`,
-      en: `\n💡 <i>Your current premium time will be extended.</i>\n`
-    } : { pt: '', fr: '', en: '' };
-
-    const text = {
-      pt: `💳 <b>Pagamento Único Mercado Pago</b>\n\n` +
-          `📦 Plano: ${planInfo.name.pt}\n` +
-          `💰 Preço: R$ ${planInfo.price_brl}\n` +
-          `⏱ Duração: ${planInfo.duration} dias\n\n` +
-          `💡 Pagamento único, sem renovação automática${extendNote.pt}\n` +
-          `👇 Clique no link abaixo para pagar:`,
-      fr: `💳 <b>Paiement Unique Mercado Pago</b>\n\n` +
-          `📦 Plan: ${planInfo.name.fr}\n` +
-          `💰 Prix: R$ ${planInfo.price_brl}\n` +
-          `⏱ Durée: ${planInfo.duration} jours\n\n` +
-          `💡 Paiement unique, pas de renouvellement automatique${extendNote.fr}\n` +
-          `👇 Cliquez sur le lien ci-dessous pour payer:`,
-      en: `💳 <b>One-Time Payment Mercado Pago</b>\n\n` +
-          `📦 Plan: ${planInfo.name.en}\n` +
-          `💰 Price: R$ ${planInfo.price_brl}\n` +
-          `⏱ Duration: ${planInfo.duration} days\n\n` +
-          `💡 One-time payment, no automatic renewal${extendNote.en}\n` +
-          `👇 Click the link below to pay:`
-    };
-
-    const { Markup } = await import('telegraf');
-    const msg = getMsg(ctx);
-    const backButton = isRenew ? 'premium:back_to_renew' : 'premium:oneshot_pricing';
-
-    await ctx.editMessageText(text[lang] || text.en, {
-      parse_mode: 'HTML',
-      reply_markup: {
-        inline_keyboard: [
-          [Markup.button.url(msg.btn.pay, paymentData.init_point)],
-          [Markup.button.callback(msg.btn.back, backButton)]
-        ]
-      }
-    });
-
-  } catch (error) {
-    logger.error('[BOT] Failed to create Mercado Pago one-shot payment:', error);
-    const errorMsg = {
-      pt: '❌ Erro ao gerar pagamento',
-      fr: '❌ Erreur lors de la génération du paiement',
-      en: '❌ Error generating payment'
-    };
-    await ctx.reply(errorMsg[lang] || errorMsg.en);
-  }
-});
-
-// PayPal One-shot payment handler
-bot.action(/^premium:oneshot:pp:(.+)$/, async (ctx) => {
-  const duration = ctx.match[1]; // '3months', '6months', '12months'
-  const telegram_id = ctx.from.id;
-
-  await ctx.answerCbQuery('Generating PayPal payment...');
-
-  try {
-    const { initiatePayment } = await import('../services/payments/index.js');
-
-    const paymentData = await initiatePayment({
-      telegram_id,
-      plan: duration,
-      method: 'paypal',
-      email: null
-    });
-
-    const lang = ctx.state.lang || 'pt';
-    const paypal = await import('../services/payments/paypal.js');
-    const planInfo = paypal.PAYPAL_PLANS[duration];
-
-    const text = {
-      pt: `💳 <b>Pagamento Único PayPal</b>\n\n` +
-          `📦 Plano: ${planInfo.name.pt}\n` +
-          `💰 Preço: $${planInfo.price}\n` +
-          `⏱ Duração: ${planInfo.duration} dias\n\n` +
-          `💡 Pagamento único, sem renovação automática\n\n` +
-          `👇 Clique no link abaixo para pagar:`,
-      fr: `💳 <b>Paiement Unique PayPal</b>\n\n` +
-          `📦 Plan: ${planInfo.name.fr}\n` +
-          `💰 Prix: $${planInfo.price}\n` +
-          `⏱ Durée: ${planInfo.duration} jours\n\n` +
-          `💡 Paiement unique, pas de renouvellement automatique\n\n` +
-          `👇 Cliquez sur le lien ci-dessous pour payer:`,
-      en: `💳 <b>One-Time Payment PayPal</b>\n\n` +
-          `📦 Plan: ${planInfo.name.en}\n` +
-          `💰 Price: $${planInfo.price}\n` +
-          `⏱ Duration: ${planInfo.duration} days\n\n` +
-          `💡 One-time payment, no automatic renewal\n\n` +
-          `👇 Click the link below to pay:`
-    };
-
-    const { Markup } = await import('telegraf');
-    const msg = getMsg(ctx);
-
-    await ctx.editMessageText(text[lang] || text.en, {
-      parse_mode: 'HTML',
-      reply_markup: {
-        inline_keyboard: [
-          [Markup.button.url(msg.btn.pay, paymentData.approval_url)],
-          [Markup.button.callback(msg.btn.back, 'premium:oneshot_pricing')]
-        ]
-      }
-    });
-
-  } catch (error) {
-    logger.error('[BOT] Failed to create PayPal one-shot payment:', error);
-    const errorMsg = {
-      pt: '❌ Erro ao gerar pagamento',
-      fr: '❌ Erreur lors de la génération du paiement',
-      en: '❌ Error generating payment'
     };
     await ctx.reply(errorMsg[lang] || errorMsg.en);
   }

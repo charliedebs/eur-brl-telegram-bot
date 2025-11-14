@@ -890,32 +890,6 @@ You can cancel anytime, directly in the Mercado Pago app.
 
 ❓ Payment issues? Use the "Help" button below.`,
 
-  PREMIUM_ONESHOT_PRICING: `💎 GO PREMIUM
-
-✨ With Premium:
-• 🔔 Unlimited custom alerts
-• 📢 Regular spontaneous alerts
-• 🎯 Multi-pairs (EUR→BRL + BRL→EUR)
-• 📊 Advanced analytics
-• 🌍 Multi-currency coming soon
-• ⚡ Priority access to new features
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-💰 <b>ONE-TIME PAYMENT (no subscription)</b>
-Pay once, use for the chosen period, no automatic renewal.
-
-💳 <b>Available plans:</b>
-• R$ 18 - 3 months
-• R$ 32 - 6 months
-• R$ 60 - 12 months
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-<i>⚖️ Digital service with immediate access. No refunds after activation. By paying, you agree to the terms of use.</i>
-
-❓ Payment issues? Use the "Help" button below.`,
-    
       PREMIUM_DETAILS: `💎 PREMIUM FEATURES
     
     🔔 UNLIMITED CUSTOM ALERTS
@@ -1706,10 +1680,6 @@ You will receive spontaneous alerts again when there are interesting rate opport
         premium: '🚀 Discover Premium',
         giveFeedback: '💬 Give feedback',
         seePremium: '💎 See Premium',
-        seeOneshot: '💰 Or one-time payment (no auto-renewal) →',
-        backToSubscriptions: '⬅️ Back to subscriptions',
-        addMoreTime: '💰 Add more time (one-time payment)',
-        switchToSubscription: '🔄 Switch to recurring subscription',
 
         // Navigation menu
         navigation: '📍 Navigation',
@@ -1738,14 +1708,6 @@ You will receive spontaneous alerts again when there are interesting rate opport
         subPPQuarterly: '💳 €4/3 months',
         subPPSemiannual: '💳 €7/6 months',
         subPPAnnual: '💳 €12/12 months',
-
-        // One-shot plans
-        oneshot3m: '💰 R$ 18 - 3 months',
-        oneshot6m: '💰 R$ 32 - 6 months',
-        oneshot12m: '💰 R$ 60 - 12 months',
-        oneshotPP3m: '💰 $4.50 - 3 months',
-        oneshotPP6m: '💰 $8 - 6 months',
-        oneshotPP12m: '💰 $15 - 12 months',
 
         premiumDetails: 'ℹ️ See all features',
         createAlert: '➕ Create an alert',

@@ -31,7 +31,8 @@ function getPayPalClient() {
   return paypalClient;
 }
 
-// Premium plans in USD (ONE-SHOT payments)
+// Legacy: Premium plans configuration for webhook processing only
+// One-shot payments are no longer offered; this is maintained for existing/in-flight transactions
 export const PAYPAL_PLANS = {
   '3months': {
     duration: 90,

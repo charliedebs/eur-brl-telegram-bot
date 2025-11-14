@@ -4,7 +4,6 @@
  * Handles all premium-related logic:
  * - Premium pricing displays
  * - Subscription management
- * - One-shot purchases
  * - Premium feature access checks
  * - Payment help/support
  */
@@ -130,7 +129,8 @@ export class PremiumHandler {
 
           keyboardType = 'premium_subscription_active';
         } else {
-          // User has premium but no active subscription (one-shot payment)
+          // User has premium but no active subscription (legacy one-shot payment)
+          // Encourage them to switch to subscription
           premiumMessage = {
             pt: `✅ <b>Você é Premium!</b>\n\n` +
                 `⏰ Expira em: ${expiryDate}\n` +
@@ -145,7 +145,7 @@ export class PremiumHandler {
                 `• ⚡ Acesso prioritário às novas funcionalidades\n\n` +
                 `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
                 `💰 <b>RENOVAR SEU ACESSO</b>\n\n` +
-                `Escolha abaixo para adicionar mais tempo ou passar para assinatura recorrente:`,
+                `Escolha uma assinatura recorrente para continuar aproveitando:`,
             fr: `✅ <b>Vous êtes Premium!</b>\n\n` +
                 `⏰ Expire le: ${expiryDate}\n` +
                 `📅 Jours restants: ${premiumInfo.days_remaining}\n\n` +
@@ -159,7 +159,7 @@ export class PremiumHandler {
                 `• ⚡ Accès prioritaire aux nouvelles fonctionnalités\n\n` +
                 `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
                 `💰 <b>RENOUVELER VOTRE ACCÈS</b>\n\n` +
-                `Choisissez ci-dessous pour ajouter plus de temps ou passer en abonnement récurrent:`,
+                `Choisissez un abonnement récurrent pour continuer à profiter:`,
             en: `✅ <b>You are Premium!</b>\n\n` +
                 `⏰ Expires: ${expiryDate}\n` +
                 `📅 Days remaining: ${premiumInfo.days_remaining}\n\n` +
@@ -173,10 +173,10 @@ export class PremiumHandler {
                 `• ⚡ Priority access to new features\n\n` +
                 `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
                 `💰 <b>RENEW YOUR ACCESS</b>\n\n` +
-                `Choose below to add more time or switch to recurring subscription:`
+                `Choose a recurring subscription to keep enjoying:`
           };
 
-          keyboardType = 'premium_oneshot_renew';
+          keyboardType = 'premium_pricing_renew';
         }
 
         const keyboard = kbBuilder(msg, keyboardType, { lang });
@@ -236,12 +236,12 @@ export class PremiumHandler {
           keyboardType = 'premium_subscription_active';
         } else {
           premiumMessage = {
-            pt: `✅ <b>Você é Premium!</b>\n\n⏰ Expira em: ${expiryDate}\n📅 Dias restantes: ${premiumInfo.days_remaining}\n\n💎 <b>FUNCIONALIDADES ATIVAS</b>\n✨ Alertas personalizados ilimitados\n✨ Alertas espontâneos regulares\n\n💰 <b>RENOVAR SEU ACESSO</b>\n\nEscolha abaixo para adicionar mais tempo ou passar para assinatura recorrente:`,
-            fr: `✅ <b>Vous êtes Premium!</b>\n\n⏰ Expire le: ${expiryDate}\n📅 Jours restants: ${premiumInfo.days_remaining}\n\n💎 <b>FONCTIONNALITÉS ACTIVES</b>\n✨ Alertes personnalisées illimitées\n✨ Alertes spontanées régulières\n\n💰 <b>RENOUVELER VOTRE ACCÈS</b>\n\nChoisissez ci-dessous pour ajouter plus de temps ou passer en abonnement récurrent:`,
-            en: `✅ <b>You are Premium!</b>\n\n⏰ Expires: ${expiryDate}\n📅 Days remaining: ${premiumInfo.days_remaining}\n\n💎 <b>ACTIVE FEATURES</b>\n✨ Unlimited custom alerts\n✨ Regular spontaneous alerts\n\n💰 <b>RENEW YOUR ACCESS</b>\n\nChoose below to add more time or switch to recurring subscription:`
+            pt: `✅ <b>Você é Premium!</b>\n\n⏰ Expira em: ${expiryDate}\n📅 Dias restantes: ${premiumInfo.days_remaining}\n\n💎 <b>FUNCIONALIDADES ATIVAS</b>\n✨ Alertas personalizados ilimitados\n✨ Alertas espontâneos regulares\n\n💰 <b>RENOVAR SEU ACESSO</b>\n\nEscolha uma assinatura recorrente para continuar aproveitando:`,
+            fr: `✅ <b>Vous êtes Premium!</b>\n\n⏰ Expire le: ${expiryDate}\n📅 Jours restants: ${premiumInfo.days_remaining}\n\n💎 <b>FONCTIONNALITÉS ACTIVES</b>\n✨ Alertes personnalisées illimitées\n✨ Alertes spontanées régulières\n\n💰 <b>RENOUVELER VOTRE ACCÈS</b>\n\nChoisissez un abonnement récurrent pour continuer à profiter:`,
+            en: `✅ <b>You are Premium!</b>\n\n⏰ Expires: ${expiryDate}\n📅 Days remaining: ${premiumInfo.days_remaining}\n\n💎 <b>ACTIVE FEATURES</b>\n✨ Unlimited custom alerts\n✨ Regular spontaneous alerts\n\n💰 <b>RENEW YOUR ACCESS</b>\n\nChoose a recurring subscription to keep enjoying:`
           };
 
-          keyboardType = 'premium_oneshot_renew';
+          keyboardType = 'premium_pricing_renew';
         }
 
         const keyboard = kbBuilder(msg, keyboardType, { lang });
@@ -271,28 +271,6 @@ export class PremiumHandler {
     const keyboard = kbBuilder(msg, 'premium_details');
 
     await editFn(msg.PREMIUM_DETAILS, { parse_mode: 'HTML', keyboard });
-    answerFn();
-  }
-
-  /**
-   * Handle one-shot pricing view
-   */
-  async handleOneshotPricing(userId, lang, editFn, answerFn, kbBuilder) {
-    const msg = this.getMsg(lang);
-    const keyboard = kbBuilder(msg, 'premium_oneshot_pricing');
-
-    await editFn(msg.PREMIUM_ONESHOT_PRICING, { parse_mode: 'HTML', keyboard });
-    answerFn();
-  }
-
-  /**
-   * Handle premium user renewing with one-shot
-   */
-  async handleRenewOneshot(userId, lang, editFn, answerFn, kbBuilder) {
-    const msg = this.getMsg(lang);
-    const keyboard = kbBuilder(msg, 'premium_oneshot_pricing_renew');
-
-    await editFn(msg.PREMIUM_ONESHOT_PRICING, { parse_mode: 'HTML', keyboard });
     answerFn();
   }
 
@@ -331,12 +309,12 @@ export class PremiumHandler {
       );
 
       const premiumMessage = {
-        pt: `✅ <b>Você é Premium!</b>\n\n⏰ Expira em: ${expiryDate}\n📅 Dias restantes: ${premiumInfo.days_remaining}\n\n💎 <b>FUNCIONALIDADES ATIVAS</b>\n✨ Alertas personalizados ilimitados\n✨ Alertas espontâneos regulares\n\n💰 <b>RENOVAR SEU ACESSO</b>\n\nEscolha abaixo para adicionar mais tempo ou passar para assinatura recorrente:`,
-        fr: `✅ <b>Vous êtes Premium!</b>\n\n⏰ Expire le: ${expiryDate}\n📅 Jours restants: ${premiumInfo.days_remaining}\n\n💎 <b>FONCTIONNALITÉS ACTIVES</b>\n✨ Alertes personnalisées illimitées\n✨ Alertes spontanées régulières\n\n💰 <b>RENOUVELER VOTRE ACCÈS</b>\n\nChoisissez ci-dessous pour ajouter plus de temps ou passer en abonnement récurrent:`,
-        en: `✅ <b>You are Premium!</b>\n\n⏰ Expires: ${expiryDate}\n📅 Days remaining: ${premiumInfo.days_remaining}\n\n💎 <b>ACTIVE FEATURES</b>\n✨ Unlimited custom alerts\n✨ Regular spontaneous alerts\n\n💰 <b>RENEW YOUR ACCESS</b>\n\nChoose below to add more time or switch to recurring subscription:`
+        pt: `✅ <b>Você é Premium!</b>\n\n⏰ Expira em: ${expiryDate}\n📅 Dias restantes: ${premiumInfo.days_remaining}\n\n💎 <b>FUNCIONALIDADES ATIVAS</b>\n✨ Alertas personalizados ilimitados\n✨ Alertas espontâneos regulares\n\n💰 <b>RENOVAR SEU ACESSO</b>\n\nEscolha uma assinatura recorrente para continuar aproveitando:`,
+        fr: `✅ <b>Vous êtes Premium!</b>\n\n⏰ Expire le: ${expiryDate}\n📅 Jours restants: ${premiumInfo.days_remaining}\n\n💎 <b>FONCTIONNALITÉS ACTIVES</b>\n✨ Alertes personnalisées illimitées\n✨ Alertes spontanées régulières\n\n💰 <b>RENOUVELER VOTRE ACCÈS</b>\n\nChoisissez un abonnement récurrent pour continuer à profiter:`,
+        en: `✅ <b>You are Premium!</b>\n\n⏰ Expires: ${expiryDate}\n📅 Days remaining: ${premiumInfo.days_remaining}\n\n💎 <b>ACTIVE FEATURES</b>\n✨ Unlimited custom alerts\n✨ Regular spontaneous alerts\n\n💰 <b>RENEW YOUR ACCESS</b>\n\nChoose a recurring subscription to keep enjoying:`
       };
 
-      const keyboard = kbBuilder(msg, 'premium_oneshot_renew', { lang });
+      const keyboard = kbBuilder(msg, 'premium_pricing_renew', { lang });
       await editFn(premiumMessage[lang] || premiumMessage.pt, { parse_mode: 'HTML', keyboard });
       answerFn();
 

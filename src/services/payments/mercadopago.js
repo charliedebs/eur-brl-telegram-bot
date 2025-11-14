@@ -18,7 +18,8 @@ if (process.env.MERCADOPAGO_ACCESS_TOKEN) {
   logger.info('[MERCADOPAGO] Client initialized successfully');
 }
 
-// Premium plans configuration (ONE-SHOT payments)
+// Legacy: Premium plans configuration for webhook processing only
+// One-shot payments are no longer offered; this is maintained for existing/in-flight transactions
 export const PREMIUM_PLANS = {
   '3months': {
     duration: 90,
