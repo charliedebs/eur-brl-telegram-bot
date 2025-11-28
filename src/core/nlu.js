@@ -92,6 +92,23 @@ const REGEX_PATTERNS = [
       };
     }
   },
+  // Alert/Alerts requests
+  {
+    pattern: /^(alerta|alertas|alert|alerts|alerte|alertes|criar alerta|create alert|créer alerte|meus alertas|mes alertes|my alerts|ver alertas|voir alertes|view alerts)$/i,
+    extract: () => ({
+      intent: 'alerts',
+      entities: {},
+      confidence: 0.95
+    })
+  },
+  {
+    pattern: /(ver|voir|view|check|consultar|criar|create|créer|configurar|configure).*(alerta|alert|alerte)/i,
+    extract: () => ({
+      intent: 'alerts',
+      entities: {},
+      confidence: 0.90
+    })
+  },
   // Premium status queries
   {
     pattern: /^(meu premium|minha assinatura|sou premium|premium status|statut premium|mon premium|ma souscription|am i premium|my premium|my subscription)$/i,
@@ -197,6 +214,7 @@ INTENTIONS POSSIBLES :
 - compare : demande de comparaison EUR↔BRL
 - help : demande d'aide
 - about : demande d'info sur le bot
+- alerts : demande de gestion des alertes (alerta, criar alerta, meus alertas, alert, alerts, etc.)
 - change_language : demande explicite de changement de langue (change language, mudar idioma, changer langue, etc.)
 - premium_status : demande de statut premium/assinatura (sou premium?, minha assinatura, premium status, etc.)
 - clarification : référence à un résultat précédent
@@ -211,7 +229,7 @@ ENTITÉS À EXTRAIRE :
 
 FORMAT DE RÉPONSE (JSON uniquement) :
 {
-  "intent": "greeting|compare|help|about|premium_status|clarification|unknown",
+  "intent": "greeting|compare|help|about|alerts|premium_status|clarification|unknown",
   "entities": {
     "amount": 1000,
     "route": "eurbrl",

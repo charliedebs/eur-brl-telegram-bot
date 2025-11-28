@@ -378,6 +378,25 @@ export class BotEngine {
           (msg, type, opts) => this.buildKeyboard(msg, type, opts)
         );
       }
+
+      if (intent.intent === 'alerts') {
+        // Get user for platform-aware operations
+        const user = await this.db.getUserByPlatform(context.platform, context.userId);
+        if (!user) {
+          return this.formatResponse('❌ User not found. Use /start to begin.');
+        }
+
+        const internalUserId = context.platform === 'telegram' ? context.userId : user.id;
+
+        return await this.handlers.alert.handleAlertList(
+          internalUserId,
+          lang,
+          (txt, opts) => this.formatResponse(txt, opts),
+          () => {}, // answerFn
+          (txt, opts) => this.formatResponse(txt, opts),
+          (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+        );
+      }
     } catch (error) {
       logger.error('[BOT-ENGINE] NLU error:', { error: error.message });
     }

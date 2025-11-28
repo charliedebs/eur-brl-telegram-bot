@@ -29,11 +29,11 @@ export class AlertHandler {
   /**
    * Check if user has premium access
    */
-  async requirePremium(userId, answerFn, replyFn, kbBuilder) {
+  async requirePremium(userId, lang, answerFn, replyFn, kbBuilder) {
     const isPremium = await this.db.isPremium(userId);
 
     if (!isPremium) {
-      const msg = this.getMsg('pt'); // Default to PT for premium check
+      const msg = this.getMsg(lang); // Use user's language, not forced PT
       answerFn('🔒 Fonctionnalité Premium');
       const keyboard = kbBuilder(msg, 'not_premium');
       replyFn(msg.NOT_PREMIUM, { parse_mode: 'HTML', keyboard });
@@ -194,7 +194,7 @@ export class AlertHandler {
    * Handle alert pair selection
    */
   async handleAlertChoosePair(userId, lang, editFn, answerFn, replyFn, kbBuilder) {
-    const hasPremium = await this.requirePremium(userId, answerFn, replyFn, kbBuilder);
+    const hasPremium = await this.requirePremium(userId, lang, answerFn, replyFn, kbBuilder);
     if (!hasPremium) return;
 
     const msg = this.getMsg(lang);
@@ -437,7 +437,7 @@ export class AlertHandler {
    * Handle alert list view
    */
   async handleAlertList(userId, lang, editFn, answerFn, replyFn, kbBuilder) {
-    const hasPremium = await this.requirePremium(userId, answerFn, replyFn, kbBuilder);
+    const hasPremium = await this.requirePremium(userId, lang, answerFn, replyFn, kbBuilder);
     if (!hasPremium) return;
 
     const msg = this.getMsg(lang);
