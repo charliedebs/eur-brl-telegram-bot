@@ -567,32 +567,23 @@ export class BotEngine {
 
         // === Premium ===
         case 'premium':
-          // Get user for platform-aware operations
-          const premiumUser = await this.db.getUserByPlatform(platform, userId);
-          if (!premiumUser) {
-            return this.formatResponse('❌ User not found.');
-          }
-          // Use internal user ID for Telegram compatibility
-          const premiumUserId = platform === 'telegram' ? userId : premiumUser.id;
+          return await this.handlePremiumCallback(userId, lang, platform, params, session, msg);
 
-          if (params[0] === 'pricing') {
-            return await this.handlers.premium.handlePremiumPricing(
-              premiumUserId,
-              lang,
-              (txt, opts) => this.formatResponse(txt, opts),
-              () => {}, // answerFn
-              (msg, type, opts) => this.buildKeyboard(msg, type, opts)
-            );
-          } else if (params[0] === 'details') {
-            return await this.handlers.premium.handlePremiumDetails(
-              premiumUserId,
-              lang,
-              (txt, opts) => this.formatResponse(txt, opts),
-              () => {}, // answerFn
-              (msg, type, opts) => this.buildKeyboard(msg, type, opts)
-            );
-          }
-          break;
+        // === Support ===
+        case 'support':
+          return await this.handleSupportCallback(userId, lang, platform, params, session, msg);
+
+        // === Spontaneous ===
+        case 'spontaneous':
+          return await this.handleSpontaneousCallback(userId, lang, platform, params, session, msg);
+
+        // === Feedback ===
+        case 'feedback':
+          return await this.handleFeedbackCallback(userId, lang, platform, params, session, msg);
+
+        // === Payment ===
+        case 'payment':
+          return await this.handlePaymentCallback(userId, lang, platform, params, session, msg);
 
         // === Actions ===
         case 'action':
@@ -1104,6 +1095,272 @@ export class BotEngine {
         logger.warn('[BOT-ENGINE] Unknown alert action:', { alertAction, alertParams });
         return this.formatResponse('❌ Alert action not recognized.');
     }
+  }
+
+  /**
+   * Handle premium callbacks
+   * Maps premium:action:params to PremiumHandler methods
+   */
+  async handlePremiumCallback(userId, lang, platform, params, session, msg) {
+    const [premiumAction, ...premiumParams] = params;
+
+    // Get user for platform-aware operations
+    const user = await this.db.getUserByPlatform(platform, userId);
+    if (!user) {
+      return this.formatResponse('❌ User not found.');
+    }
+
+    // Use internal user ID for Telegram compatibility
+    const internalUserId = platform === 'telegram' ? userId : user.id;
+
+    // Helper functions
+    const editFn = (text, options) => this.formatResponse(text, options);
+    const answerFn = (text) => logger.info('[BOT-ENGINE] Answer:', text);
+    const replyFn = (text, options) => this.formatResponse(text, options);
+    const kbBuilder = (msg, type, opts) => this.buildKeyboard(msg, type, opts);
+    const sessionUpdate = (updates) => this.updateSession(userId, platform, updates);
+
+    switch (premiumAction) {
+      case 'pricing':
+        return await this.handlers.premium.handlePremiumPricing(
+          internalUserId,
+          lang,
+          editFn,
+          answerFn,
+          kbBuilder
+        );
+
+      case 'details':
+        return await this.handlers.premium.handlePremiumDetails(
+          internalUserId,
+          lang,
+          editFn,
+          answerFn,
+          kbBuilder
+        );
+
+      case 'oneshot_pricing':
+        return await this.handlers.premium.handleOneshotPricing(
+          internalUserId,
+          lang,
+          editFn,
+          answerFn,
+          kbBuilder
+        );
+
+      case 'renew_oneshot':
+        return await this.handlers.premium.handleRenewOneshot(
+          internalUserId,
+          lang,
+          editFn,
+          answerFn,
+          kbBuilder
+        );
+
+      case 'renew_subscription':
+        return await this.handlers.premium.handleRenewSubscription(
+          internalUserId,
+          lang,
+          editFn,
+          answerFn,
+          kbBuilder
+        );
+
+      case 'back_to_renew':
+        return await this.handlers.premium.handleBackToRenew(
+          internalUserId,
+          lang,
+          editFn,
+          answerFn,
+          kbBuilder
+        );
+
+      case 'payment_help':
+        return await this.handlers.premium.handlePaymentHelp(
+          internalUserId,
+          lang,
+          editFn,
+          answerFn,
+          kbBuilder
+        );
+
+      case 'subscribe':
+      case 'sub':
+      case 'oneshot':
+        // Payment provider actions - these require specialized handling
+        // For now, return informational message
+        // TODO: Implement WhatsApp-compatible payment flows
+        return this.formatResponse(
+          '💳 Payment flows are currently optimized for Telegram.\n\n' +
+          'Please use the Telegram bot for premium subscriptions.',
+          { keyboard: this.buildKeyboard(msg, 'main') }
+        );
+
+      default:
+        logger.warn('[BOT-ENGINE] Unknown premium action:', { premiumAction, premiumParams });
+        return this.formatResponse('❌ Premium action not recognized.');
+    }
+  }
+
+  /**
+   * Handle support ticket callbacks
+   */
+  async handleSupportCallback(userId, lang, platform, params, session, msg) {
+    const [supportAction, ...supportParams] = params;
+
+    // Get user for platform-aware operations
+    const user = await this.db.getUserByPlatform(platform, userId);
+    if (!user) {
+      return this.formatResponse('❌ User not found.');
+    }
+
+    const internalUserId = platform === 'telegram' ? userId : user.id;
+
+    // Helper functions
+    const editFn = (text, options) => this.formatResponse(text, options);
+    const replyFn = (text, options) => this.formatResponse(text, options);
+    const kbBuilder = (msg, type, opts) => this.buildKeyboard(msg, type, opts);
+    const sessionUpdate = (updates) => this.updateSession(userId, platform, updates);
+
+    switch (supportAction) {
+      case 'custom_message':
+        // Set awaiting state for custom support message
+        sessionUpdate({ awaitingSupportMessage: true });
+        return this.formatResponse(
+          msg.SUPPORT_CUSTOM_MESSAGE || '✍️ Write your message below:',
+          { keyboard: this.buildKeyboard(msg, 'support_cancel') }
+        );
+
+      case 'no_mercadopago':
+      case 'other_currency':
+      case 'payment_failed':
+        // Predefined support scenarios
+        return await this.handlers.premium.handleSupportScenario(
+          internalUserId,
+          lang,
+          supportAction,
+          editFn,
+          replyFn,
+          sessionUpdate
+        );
+
+      default:
+        logger.warn('[BOT-ENGINE] Unknown support action:', { supportAction, supportParams });
+        return this.formatResponse('❌ Support action not recognized.');
+    }
+  }
+
+  /**
+   * Handle spontaneous alert pause/resume callbacks
+   */
+  async handleSpontaneousCallback(userId, lang, platform, params, session, msg) {
+    const [spontaneousAction] = params;
+
+    // Get user for platform-aware operations
+    const user = await this.db.getUserByPlatform(platform, userId);
+    if (!user) {
+      return this.formatResponse('❌ User not found.');
+    }
+
+    const internalUserId = platform === 'telegram' ? userId : user.id;
+
+    // Helper functions
+    const editFn = (text, options) => this.formatResponse(text, options);
+    const answerFn = (text) => logger.info('[BOT-ENGINE] Answer:', text);
+    const kbBuilder = (msg, type, opts) => this.buildKeyboard(msg, type, opts);
+
+    switch (spontaneousAction) {
+      case 'pause':
+        return await this.handlers.alert.handleSpontaneousPause(
+          internalUserId,
+          lang,
+          editFn,
+          answerFn,
+          kbBuilder
+        );
+
+      case 'resume':
+        return await this.handlers.alert.handleSpontaneousResume(
+          internalUserId,
+          lang,
+          editFn,
+          answerFn,
+          kbBuilder
+        );
+
+      default:
+        logger.warn('[BOT-ENGINE] Unknown spontaneous action:', { spontaneousAction });
+        return this.formatResponse('❌ Spontaneous action not recognized.');
+    }
+  }
+
+  /**
+   * Handle feedback callbacks (NLU accuracy tracking)
+   */
+  async handleFeedbackCallback(userId, lang, platform, params, session, msg) {
+    const [feedbackAction] = params;
+
+    switch (feedbackAction) {
+      case 'correct':
+        logger.info('[FEEDBACK] User confirmed NLU was correct:', { userId, platform });
+        // Track positive feedback
+        if (session.lastNLUIntent) {
+          // Could log to database for analytics
+          logger.info('[FEEDBACK] ✓ Correct intent:', session.lastNLUIntent);
+        }
+        return this.formatResponse('👍 Merci!');
+
+      case 'wrong':
+        logger.info('[FEEDBACK] User reported NLU was wrong:', { userId, platform });
+        // Track negative feedback
+        if (session.lastNLUIntent) {
+          logger.info('[FEEDBACK] ✗ Wrong intent:', session.lastNLUIntent);
+        }
+        // Show main menu
+        return this.formatResponse('Thanks for your feedback!', {
+          keyboard: this.buildKeyboard(msg, 'main')
+        });
+
+      default:
+        logger.warn('[BOT-ENGINE] Unknown feedback action:', { feedbackAction });
+        return this.formatResponse('Feedback received.');
+    }
+  }
+
+  /**
+   * Handle payment method callbacks
+   * Note: Payment flows are complex and may need platform-specific implementations
+   */
+  async handlePaymentCallback(userId, lang, platform, params, session, msg) {
+    const [paymentAction, ...paymentParams] = params;
+
+    // Get user for platform-aware operations
+    const user = await this.db.getUserByPlatform(platform, userId);
+    if (!user) {
+      return this.formatResponse('❌ User not found.');
+    }
+
+    // For WhatsApp, payment flows might need different implementation
+    if (platform === 'whatsapp') {
+      return this.formatResponse(
+        '💳 Payment processing is currently optimized for Telegram.\n\n' +
+        'Please use the Telegram bot to complete your payment: @YourBotName',
+        { keyboard: this.buildKeyboard(msg, 'main') }
+      );
+    }
+
+    // For now, return not implemented for other payment actions
+    logger.warn('[BOT-ENGINE] Payment callback not fully implemented for platform:', {
+      platform,
+      paymentAction,
+      paymentParams
+    });
+
+    return this.formatResponse(
+      '💳 This payment method is not yet available on this platform.\n\n' +
+      'Please use the Telegram bot for payments.',
+      { keyboard: this.buildKeyboard(msg, 'main') }
+    );
   }
 }
 
