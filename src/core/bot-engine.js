@@ -562,15 +562,30 @@ export class BotEngine {
 
         // === Alerts ===
         case 'alert':
-          // Delegate to alert handler
-          // Implementation depends on specific alert actions
-          break;
+          return await this.handleAlertCallback(userId, lang, platform, params, session, msg);
+
 
         // === Premium ===
         case 'premium':
+          // Get user for platform-aware operations
+          const premiumUser = await this.db.getUserByPlatform(platform, userId);
+          if (!premiumUser) {
+            return this.formatResponse('❌ User not found.');
+          }
+          // Use internal user ID for Telegram compatibility
+          const premiumUserId = platform === 'telegram' ? userId : premiumUser.id;
+
           if (params[0] === 'pricing') {
             return await this.handlers.premium.handlePremiumPricing(
-              userId,
+              premiumUserId,
+              lang,
+              (txt, opts) => this.formatResponse(txt, opts),
+              () => {}, // answerFn
+              (msg, type, opts) => this.buildKeyboard(msg, type, opts)
+            );
+          } else if (params[0] === 'details') {
+            return await this.handlers.premium.handlePremiumDetails(
+              premiumUserId,
               lang,
               (txt, opts) => this.formatResponse(txt, opts),
               () => {}, // answerFn
@@ -897,6 +912,197 @@ export class BotEngine {
       default:
         logger.warn('[BOT-ENGINE] Unknown action type:', { actionType, actionParams });
         return this.formatResponse('❌ Action not implemented yet.');
+    }
+  }
+
+  /**
+   * Handle alert callbacks
+   * Maps alert:action:params to AlertHandler methods
+   */
+  async handleAlertCallback(userId, lang, platform, params, session, msg) {
+    const [alertAction, ...alertParams] = params;
+
+    // Get user for platform-aware operations
+    const user = await this.db.getUserByPlatform(platform, userId);
+    if (!user) {
+      return this.formatResponse('❌ User not found. Use /start to begin.');
+    }
+
+    // Helper functions for alert handler
+    const editFn = (text, options) => this.formatResponse(text, options);
+    const answerFn = (text) => logger.info('[BOT-ENGINE] Answer:', text); // No-op for WhatsApp
+    const replyFn = (text, options) => this.formatResponse(text, options);
+    const kbBuilder = (msg, type, opts) => this.buildKeyboard(msg, type, opts);
+    const sessionUpdate = (updates) => this.updateSession(userId, platform, updates);
+
+    // For Telegram compatibility: pass the internal user ID (not platform_user_id)
+    // This allows the handlers to work with the existing database methods
+    const internalUserId = platform === 'telegram' ? userId : user.id;
+
+    switch (alertAction) {
+      case 'choose_pair':
+        return await this.handlers.alert.handleAlertChoosePair(
+          internalUserId,
+          lang,
+          editFn,
+          answerFn,
+          replyFn,
+          kbBuilder
+        );
+
+      case 'create':
+        // alert:create:eurbrl or alert:create:brleur
+        const pair = alertParams[0];
+        return await this.handlers.alert.handleAlertChooseType(
+          internalUserId,
+          lang,
+          pair,
+          editFn,
+          answerFn,
+          kbBuilder
+        );
+
+      case 'type':
+        // alert:type:relative:eurbrl or alert:type:absolute:eurbrl
+        const typeAction = alertParams[0];
+        const typePair = alertParams[1];
+
+        if (typeAction === 'relative') {
+          return await this.handlers.alert.handleAlertChooseReference(
+            internalUserId,
+            lang,
+            typePair,
+            editFn,
+            answerFn,
+            kbBuilder
+          );
+        } else if (typeAction === 'absolute') {
+          return await this.handlers.alert.handleAlertAbsoluteStart(
+            internalUserId,
+            lang,
+            typePair,
+            editFn,
+            answerFn,
+            sessionUpdate,
+            kbBuilder
+          );
+        }
+        break;
+
+      case 'ref':
+        // alert:ref:current:eurbrl or alert:ref:avg30d:eurbrl
+        const refType = alertParams[0];
+        const refPair = alertParams[1];
+        return await this.handlers.alert.handleAlertReferenceSelected(
+          internalUserId,
+          lang,
+          refType,
+          refPair,
+          editFn,
+          answerFn,
+          sessionUpdate,
+          kbBuilder
+        );
+
+      case 'percent':
+        // alert:percent:2:current:eurbrl or alert:percent:custom:avg30d:eurbrl
+        const percent = alertParams[0];
+        const percentRefType = alertParams[1];
+        const percentPair = alertParams[2];
+        return await this.handlers.alert.handleAlertPercentSelected(
+          internalUserId,
+          lang,
+          percent,
+          percentRefType,
+          percentPair,
+          editFn,
+          answerFn,
+          sessionUpdate,
+          kbBuilder
+        );
+
+      case 'cd2':
+        // alert:cd2:60:shortcode (shortcode contains the alert data)
+        const cooldown = alertParams[0];
+        const shortcode = alertParams[1];
+        return await this.handlers.alert.handleAlertCooldownSelected(
+          internalUserId,
+          lang,
+          cooldown,
+          shortcode,
+          editFn,
+          answerFn,
+          replyFn,
+          kbBuilder
+        );
+
+      case 'list':
+        return await this.handlers.alert.handleAlertList(
+          internalUserId,
+          lang,
+          editFn,
+          answerFn,
+          replyFn,
+          kbBuilder
+        );
+
+      case 'view':
+        // alert:view:alertId
+        const alertId = alertParams[0];
+        return await this.handlers.alert.handleAlertView(
+          internalUserId,
+          lang,
+          alertId,
+          editFn,
+          answerFn,
+          kbBuilder
+        );
+
+      case 'rename':
+        // alert:rename:alertId
+        const renameAlertId = alertParams[0];
+        return await this.handlers.alert.handleAlertRenameStart(
+          internalUserId,
+          lang,
+          renameAlertId,
+          editFn,
+          answerFn,
+          sessionUpdate
+        );
+
+      case 'delete':
+        // alert:delete:alertId
+        const deleteAlertId = alertParams[0];
+        return await this.handlers.alert.handleAlertDelete(
+          internalUserId,
+          lang,
+          deleteAlertId,
+          editFn,
+          answerFn,
+          kbBuilder
+        );
+
+      case 'spontaneous_pause':
+        return await this.handlers.alert.handleSpontaneousPause(
+          internalUserId,
+          lang,
+          editFn,
+          answerFn,
+          kbBuilder
+        );
+
+      case 'spontaneous_resume':
+        return await this.handlers.alert.handleSpontaneousResume(
+          internalUserId,
+          lang,
+          editFn,
+          answerFn,
+          kbBuilder
+        );
+
+      default:
+        logger.warn('[BOT-ENGINE] Unknown alert action:', { alertAction, alertParams });
+        return this.formatResponse('❌ Alert action not recognized.');
     }
   }
 }
