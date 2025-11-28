@@ -25,19 +25,43 @@ export class DatabaseService {
    * @param {string} platformUserId - Platform-specific user ID
    */
   async getUserByPlatform(platform, platformUserId) {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('platform', platform)
-      .eq('platform_user_id', platformUserId)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('platform', platform)
+        .eq('platform_user_id', platformUserId)
+        .single();
 
-    if (error && error.code !== 'PGRST116') {
-      logger.error('[DB] Failed to get user:', { error, platform, platformUserId });
+      if (error && error.code !== 'PGRST116') {
+        logger.error('[DB] Failed to get user:', {
+          error: {
+            message: error.message,
+            details: error.details || error.toString(),
+            hint: error.hint || '',
+            code: error.code || ''
+          },
+          platform,
+          platformUserId,
+          supabaseUrl: process.env.SUPABASE_URL ? 'SET' : 'NOT SET',
+          supabaseKey: process.env.SUPABASE_KEY ? 'SET (length: ' + process.env.SUPABASE_KEY.length + ')' : 'NOT SET'
+        });
+        return null;
+      }
+
+      return data;
+    } catch (err) {
+      logger.error('[DB] Exception in getUserByPlatform:', {
+        error: {
+          message: err.message,
+          stack: err.stack,
+          name: err.name
+        },
+        platform,
+        platformUserId
+      });
       return null;
     }
-
-    return data;
   }
 
   /**
@@ -47,30 +71,54 @@ export class DatabaseService {
    * @param {string} language - 'pt' | 'en' | 'fr'
    */
   async createUserByPlatform(platform, platformUserId, language = 'pt') {
-    const userData = {
-      platform,
-      platform_user_id: platformUserId,
-      language
-    };
+    try {
+      const userData = {
+        platform,
+        platform_user_id: platformUserId,
+        language
+      };
 
-    // For Telegram, also set telegram_id for backwards compatibility
-    if (platform === 'telegram') {
-      userData.telegram_id = platformUserId;
-    }
+      // For Telegram, also set telegram_id for backwards compatibility
+      if (platform === 'telegram') {
+        userData.telegram_id = platformUserId;
+      }
 
-    const { data, error } = await supabase
-      .from('users')
-      .insert([userData])
-      .select()
-      .single();
+      const { data, error } = await supabase
+        .from('users')
+        .insert([userData])
+        .select()
+        .single();
 
-    if (error) {
-      logger.error('[DB] Failed to create user:', { error, platform, platformUserId });
+      if (error) {
+        logger.error('[DB] Failed to create user:', {
+          error: {
+            message: error.message,
+            details: error.details || error.toString(),
+            hint: error.hint || '',
+            code: error.code || ''
+          },
+          platform,
+          platformUserId,
+          supabaseUrl: process.env.SUPABASE_URL ? 'SET' : 'NOT SET',
+          supabaseKey: process.env.SUPABASE_KEY ? 'SET (length: ' + process.env.SUPABASE_KEY.length + ')' : 'NOT SET'
+        });
+        return null;
+      }
+
+      logger.info(`[DB] ✅ User created: ${platform}:${platformUserId} (${language})`);
+      return data;
+    } catch (err) {
+      logger.error('[DB] Exception in createUserByPlatform:', {
+        error: {
+          message: err.message,
+          stack: err.stack,
+          name: err.name
+        },
+        platform,
+        platformUserId
+      });
       return null;
     }
-
-    logger.info(`[DB] ✅ User created: ${platform}:${platformUserId} (${language})`);
-    return data;
   }
 
   /**

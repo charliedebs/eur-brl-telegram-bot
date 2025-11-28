@@ -52,13 +52,33 @@ bot.use(async (ctx, next) => {
       const langCode = ctx.from.language_code || 'pt';
       const lang = langCode.startsWith('fr') ? 'fr' : langCode.startsWith('pt') ? 'pt' : langCode.startsWith('en') ? 'en' : 'pt';
       user = await db.createUser(userId, lang);
+
+      // Check if user creation failed
+      if (!user) {
+        logger.error('[BOT] Failed to create user - database unavailable', { userId });
+        // Set minimal state to prevent crashes
+        ctx.state.user = null;
+        ctx.state.lang = lang;
+        ctx.state.dbError = true;
+
+        // Inform user and stop processing
+        const errorMsg = {
+          pt: '❌ Erro de conexão com o banco de dados. Por favor, tente novamente em alguns minutos.',
+          fr: '❌ Erreur de connexion à la base de données. Veuillez réessayer dans quelques minutes.',
+          en: '❌ Database connection error. Please try again in a few minutes.'
+        };
+        await ctx.reply(errorMsg[lang] || errorMsg.en);
+        return; // Don't call next(), stop processing
+      }
+
       logger.info('[LANG] New user created with language:', { userId, lang, telegram_lang: langCode });
     }
-    ctx.state.user = user;
-    ctx.state.lang = user.language || 'pt'; // Ensure we always have a language (PT default)
 
-    // Log if user language is not set (should not happen)
-    if (!user.language) {
+    ctx.state.user = user;
+    ctx.state.lang = user?.language || 'pt'; // Ensure we always have a language (PT default)
+
+    // Log if user language is not set (should not happen but handle gracefully)
+    if (user && !user.language) {
       logger.warn('[LANG] User without language detected, defaulting to PT:', { userId });
       await db.updateUser(userId, { language: 'pt' });
       ctx.state.lang = 'pt';
