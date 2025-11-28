@@ -48,13 +48,16 @@ Service gratuit, financé par des liens de parrainage.
     const tzAbbr = new Date().toLocaleTimeString('en-US', {timeZoneName: 'short'}).split(' ')[2];
 
     // ✅ Ligne référence - Yahoo Finance uniquement
+    // Adapter le taux selon la route
+    const referenceRate = route === 'brleur' ? (1 / rates.cross) : rates.cross;
+
     let ref;
     if (rates.yahooFrozen) {
       // Yahoo indisponible (week-end/marché fermé) - affichage du taux crypto
-      ref = `📊 Taux de référence ${formatRate(rates.cross, locale)} • ${timeStr} ${tzAbbr}\n⚠️ Taux officiel figé (week-end) - affichage du taux ${rates.referenceSource}`;
+      ref = `📊 Taux de référence ${formatRate(referenceRate, locale)} • ${timeStr} ${tzAbbr}\n⚠️ Taux officiel figé (week-end) - affichage du taux ${rates.referenceSource}`;
     } else {
       // Yahoo disponible - référence officielle
-      ref = `📊 Taux officiel ${formatRate(rates.cross, locale)} (Yahoo Finance) • ${timeStr} ${tzAbbr}`;
+      ref = `📊 Taux officiel ${formatRate(referenceRate, locale)} (Yahoo Finance) • ${timeStr} ${tzAbbr}`;
     }
     
     let onchainLine, bankLine;

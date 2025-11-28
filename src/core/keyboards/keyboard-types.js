@@ -112,13 +112,16 @@ export function getKeyboardDefinition(msg, type, options = {}) {
         { text: '⚙️ Plus...', id: `action:comparison_more:${route}:${amount}`, row: 2 },
       ];
 
-    // WhatsApp comparison "More" submenu
+    // WhatsApp comparison "More" submenu - All options displayed directly
     case 'comparison_more':
       return [
         { text: msg.btn.calcdetails, id: `action:calc_details:${route}:${amount}`, row: 0 },
-        { text: msg.btn.moreOptions, id: `action:more_options:${route}:${amount}`, row: 1 },
-        { text: msg.btn.sources, id: 'action:sources', row: 2 },
-        { text: '🔙 ' + msg.btn.back, id: `route:${route}:${amount}`, row: 3 },
+        { text: msg.btn.swapMode, id: `action:swap_mode:${route}:${amount}`, row: 1 },
+        { text: msg.btn.change, id: `action:change_amount:${route}`, row: 2 },
+        { text: '🔔 ' + msg.btn.createAlert, id: 'alert:choose_pair', row: 3 },
+        { text: msg.btn.myAlerts, id: 'alert:list', row: 4 },
+        { text: msg.btn.sources, id: 'action:sources', row: 5 },
+        { text: '🔙 ' + msg.btn.back, id: `route:${route}:${amount}`, row: 6 },
       ];
 
     // More options

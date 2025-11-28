@@ -48,13 +48,16 @@ export const messagesPt = {
         const tzAbbr = new Date().toLocaleTimeString('en-US', {timeZoneName: 'short'}).split(' ')[2];
 
         // ✅ Linha referência - Yahoo Finance apenas
+        // Adaptar taxa segundo a rota
+        const referenceRate = route === 'brleur' ? (1 / rates.cross) : rates.cross;
+
         let ref;
         if (rates.yahooFrozen) {
           // Yahoo indisponível (fim de semana/mercado fechado) - mostrando taxa crypto
-          ref = `📊 Taxa de referência ${formatRate(rates.cross, locale)} • ${timeStr} ${tzAbbr}\n⚠️ Taxa oficial congelada (fim de semana) - mostrando taxa ${rates.referenceSource}`;
+          ref = `📊 Taxa de referência ${formatRate(referenceRate, locale)} • ${timeStr} ${tzAbbr}\n⚠️ Taxa oficial congelada (fim de semana) - mostrando taxa ${rates.referenceSource}`;
         } else {
           // Yahoo disponível - referência oficial
-          ref = `📊 Taxa oficial ${formatRate(rates.cross, locale)} (Yahoo Finance) • ${timeStr} ${tzAbbr}`;
+          ref = `📊 Taxa oficial ${formatRate(referenceRate, locale)} (Yahoo Finance) • ${timeStr} ${tzAbbr}`;
         }
         
         let onchainLine, bankLine;

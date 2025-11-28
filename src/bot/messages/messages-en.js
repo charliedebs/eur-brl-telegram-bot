@@ -48,13 +48,16 @@ export const messagesEn = {
         const tzAbbr = new Date().toLocaleTimeString('en-US', {timeZoneName: 'short'}).split(' ')[2];
 
         // ✅ Reference line - Yahoo Finance only
+        // Adapt rate according to route
+        const referenceRate = route === 'brleur' ? (1 / rates.cross) : rates.cross;
+
         let ref;
         if (rates.yahooFrozen) {
           // Yahoo unavailable (weekend/market closed) - showing crypto cross rate instead
-          ref = `📊 Reference rate ${formatRate(rates.cross, locale)} • ${timeStr} ${tzAbbr}\n⚠️ Official rate frozen (weekend) - showing ${rates.referenceSource} rate`;
+          ref = `📊 Reference rate ${formatRate(referenceRate, locale)} • ${timeStr} ${tzAbbr}\n⚠️ Official rate frozen (weekend) - showing ${rates.referenceSource} rate`;
         } else {
           // Yahoo available - official reference
-          ref = `📊 Official rate ${formatRate(rates.cross, locale)} (Yahoo Finance) • ${timeStr} ${tzAbbr}`;
+          ref = `📊 Official rate ${formatRate(referenceRate, locale)} (Yahoo Finance) • ${timeStr} ${tzAbbr}`;
         }
         
         let onchainLine, bankLine;
